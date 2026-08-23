@@ -1,0 +1,140 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * This file is part of CodeIgniter 4 framework.
+ *
+ * (c) CodeIgniter Foundation <admin@codeigniter.com>
+ *
+ * For the full copyright and license information, please view
+ * the LICENSE file that was distributed with this source code.
+ */
+
+namespace CodeIgniter\Commands\Generators;
+
+use CodeIgniter\CLI\BaseCommand;
+use CodeIgniter\CLI\CLI;
+use CodeIgniter\CLI\GeneratorTrait;
+
+/**
+ * Generates a skeleton Model file.
+ */
+class ModelGenerator extends BaseCommand
+{
+    use GeneratorTrait;
+
+    /**
+     * The Command's Group
+     *
+     * @var string
+     */
+    protected $group = 'Generators';
+
+    /**
+     * The Command's Name
+     *
+     * @var string
+     */
+    protected $name = 'make:model';
+
+    /**
+     * The Command's Description
+     *
+     * @var string
+     */
+    protected $description = 'Generates a new model file.';
+
+    /**
+     * The Command's Usage
+     *
+     * @var string
+     */
+    protected $usage = 'make:model <name> [options]';
+
+    /**
+     * The Command's Arguments
+     *
+     * @var array<string, string>
+     */
+    protected $arguments = [
+        'name' => 'The model class name.',
+    ];
+
+    /**
+     * The Command's Options
+     *
+     * @var array<string, string>
+     */
+    protected $options = [
+        '--table'     => 'Supply a table name. Default: "the lowercased plural of the class name".',
+        '--dbgroup'   => 'Database group to use. Default: "default".',
+        '--return'    => 'Return type, Options: [array, object, entity]. Default: "array".',
+        '--namespace' => 'Set root namespace. Default: "APP_NAMESPACE".',
+        '--suffix'    => 'Append the component title to the class name (e.g. User => UserModel).',
+        '--force'     => 'Force overwrite existing file.',
+    ];
+
+    /**
+     * Actually execute a command.
+     */
+    public function run(array $params)
+    {
+        $this->component = 'Model';
+        $this->directory = 'Models';
+        $this->template  = 'model.tpl.php';
+
+        $this->classNameLang = 'CLI.generator.className.model';
+        $this->generateClass($params);
+    }
+
+    /**
+     * Prepare options and do the necessary replacements.
+     */
+    protected function prepare(string $class): string
+    {
+        $table   = $this->getOption('table');
+        $dbGroup = $this->getOption('dbgroup');
+        $return  = $this->getOption('return');
+
+        $baseClass = class_basename($class);
+
+        if (preg_match('/^(\S+)Model$/i', $baseClass, $match) === 1) {
+            $baseClass = $match[1];
+        }
+
+        $table  = is_string($table) ? $table : plural(strtolower($baseClass));
+        $return = is_string($return) ? $return : 'array';
+
+        if (! in_array($return, ['array', 'object', 'entity'], true)) {
+            // @codeCoverageIgnoreStart
+            $return = CLI::prompt(lang('CLI.generator.returnType'), ['array', 'object', 'entity'], 'required');
+            CLI::newLine();
+            // @codeCoverageIgnoreEnd
+        }
+
+        if ($return === 'entity') {
+            // Build the fully-qualified entity class from the model class so
+            // that the generated Entity keeps any sub-namespaces (eg. Admin).
+            $entityClass = str_replace('Models', 'Entities', $class);
+
+            if (preg_match('/^(\S+)Model$/i', $entityClass, $match) === 1) {
+                $entityClass = $match[1];
+
+                if ($this->getOption('suffix')) {
+                    $entityClass .= 'Entity';
+                }
+            }
+
+            // Call the entity generator with the fully-qualified class name so
+            // it ends up under the correct sub-namespace/folder (eg. Admin).
+            $this->call('make:entity', array_merge([trim($entityClass, '\\')], $this->params));
+
+            $return = '\\' . trim($entityClass, '\\') . '::class';
+        } else {
+            $return = "'{$return}'";
+        }
+
+        return $this->parseTemplate($class, ['{dbGroup}', '{table}', '{return}'], [$dbGroup, $table, $return], compact('dbGroup'));
+    }
+}

@@ -1,0 +1,40 @@
+{
+    "name": "uriangato/ventanilla-movilidad",
+    "type": "project",
+    "description": "Ventanilla Digital de Movilidad Uriangato",
+    "homepage": "https://codeigniter.com",
+    "license": "MIT",
+    "require": {
+        "php": "^8.1",
+        "codeigniter4/framework": "^4.5",
+        "laminas/laminas-escaper": "^2.13",
+        "laminas/laminas-zendframework-bridge": "^1.8"
+    },
+    "require-dev": {
+        "kint-php/kint": "^6",
+        "phpunit/phpunit": "^10.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/",
+            "Config\\": "app/Config/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/app/",
+            "Tests\\Support\\": "tests/_support/"
+        }
+    },
+    "scripts": {
+        "post-update-cmd": [
+            "CodeIgniter\\ComposerScripts::postUpdate"
+        ],
+        "test": "phpunit"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true
+    }
+}

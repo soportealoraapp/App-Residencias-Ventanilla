@@ -1,0 +1,34 @@
+# Disable directory listing
+Options -Indexes
+
+# <IfModule mod_authz_core.c>
+#     Require all denied
+# </IfModule>
+# <IfModule !mod_authz_core.c>
+#     Order deny,allow
+#     Deny from all
+# </IfModule>
+
+<IfModule mod_rewrite.c>
+    Options +FollowSymlinks
+    RewriteEngine On
+
+    # !IMPORTANT! WAS ONLY ADDED FOR TRAE TO FIND STATIC FILES.
+    # IN PRODUCTION, PLEASE REMOVE THIS FOR SECURITY.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^([\s\S]*)$ index.php/$1 [NC,L,QSA]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    DirectoryIndex index.php index.html
+
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</IfModule>

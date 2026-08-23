@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         cacheDirectory=".phpunit.cache"
+         executionOrder="depends,defects"
+         requireCoverageMetadata="true"
+         beStrictAboutOutputDuringTests="true"
+         failOnRisky="true"
+         failOnWarning="true">
+    <testsuites>
+        <testsuite name="App">
+            <directory>tests/app</directory>
+        </testsuite>
+        <testsuite name="system">
+            <directory>tests/system</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory suffix=".php">app</directory>
+        </include>
+    </source>
+    <php>
+        <env name="CI_ENVIRONMENT" value="testing"/>
+        <env name="app.baseURL" value="http://localhost:8080/"/>
+        <env name="database.tests.hostname" value="127.0.0.1"/>
+        <env name="database.tests.database" value=":memory:"/>
+        <env name="database.tests.username" value=""/>
+        <env name="database.tests.password" value=""/>
+        <env name="database.tests.DBDriver" value="SQLite3"/>
+        <env name="database.tests.DBPrefix" value="db_"/>
+        <env name="APP_ENABLE_UR_TT_T_06" value="true"/>
+    </php>
+</phpunit>
