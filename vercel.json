@@ -1,9 +1,9 @@
-﻿{
+{
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "installCommand": "bash scripts/vercel-install.sh",
   "functions": {
-    "api/index.php": {
+    "api/**/*.php": {
       "runtime": "vercel-php@0.7.2"
     }
   },
