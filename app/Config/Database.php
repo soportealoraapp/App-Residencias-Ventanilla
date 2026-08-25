@@ -83,6 +83,54 @@ class Database extends Config
     {
         parent::__construct();
 
+        // ----------------------------------------------------------------
+        // Vercel bloquea conexiones salientes al puerto 5432 (conexion
+        // directa de PostgreSQL). En ese entorno debemos usar el
+        // connection pooler de Supabase (PgBouncer) que opera en el
+        // puerto 6543.
+        //
+        // POSTGRES_URL apunta al pooler:
+        //   postgres://user:pass@aws-xxx.pooler.supabase.com:6543/db
+        //
+        // Lo parseamos y lo usamos como fuente base en Vercel; las vars
+        // individuales POSTGRES_* siguen disponibles como fallback local.
+        // ----------------------------------------------------------------
+        $isServerless = (getenv('VERCEL') !== false || getenv('VERCEL_ENV') !== false);
+
+        if ($isServerless) {
+            $poolerUrl = $this->resolveEnv(['POSTGRES_URL', 'POSTGRES_PRISMA_URL']);
+            if ($poolerUrl !== false) {
+                $parsed = parse_url($poolerUrl);
+                if (is_array($parsed)) {
+                    if (isset($parsed['host'])) {
+                        $this->default['hostname'] = $parsed['host'];
+                    }
+                    if (isset($parsed['port'])) {
+                        $this->default['port'] = (int) $parsed['port'];
+                    }
+                    if (isset($parsed['user'])) {
+                        $this->default['username'] = urldecode($parsed['user']);
+                    }
+                    if (isset($parsed['pass'])) {
+                        $this->default['password'] = urldecode($parsed['pass']);
+                    }
+                    if (isset($parsed['path'])) {
+                        $this->default['database'] = ltrim($parsed['path'], '/');
+                    }
+                    if (isset($parsed['query'])) {
+                        parse_str($parsed['query'], $qp);
+                        if (isset($qp['sslmode'])) {
+                            $this->default['sslmode'] = $qp['sslmode'];
+                        }
+                    }
+                    $this->default['DBDriver'] = 'Postgre';
+                    $this->default['schema']   = 'public';
+                    return;
+                }
+            }
+        }
+
+        // Resolucion normal para entornos locales / servidores tradicionales.
         $hostname = $this->resolveEnv(['POSTGRES_HOST', 'DATABASE_DEFAULT_HOSTNAME', 'database.default.hostname']);
         if (is_string($hostname)) {
             $this->default['hostname'] = $hostname;
