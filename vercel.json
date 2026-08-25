@@ -1,9 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "buildCommand": "echo 'Skipping build command; vendor/composer install handled by vercel runtime'",
-  "outputDirectory": "public",
-  "installCommand": "composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist",
+  "installCommand": "curl --silent --show-error --fail --location --output composer-setup.php https://getcomposer.org/installer && php composer-setup.php --quiet && rm -f composer-setup.php && php composer.phar install --no-dev --optimize-autoloader --no-interaction --prefer-dist && rm -f composer.phar",
   "functions": {
     "api/index.php": {
       "runtime": "vercel-php@0.7.2"
@@ -11,9 +9,10 @@
   },
   "rewrites": [
     { "source": "/assets/(.*)", "destination": "/public/assets/$1" },
-    { "source": "/(css|js|img|favicon.ico|robots.txt)", "destination": "/public/$1" },
+    { "source": "/(css|js|img|favicon\\.ico|robots\\.txt)", "destination": "/public/$1" },
     { "source": "/(.*)", "destination": "/api/index.php" }
   ],
+  "cleanUrls": true,
   "headers": [
     {
       "source": "/(.*)",
@@ -26,6 +25,7 @@
   ],
   "env": {
     "CI_ENVIRONMENT": "production",
-    "COMPOSER_PROCESS_TIMEOUT": "600"
+    "COMPOSER_PROCESS_TIMEOUT": "600",
+    "COMPOSER_ALLOW_SUPERUSER": "1"
   }
 }
