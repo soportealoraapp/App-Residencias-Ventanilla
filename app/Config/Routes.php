@@ -49,9 +49,6 @@ $routes->get('login', 'AuthController::login');
 $routes->get('register', 'AuthController::register');
 $routes->get('logout', 'AuthController::logout');
 
-$routes->get('portal', static function () {
-    return redirect()->route('portal.dashboard');
-});
 
 $routes->group('portal', ['filter' => 'auth'], static function ($routes) {
     $routes->get('dashboard', 'Portal\PortalController::dashboard', ['as' => 'portal.dashboard']);

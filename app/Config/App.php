@@ -30,6 +30,16 @@ class App extends BaseConfig
 
     public function __construct()
     {
+        // ----------------------------------------------------------------
+        // Confianza de proxy: Vercel termina TLS en su edge y pasa las
+        // peticiones a PHP como HTTP plano, pero incluye el header
+        // X-Forwarded-Proto: https. Necesitamos trustear ese header para
+        // que CI4 detecte la peticion como HTTPS y NO emita un redirect.
+        // En un entorno serverless de Vercel toda la infraestructura es de
+        // confianza, por lo que aceptamos cualquier IP de proxy.
+        // ----------------------------------------------------------------
+        $this->proxyIPs = ['0.0.0.0/0'];
+
         $envBaseUrl = getenv('APP_BASEURL') !== false ? getenv('APP_BASEURL') : getenv('app.baseURL');
         if (is_string($envBaseUrl) && $envBaseUrl !== '') {
             $this->baseURL = rtrim($envBaseUrl, '/') . '/';
@@ -48,16 +58,38 @@ class App extends BaseConfig
             }
         }
 
-        $forceEnv = getenv('APP_FORCE_HTTPS') !== false ? getenv('APP_FORCE_HTTPS') : getenv('app.forceHTTPS');
-        if ($forceEnv === false || $forceEnv === '') {
+        // ----------------------------------------------------------------
+        // forceGlobalSecureRequests: solo activar si el entorno NO es
+        // serverless (Vercel/Lambda). En serverless, el edge ya garantiza
+        // HTTPS; activar force_https() aqui causaria un redirect loop
+        // porque PHP ve la peticion como HTTP aunque el cliente use HTTPS.
+        //
+        // En su lugar, solo marcamos las cookies como 'secure' cuando el
+        // baseURL es https://, lo cual es suficiente para produccion.
+        // ----------------------------------------------------------------
+        $isServerless = (getenv('VERCEL') !== false || getenv('VERCEL_ENV') !== false);
+
+        $envForceHttps = getenv('APP_FORCE_HTTPS') !== false ? getenv('APP_FORCE_HTTPS') : getenv('app.forceHTTPS');
+
+        if ($isServerless) {
+            // En Vercel: nunca forzar redirect HTTPS (ya viene por HTTPS),
+            // pero si asegurar las cookies si el baseURL usa HTTPS.
             $scheme = parse_url($this->baseURL, PHP_URL_SCHEME);
-            $forceEnv = ($scheme === 'https') ? 'true' : 'false';
-        }
-        $forceSecure = filter_var($forceEnv, FILTER_VALIDATE_BOOLEAN);
-        if ($forceSecure) {
-            $this->forceGlobalSecureRequests = true;
-            $this->cookie['secure'] = true;
-            $this->CSRFSameSite = 'Lax';
+            if ($scheme === 'https') {
+                $this->cookie['secure'] = true;
+                $this->CSRFSameSite     = 'Lax';
+            }
+        } else {
+            // Entorno local o servidor tradicional: comportamiento normal.
+            if ($envForceHttps === false || $envForceHttps === '') {
+                $scheme        = parse_url($this->baseURL, PHP_URL_SCHEME);
+                $envForceHttps = ($scheme === 'https') ? 'true' : 'false';
+            }
+            if (filter_var($envForceHttps, FILTER_VALIDATE_BOOLEAN)) {
+                $this->forceGlobalSecureRequests = true;
+                $this->cookie['secure']          = true;
+                $this->CSRFSameSite              = 'Lax';
+            }
         }
     }
 
