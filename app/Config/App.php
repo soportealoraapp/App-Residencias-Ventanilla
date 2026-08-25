@@ -30,7 +30,7 @@ class App extends BaseConfig
 
     public function __construct()
     {
-        $envBaseUrl = getenv('app.baseURL');
+        $envBaseUrl = getenv('APP_BASEURL') !== false ? getenv('APP_BASEURL') : getenv('app.baseURL');
         if (is_string($envBaseUrl) && $envBaseUrl !== '') {
             $this->baseURL = rtrim($envBaseUrl, '/') . '/';
         }
@@ -40,19 +40,20 @@ class App extends BaseConfig
             $this->allowedHostnames[] = $host;
         }
 
-        $extraHosts = array_filter(array_map('trim', explode(',', (string) getenv('app.allowedHostnames'))));
+        $hostnamesEnv = getenv('APP_ALLOWED_HOSTNAMES') !== false ? getenv('APP_ALLOWED_HOSTNAMES') : getenv('app.allowedHostnames');
+        $extraHosts = array_filter(array_map('trim', explode(',', (string) $hostnamesEnv)));
         foreach ($extraHosts as $h) {
             if ($h !== '' && ! in_array($h, $this->allowedHostnames, true)) {
                 $this->allowedHostnames[] = $h;
             }
         }
 
-        $isHttpsEnv = getenv('app.forceHTTPS');
-        if ($isHttpsEnv === false || $isHttpsEnv === '') {
+        $forceEnv = getenv('APP_FORCE_HTTPS') !== false ? getenv('APP_FORCE_HTTPS') : getenv('app.forceHTTPS');
+        if ($forceEnv === false || $forceEnv === '') {
             $scheme = parse_url($this->baseURL, PHP_URL_SCHEME);
-            $isHttpsEnv = ($scheme === 'https') ? 'true' : 'false';
+            $forceEnv = ($scheme === 'https') ? 'true' : 'false';
         }
-        $forceSecure = filter_var($isHttpsEnv, FILTER_VALIDATE_BOOLEAN);
+        $forceSecure = filter_var($forceEnv, FILTER_VALIDATE_BOOLEAN);
         if ($forceSecure) {
             $this->forceGlobalSecureRequests = true;
             $this->cookie['secure'] = true;
