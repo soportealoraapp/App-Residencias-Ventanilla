@@ -1,0 +1,31 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "buildCommand": "echo 'Skipping build command; vendor/composer install handled by vercel runtime'",
+  "outputDirectory": "public",
+  "installCommand": "composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist",
+  "functions": {
+    "api/index.php": {
+      "runtime": "vercel-php@0.7.2"
+    }
+  },
+  "rewrites": [
+    { "source": "/assets/(.*)", "destination": "/public/assets/$1" },
+    { "source": "/(css|js|img|favicon.ico|robots.txt)", "destination": "/public/$1" },
+    { "source": "/(.*)", "destination": "/api/index.php" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Powered-By", "value": "" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
+    }
+  ],
+  "env": {
+    "CI_ENVIRONMENT": "production",
+    "COMPOSER_PROCESS_TIMEOUT": "600"
+  }
+}
