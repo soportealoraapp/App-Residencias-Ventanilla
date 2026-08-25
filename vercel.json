@@ -1,4 +1,4 @@
-{
+﻿{
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "installCommand": "bash scripts/vercel-install.sh",
@@ -22,56 +22,5 @@
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
       ]
     }
-  ],
-  "env": {
-    "CI_ENVIRONMENT": "production",
-    "COMPOSER_PROCESS_TIMEOUT": "600",
-    "COMPOSER_ALLOW_SUPERUSER": "1",
-
-    "APP_BASEURL": "https://app-residencias.vercel.app/",
-    "APP_FORCE_HTTPS": "true",
-    "APP_ALLOWED_HOSTNAMES": "app-residencias.vercel.app",
-
-    "DATABASE_DEFAULT_DBDRIVER": "Postgre",
-    "DATABASE_DEFAULT_HOSTNAME": "db.kuwxjtwjjefqpzubtrlc.supabase.co",
-    "DATABASE_DEFAULT_DATABASE": "postgres",
-    "DATABASE_DEFAULT_USERNAME": "postgres",
-    "DATABASE_DEFAULT_PASSWORD": "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",
-    "DATABASE_DEFAULT_PORT": "5432",
-    "DATABASE_DEFAULT_CHARSET": "utf8",
-    "DATABASE_DEFAULT_SCHEMA": "public",
-    "DATABASE_DEFAULT_SSLMODE": "require",
-    "DATABASE_DEFAULT_FOREIGNKEYS": "true",
-
-    "POSTGRES_HOST": "db.kuwxjtwjjefqpzubtrlc.supabase.co",
-    "POSTGRES_PORT": "5432",
-    "POSTGRES_USER": "postgres",
-    "POSTGRES_PASSWORD": "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",
-    "POSTGRES_DATABASE": "postgres",
-    "POSTGRES_URL_NON_POOLING": "postgres://postgres.kuwxjtwjjefqpzubtrlc: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@db.kuwxjtwjjefqpzubtrlc.supabase.co:5432/postgres?sslmode=require",
-    "POSTGRES_URL": "postgres://postgres.kuwxjtwjjefqpzubtrlc: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@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require",
-    "POSTGRES_PRISMA_URL": "postgres://postgres.kuwxjtwjjefqpzubtrlc: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@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require&pgbouncer=true",
-
-    "SUPABASE_URL": "https://kuwxjtwjjefqpzubtrlc.supabase.co",
-    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1d3hqdHdqamVmcXB6dWJ0cmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2ODg5ODQsImV4cCI6MjEwMzI2NDk4NH0.I52FP-sHJpyI_jKu4vrY0qu3nQ7TMMxUksM4gFhZzVQ",
-    "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1d3hqdHdqamVmcXB6dWJ0cmxjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NzY4ODk4NCwiZXhwIjoyMTAzMjY0OTg0fQ.luSCeCtGjqaZFomh5IgwyIKGFR_OjY66L3V3sDRcyfI",
-    "SUPABASE_JWT_SECRET": "1koqu+d21bMHtg6fKgR2vxTJmiLOMDVJsaBrFnQ/4XYEsnUii1egs+PUOEGBRhsxh/ImGmlNBmD0/PcDvZtGPA==",
-    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_MSomxnaUVqiTv4-lDnjBXg_CMJrxx7x",
-    "SUPABASE_SECRET_KEY": "sb_secret_7URs73IENOP_ZIjKi-UqjQ_b8aoNIt3",
-
-    "SECURITY_CSRFPROTECTION": "true",
-    "SECURITY_CSRFTOKENNAME": "csrf_csrf_token",
-    "SECURITY_CSRFCOOKIENAME": "csrf_cookie",
-    "SECURITY_CSRFEXPIRE": "7200",
-    "SECURITY_CSRFREGENERATE": "true",
-    "SECURITY_CSRFSAMESITE": "Lax",
-
-    "COOKIE_DOMAIN": ".app-residencias.vercel.app",
-    "COOKIE_SECURE": "true",
-    "COOKIE_HTTPONLY": "true",
-    "COOKIE_SAMESITE": "Lax",
-    "COOKIE_PATH": "/",
-
-    "APP_ENABLE_UR_TT_T_06": "false"
-  }
+  ]
 }
