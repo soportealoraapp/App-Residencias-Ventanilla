@@ -10,8 +10,7 @@ class CreateAuditoriaTable extends Migration
     {
         $this->forge->addField([
             'id' => [
-                'type'           => 'BIGINT',
-                'unsigned'       => true,
+                'type'           => 'BIGSERIAL',
                 'auto_increment' => true,
             ],
             'entidad' => [
@@ -21,7 +20,6 @@ class CreateAuditoriaTable extends Migration
             ],
             'entidad_id' => [
                 'type'     => 'BIGINT',
-                'unsigned' => true,
                 'null'     => true,
             ],
             'accion' => [
@@ -31,11 +29,10 @@ class CreateAuditoriaTable extends Migration
             ],
             'usuario_id' => [
                 'type'     => 'BIGINT',
-                'unsigned' => true,
                 'null'     => true,
             ],
             'fecha' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => false,
             ],
             'detalle' => [
@@ -43,7 +40,7 @@ class CreateAuditoriaTable extends Migration
                 'null' => true,
             ],
             'created_at' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
         ]);

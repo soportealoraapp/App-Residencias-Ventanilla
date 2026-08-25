@@ -10,8 +10,7 @@ class CreateConcesionesTable extends Migration
     {
         $this->forge->addField([
             'id' => [
-                'type'           => 'BIGINT',
-                'unsigned'       => true,
+                'type'           => 'BIGSERIAL',
                 'auto_increment' => true,
             ],
             'numero_titulo' => [
@@ -44,17 +43,17 @@ class CreateConcesionesTable extends Migration
                 'null' => true,
             ],
             'estatus' => [
-                'type'    => 'ENUM',
-                'values'  => ['vigente', 'vencida', 'en_transmision'],
-                'default' => 'vigente',
-                'null'    => false,
+                'type'       => 'VARCHAR',
+                'constraint' => 30,
+                'default'    => 'vigente',
+                'null'       => false,
             ],
             'created_at' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
             'updated_at' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
         ]);

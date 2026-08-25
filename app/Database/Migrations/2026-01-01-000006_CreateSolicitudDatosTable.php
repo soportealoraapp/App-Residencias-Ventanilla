@@ -10,13 +10,11 @@ class CreateSolicitudDatosTable extends Migration
     {
         $this->forge->addField([
             'id' => [
-                'type'           => 'BIGINT',
-                'unsigned'       => true,
+                'type'           => 'BIGSERIAL',
                 'auto_increment' => true,
             ],
             'solicitud_id' => [
                 'type'     => 'BIGINT',
-                'unsigned' => true,
                 'null'     => false,
             ],
             'clave' => [
@@ -29,11 +27,11 @@ class CreateSolicitudDatosTable extends Migration
                 'null' => true,
             ],
             'created_at' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
             'updated_at' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
         ]);

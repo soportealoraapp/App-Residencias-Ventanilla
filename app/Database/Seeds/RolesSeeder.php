@@ -27,5 +27,9 @@ class RolesSeeder extends Seeder
         ];
 
         $this->db->table('roles')->insertBatch($data);
+
+        if ($this->db->DBDriver === 'Postgre') {
+            $this->db->query("SELECT setval(pg_get_serial_sequence('roles', 'id'), COALESCE((SELECT MAX(id) FROM roles), 1))");
+        }
     }
 }

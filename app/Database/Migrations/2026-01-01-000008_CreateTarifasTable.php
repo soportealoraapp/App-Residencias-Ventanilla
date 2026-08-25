@@ -10,8 +10,7 @@ class CreateTarifasTable extends Migration
     {
         $this->forge->addField([
             'id' => [
-                'type'           => 'BIGINT',
-                'unsigned'       => true,
+                'type'           => 'BIGSERIAL',
                 'auto_increment' => true,
             ],
             'tramite' => [
@@ -43,17 +42,16 @@ class CreateTarifasTable extends Migration
                 'null'       => true,
             ],
             'placeholder_oficial' => [
-                'type'    => 'TINYINT',
-                'constraint' => 1,
+                'type'    => 'SMALLINT',
                 'default' => 1,
                 'null'    => false,
             ],
             'created_at' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
             'updated_at' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
         ]);

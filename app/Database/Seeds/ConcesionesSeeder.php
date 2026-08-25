@@ -39,5 +39,9 @@ class ConcesionesSeeder extends Seeder
         ];
 
         $this->db->table('concesiones')->insertBatch($data);
+
+        if ($this->db->DBDriver === 'Postgre') {
+            $this->db->query("SELECT setval(pg_get_serial_sequence('concesiones', 'id'), COALESCE((SELECT MAX(id) FROM concesiones), 1))");
+        }
     }
 }

@@ -10,8 +10,7 @@ class CreateRolesTable extends Migration
     {
         $this->forge->addField([
             'id' => [
-                'type'           => 'BIGINT',
-                'unsigned'       => true,
+                'type'           => 'BIGSERIAL',
                 'auto_increment' => true,
             ],
             'nombre' => [
@@ -26,11 +25,11 @@ class CreateRolesTable extends Migration
                 'null'       => true,
             ],
             'created_at' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
             'updated_at' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
         ]);

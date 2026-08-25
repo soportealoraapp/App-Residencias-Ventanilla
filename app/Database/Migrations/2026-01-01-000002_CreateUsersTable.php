@@ -10,8 +10,7 @@ class CreateUsersTable extends Migration
     {
         $this->forge->addField([
             'id' => [
-                'type'           => 'BIGINT',
-                'unsigned'       => true,
+                'type'           => 'BIGSERIAL',
                 'auto_increment' => true,
             ],
             'username' => [
@@ -51,8 +50,7 @@ class CreateUsersTable extends Migration
                 'null' => true,
             ],
             'activo' => [
-                'type'    => 'TINYINT',
-                'constraint' => 1,
+                'type'    => 'SMALLINT',
                 'default' => 1,
                 'null'    => false,
             ],
@@ -62,15 +60,15 @@ class CreateUsersTable extends Migration
                 'null'       => true,
             ],
             'reset_expira' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
             'created_at' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
             'updated_at' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
         ]);

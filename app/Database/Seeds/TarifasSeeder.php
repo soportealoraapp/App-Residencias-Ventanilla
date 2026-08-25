@@ -84,5 +84,9 @@ class TarifasSeeder extends Seeder
         ];
 
         $this->db->table('tarifas')->insertBatch($data);
+
+        if ($this->db->DBDriver === 'Postgre') {
+            $this->db->query("SELECT setval(pg_get_serial_sequence('tarifas', 'id'), COALESCE((SELECT MAX(id) FROM tarifas), 1))");
+        }
     }
 }

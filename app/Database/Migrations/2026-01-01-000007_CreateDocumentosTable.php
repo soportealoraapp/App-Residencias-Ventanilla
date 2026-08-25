@@ -10,13 +10,11 @@ class CreateDocumentosTable extends Migration
     {
         $this->forge->addField([
             'id' => [
-                'type'           => 'BIGINT',
-                'unsigned'       => true,
+                'type'           => 'BIGSERIAL',
                 'auto_increment' => true,
             ],
             'solicitud_id' => [
                 'type'     => 'BIGINT',
-                'unsigned' => true,
                 'null'     => false,
             ],
             'tipo_documento' => [
@@ -40,9 +38,8 @@ class CreateDocumentosTable extends Migration
                 'null'       => true,
             ],
             'tamano_bytes' => [
-                'type'     => 'INT',
-                'unsigned' => true,
-                'null'     => true,
+                'type' => 'BIGINT',
+                'null' => true,
             ],
             'hash_sha256' => [
                 'type'       => 'VARCHAR',
@@ -51,25 +48,23 @@ class CreateDocumentosTable extends Migration
             ],
             'usuario_id' => [
                 'type'     => 'BIGINT',
-                'unsigned' => true,
                 'null'     => false,
             ],
             'fecha_carga' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => false,
             ],
             'validado' => [
-                'type'    => 'TINYINT',
-                'constraint' => 1,
+                'type'    => 'SMALLINT',
                 'default' => 0,
                 'null'    => false,
             ],
             'created_at' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
             'updated_at' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
         ]);

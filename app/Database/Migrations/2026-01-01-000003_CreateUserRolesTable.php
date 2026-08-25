@@ -10,26 +10,23 @@ class CreateUserRolesTable extends Migration
     {
         $this->forge->addField([
             'id' => [
-                'type'           => 'BIGINT',
-                'unsigned'       => true,
+                'type'           => 'BIGSERIAL',
                 'auto_increment' => true,
             ],
             'user_id' => [
                 'type'     => 'BIGINT',
-                'unsigned' => true,
                 'null'     => false,
             ],
             'role_id' => [
                 'type'     => 'BIGINT',
-                'unsigned' => true,
                 'null'     => false,
             ],
             'created_at' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
             'updated_at' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
         ]);

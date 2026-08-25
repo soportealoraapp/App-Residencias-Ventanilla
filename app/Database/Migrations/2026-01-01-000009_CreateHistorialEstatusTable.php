@@ -10,13 +10,11 @@ class CreateHistorialEstatusTable extends Migration
     {
         $this->forge->addField([
             'id' => [
-                'type'           => 'BIGINT',
-                'unsigned'       => true,
+                'type'           => 'BIGSERIAL',
                 'auto_increment' => true,
             ],
             'solicitud_id' => [
                 'type'     => 'BIGINT',
-                'unsigned' => true,
                 'null'     => false,
             ],
             'estatus_anterior' => [
@@ -31,11 +29,10 @@ class CreateHistorialEstatusTable extends Migration
             ],
             'usuario_id' => [
                 'type'     => 'BIGINT',
-                'unsigned' => true,
                 'null'     => true,
             ],
             'fecha' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => false,
             ],
             'comentario' => [
@@ -43,11 +40,11 @@ class CreateHistorialEstatusTable extends Migration
                 'null' => true,
             ],
             'created_at' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
             'updated_at' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
         ]);

@@ -52,5 +52,10 @@ class UsuariosDemoSeeder extends Seeder
         ];
 
         $this->db->table('user_roles')->insertBatch($userRoles);
+
+        if ($this->db->DBDriver === 'Postgre') {
+            $this->db->query("SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE((SELECT MAX(id) FROM users), 1))");
+            $this->db->query("SELECT setval(pg_get_serial_sequence('user_roles', 'id'), COALESCE((SELECT MAX(id) FROM user_roles), 1))");
+        }
     }
 }

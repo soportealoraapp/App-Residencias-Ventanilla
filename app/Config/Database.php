@@ -20,18 +20,20 @@ class Database extends Config
         'DBPrefix'     => '',
         'pConnect'     => false,
         'DBDebug'      => true,
-        'charset'      => 'utf8mb4',
-        'DBCollat'     => 'utf8mb4_general_ci',
+        'charset'      => 'utf8',
+        'DBCollat'     => '',
         'swapPre'      => '',
         'encrypt'      => false,
         'compress'     => false,
         'strictOn'     => false,
         'failover'     => [],
-        'port'         => 3306,
+        'port'         => 5432,
         'numberNative' => false,
         'foundRows'    => false,
         'foreignKeys'  => true,
         'busyTimeout'  => 1000,
+        'schema'       => 'public',
+        'sslmode'      => 'require',
     ];
 
     public array $tests = [
@@ -51,41 +53,94 @@ class Database extends Config
         'compress'    => false,
         'strictOn'    => false,
         'failover'    => [],
-        'port'        => 3306,
+        'port'        => 5432,
         'foreignKeys' => true,
         'busyTimeout' => 1000,
+        'schema'      => 'public',
     ];
+
+    /**
+     * Resuelve una variable de entorno con orden de prioridad:
+     *  1. POSTGRES_*       (estandar Supabase)
+     *  2. DATABASE_DEFAULT_*  (formato Vercel compatible)
+     *  3. database.default.* (formato legacy CodeIgniter con puntos)
+     *
+     * @param list<string> $candidates Lista de nombres de variable a probar en orden
+     * @return false|string false si no existe, string con el valor si existe
+     */
+    private function resolveEnv(array $candidates)
+    {
+        foreach ($candidates as $name) {
+            $val = getenv($name);
+            if ($val !== false && $val !== '') {
+                return $val;
+            }
+        }
+        return false;
+    }
 
     public function __construct()
     {
         parent::__construct();
 
-        if (getenv('database.default.hostname')) {
-            $this->default['hostname'] = getenv('database.default.hostname');
+        $hostname = $this->resolveEnv(['POSTGRES_HOST', 'DATABASE_DEFAULT_HOSTNAME', 'database.default.hostname']);
+        if (is_string($hostname)) {
+            $this->default['hostname'] = $hostname;
         }
-        if (getenv('database.default.database')) {
-            $this->default['database'] = getenv('database.default.database');
+
+        $database = $this->resolveEnv(['POSTGRES_DATABASE', 'DATABASE_DEFAULT_DATABASE', 'database.default.database']);
+        if (is_string($database)) {
+            $this->default['database'] = $database;
         }
-        if (getenv('database.default.username')) {
-            $this->default['username'] = getenv('database.default.username');
+
+        $username = $this->resolveEnv(['POSTGRES_USER', 'DATABASE_DEFAULT_USERNAME', 'database.default.username']);
+        if (is_string($username)) {
+            $this->default['username'] = $username;
         }
-        if (getenv('database.default.password') !== false) {
-            $this->default['password'] = getenv('database.default.password');
+
+        $password = $this->resolveEnv(['POSTGRES_PASSWORD', 'DATABASE_DEFAULT_PASSWORD', 'database.default.password']);
+        if (is_string($password)) {
+            $this->default['password'] = $password;
         }
-        if (getenv('database.default.DBDriver')) {
-            $this->default['DBDriver'] = getenv('database.default.DBDriver');
+
+        $dbdriver = $this->resolveEnv(['DATABASE_DEFAULT_DBDRIVER', 'database.default.DBDriver']);
+        if (is_string($dbdriver)) {
+            $this->default['DBDriver'] = $dbdriver;
         }
-        if (getenv('database.default.DBPrefix') !== false) {
-            $this->default['DBPrefix'] = getenv('database.default.DBPrefix');
+
+        $dbprefix = $this->resolveEnv(['DATABASE_DEFAULT_DBPREFIX', 'database.default.DBPrefix']);
+        if ($dbprefix !== false) {
+            $this->default['DBPrefix'] = $dbprefix;
         }
-        if (getenv('database.default.port')) {
-            $this->default['port'] = (int) getenv('database.default.port');
+
+        $port = $this->resolveEnv(['POSTGRES_PORT', 'DATABASE_DEFAULT_PORT', 'database.default.port']);
+        if (is_string($port)) {
+            $this->default['port'] = (int) $port;
         }
-        if (getenv('database.default.foreignKeys') !== false) {
-            $this->default['foreignKeys'] = filter_var(getenv('database.default.foreignKeys'), FILTER_VALIDATE_BOOLEAN);
+
+        $charset = $this->resolveEnv(['DATABASE_DEFAULT_CHARSET', 'database.default.charset']);
+        if (is_string($charset)) {
+            $this->default['charset'] = $charset;
         }
-        if (getenv('database.default.busyTimeout') !== false) {
-            $this->default['busyTimeout'] = (int) getenv('database.default.busyTimeout');
+
+        $schema = $this->resolveEnv(['DATABASE_DEFAULT_SCHEMA', 'database.default.schema']);
+        if (is_string($schema)) {
+            $this->default['schema'] = $schema;
+        }
+
+        $sslmode = $this->resolveEnv(['DATABASE_DEFAULT_SSLMODE', 'database.default.sslmode']);
+        if (is_string($sslmode)) {
+            $this->default['sslmode'] = $sslmode;
+        }
+
+        $foreignKeys = $this->resolveEnv(['DATABASE_DEFAULT_FOREIGNKEYS', 'database.default.foreignKeys']);
+        if (is_string($foreignKeys)) {
+            $this->default['foreignKeys'] = filter_var($foreignKeys, FILTER_VALIDATE_BOOLEAN);
+        }
+
+        $busyTimeout = $this->resolveEnv(['DATABASE_DEFAULT_BUSYTIMEOUT', 'database.default.busyTimeout']);
+        if (is_string($busyTimeout)) {
+            $this->default['busyTimeout'] = (int) $busyTimeout;
         }
     }
 }

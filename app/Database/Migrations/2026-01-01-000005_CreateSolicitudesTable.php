@@ -10,8 +10,7 @@ class CreateSolicitudesTable extends Migration
     {
         $this->forge->addField([
             'id' => [
-                'type'           => 'BIGINT',
-                'unsigned'       => true,
+                'type'           => 'BIGSERIAL',
                 'auto_increment' => true,
             ],
             'folio' => [
@@ -21,13 +20,12 @@ class CreateSolicitudesTable extends Migration
                 'null'       => false,
             ],
             'tramite' => [
-                'type'    => 'ENUM',
-                'values'  => ['UR-TT-T-07', 'UR-TT-T-06'],
-                'null'    => false,
+                'type'       => 'VARCHAR',
+                'constraint' => 20,
+                'null'       => false,
             ],
             'ciudadano_id' => [
                 'type'     => 'BIGINT',
-                'unsigned' => true,
                 'null'     => false,
             ],
             'estatus' => [
@@ -41,15 +39,15 @@ class CreateSolicitudesTable extends Migration
                 'null'       => true,
             ],
             'fecha_solicitud' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => false,
             ],
             'fecha_resolucion' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
             'fecha_pago' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
             'fecha_vigencia_inicio' => [
@@ -65,11 +63,11 @@ class CreateSolicitudesTable extends Migration
                 'null' => true,
             ],
             'created_at' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
             'updated_at' => [
-                'type' => 'DATETIME',
+                'type' => 'TIMESTAMP',
                 'null' => true,
             ],
         ]);
