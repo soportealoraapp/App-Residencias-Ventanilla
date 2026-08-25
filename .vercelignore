@@ -1,0 +1,16 @@
+vendor/
+writable/
+php82/
+php-8.2.25-Win32-vs16-x64.zip
+phpunit.xml.dist
+tests/
+supabase/
+scripts/
+.git/
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+coverage/
+.phpunit.cache/
