@@ -38,7 +38,9 @@ class App extends BaseConfig
         // En un entorno serverless de Vercel toda la infraestructura es de
         // confianza, por lo que aceptamos cualquier IP de proxy.
         // ----------------------------------------------------------------
-        $this->proxyIPs = ['0.0.0.0/0'];
+        $this->proxyIPs = [
+            '0.0.0.0/0' => 'X-Forwarded-For',
+        ];
 
         $envBaseUrl = getenv('APP_BASEURL') !== false ? getenv('APP_BASEURL') : getenv('app.baseURL');
         if (is_string($envBaseUrl) && $envBaseUrl !== '') {
