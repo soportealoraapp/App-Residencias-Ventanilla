@@ -25,15 +25,34 @@ class Cache extends BaseConfig
     public string $handler = 'file';
 
     /**
-     * --------------------------------------------------------------------------
-     * Backup Handler
-     * --------------------------------------------------------------------------
-     *
-     * The name of the handler that will be used in case the first one is
-     * unreachable. Often, 'file' is used here since the filesystem is
-     * always available, though that's not always practical for the app.
+     * Backup Handler.
      */
     public string $backupHandler = 'dummy';
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        if ($this->isVercel()) {
+            $this->handler      = 'dummy';
+            $this->backupHandler = 'dummy';
+        }
+    }
+
+    private function isVercel(): bool
+    {
+        $vercel = getenv('VERCEL');
+        if (is_string($vercel) && ($vercel === '1' || strtolower($vercel) === 'true')) {
+            return true;
+        }
+
+        $vercelEnv = getenv('VERCEL_ENV');
+        if (is_string($vercelEnv) && $vercelEnv !== '') {
+            return true;
+        }
+
+        return false;
+    }
 
     /**
      * --------------------------------------------------------------------------

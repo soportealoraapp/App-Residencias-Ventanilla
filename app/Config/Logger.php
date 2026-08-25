@@ -3,6 +3,7 @@
 namespace Config;
 
 use CodeIgniter\Config\BaseConfig;
+use CodeIgniter\Log\Handlers\ErrorlogHandler;
 use CodeIgniter\Log\Handlers\FileHandler;
 use CodeIgniter\Log\Handlers\HandlerInterface;
 
@@ -76,76 +77,49 @@ class Logger extends BaseConfig
      *
      * @var array<class-string<HandlerInterface>, array<string, int|list<string>|string>>
      */
-    public array $handlers = [
-        /*
-         * --------------------------------------------------------------------
-         * File Handler
-         * --------------------------------------------------------------------
-         */
-        FileHandler::class => [
-            // The log levels that this handler will handle.
-            'handles' => [
-                'critical',
-                'alert',
-                'emergency',
-                'debug',
-                'error',
-                'info',
-                'notice',
-                'warning',
-            ],
+    public array $handlers = [];
 
-            /*
-             * The default filename extension for log files.
-             * An extension of 'php' allows for protecting the log files via basic
-             * scripting, when they are to be stored under a publicly accessible directory.
-             *
-             * NOTE: Leaving it blank will default to 'log'.
-             */
-            'fileExtension' => '',
+    public function __construct()
+    {
+        parent::__construct();
 
-            /*
-             * The file system permissions to be applied on newly created log files.
-             *
-             * IMPORTANT: This MUST be an integer (no quotes) and you MUST use octal
-             * integer notation (i.e. 0700, 0644, etc.)
-             */
-            'filePermissions' => 0644,
+        if ($this->isVercel()) {
+            $this->handlers = [
+                ErrorlogHandler::class => [
+                    'handles' => [
+                        'critical', 'alert', 'emergency', 'debug',
+                        'error', 'info', 'notice', 'warning',
+                    ],
+                    'messageType' => 0,
+                ],
+            ];
+        } else {
+            $this->handlers = [
+                FileHandler::class => [
+                    'handles' => [
+                        'critical', 'alert', 'emergency', 'debug',
+                        'error', 'info', 'notice', 'warning',
+                    ],
+                    'fileExtension'  => '',
+                    'filePermissions' => 0644,
+                    'path'           => '',
+                ],
+            ];
+        }
+    }
 
-            /*
-             * Logging Directory Path
-             *
-             * By default, logs are written to WRITEPATH . 'logs/'
-             * Specify a different destination here, if desired.
-             */
-            'path' => '',
-        ],
+    private function isVercel(): bool
+    {
+        $vercel = getenv('VERCEL');
+        if (is_string($vercel) && ($vercel === '1' || strtolower($vercel) === 'true')) {
+            return true;
+        }
 
-        /*
-         * The ChromeLoggerHandler requires the use of the Chrome web browser
-         * and the ChromeLogger extension. Uncomment this block to use it.
-         */
-        // 'CodeIgniter\Log\Handlers\ChromeLoggerHandler' => [
-        //     /*
-        //      * The log levels that this handler will handle.
-        //      */
-        //     'handles' => ['critical', 'alert', 'emergency', 'debug',
-        //                   'error', 'info', 'notice', 'warning'],
-        // ],
+        $vercelEnv = getenv('VERCEL_ENV');
+        if (is_string($vercelEnv) && $vercelEnv !== '') {
+            return true;
+        }
 
-        /*
-         * The ErrorlogHandler writes the logs to PHP's native `error_log()` function.
-         * Uncomment this block to use it.
-         */
-        // 'CodeIgniter\Log\Handlers\ErrorlogHandler' => [
-        //     /* The log levels this handler can handle. */
-        //     'handles' => ['critical', 'alert', 'emergency', 'debug', 'error', 'info', 'notice', 'warning'],
-        //
-        //     /*
-        //     * The message type where the error should go. Can be 0 or 4, or use the
-        //     * class constants: `ErrorlogHandler::TYPE_OS` (0) or `ErrorlogHandler::TYPE_SAPI` (4)
-        //     */
-        //     'messageType' => 0,
-        // ],
-    ];
+        return false;
+    }
 }

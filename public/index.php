@@ -3,6 +3,10 @@
 use CodeIgniter\Boot;
 use Config\Paths;
 
+if (getenv('CI_ENVIRONMENT') === false && ! defined('CI_ENVIRONMENT')) {
+    define('CI_ENVIRONMENT', 'production');
+}
+
 $minPhpVersion = '8.1';
 if (version_compare(PHP_VERSION, $minPhpVersion, '<')) {
     $message = sprintf(

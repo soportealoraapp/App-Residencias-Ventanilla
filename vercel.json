@@ -3,13 +3,14 @@
   "version": 2,
   "installCommand": "bash scripts/vercel-install.sh",
   "functions": {
-    "api/**/*.php": {
-      "runtime": "vercel-php@0.7.2"
+    "api/index.php": {
+      "runtime": "vercel-php@0.7.4"
     }
   },
   "rewrites": [
     { "source": "/assets/(.*)", "destination": "/public/assets/$1" },
-    { "source": "/(css|js|img|favicon\\.ico|robots\\.txt)", "destination": "/public/$1" },
+    { "source": "/(css|js|img)/(.*)", "destination": "/public/$1/$2" },
+    { "source": "/(favicon\\.ico|robots\\.txt)", "destination": "/public/$1" },
     { "source": "/(.*)", "destination": "/api/index.php" }
   ],
   "cleanUrls": true,

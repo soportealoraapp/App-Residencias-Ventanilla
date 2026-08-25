@@ -104,4 +104,28 @@ class Cookie extends BaseConfig
      * @see https://tools.ietf.org/html/rfc2616#section-2.2
      */
     public bool $raw = false;
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        if ($this->isVercel()) {
+            $this->secure = true;
+        }
+    }
+
+    private function isVercel(): bool
+    {
+        $vercel = getenv('VERCEL');
+        if (is_string($vercel) && ($vercel === '1' || strtolower($vercel) === 'true')) {
+            return true;
+        }
+
+        $vercelEnv = getenv('VERCEL_ENV');
+        if (is_string($vercelEnv) && $vercelEnv !== '') {
+            return true;
+        }
+
+        return false;
+    }
 }
