@@ -25,7 +25,7 @@
                 </div>
             <?php endif ?>
 
-            <form method="POST" action="/auth/reset/<?= esc($token) ?>">
+            <?= form_open('/auth/reset/' . esc($token)) ?>
                 <input type="hidden" name="token" value="<?= esc($token) ?>">
                 <div class="mb-3">
                     <label for="password" class="form-label">Nueva contraseña</label>
@@ -38,7 +38,7 @@
                 <div class="d-grid gap-2">
                     <button type="submit" class="btn btn-info btn-lg text-white">Actualizar contraseña</button>
                 </div>
-            </form>
+            <?= form_close() ?>
         <?php endif ?>
         <div class="mt-4 text-center">
             <p class="mb-0">

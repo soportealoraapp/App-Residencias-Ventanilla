@@ -51,4 +51,15 @@ class TarifarioService
 
         return (int)$tarifa->placeholder_oficial === 1;
     }
+
+    public function esPlaceholderT07(string $tipoSolicitante, string $periodo, int $numCamiones = 1): bool
+    {
+        $criterio = strtolower($tipoSolicitante) . '_' . $periodo;
+        return $this->esPlaceholder('UR-TT-T-07', $criterio);
+    }
+
+    public function esPlaceholderT06(): bool
+    {
+        return $this->esPlaceholder('UR-TT-T-06', 'cesion_concesion_base');
+    }
 }

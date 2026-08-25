@@ -23,7 +23,7 @@
             </div>
         <?php endif ?>
 
-        <form method="POST" action="/auth/attempt-login">
+        <?= form_open('/auth/attempt-login') ?>
             <div class="mb-3">
                 <label for="username" class="form-label">Usuario o Correo electrónico</label>
                 <input type="text" class="form-control" id="username" name="username" value="<?= old('username') ?>" placeholder="Ingresa tu usuario o email" required>
@@ -35,7 +35,7 @@
             <div class="d-grid gap-2">
                 <button type="submit" class="btn btn-primary btn-lg">Iniciar sesión</button>
             </div>
-        </form>
+        <?= form_close() ?>
         <div class="mt-4 text-center">
             <p class="mb-1">
                 <a href="/auth/register" class="text-decoration-none">No tienes cuenta? Regístrate</a>

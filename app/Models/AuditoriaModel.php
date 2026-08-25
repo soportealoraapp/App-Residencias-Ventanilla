@@ -19,6 +19,7 @@ class AuditoriaModel extends Model
         'usuario_id',
         'fecha',
         'detalle',
+        'created_at',
     ];
     protected $useTimestamps    = false;
     protected $dateFormat       = 'datetime';

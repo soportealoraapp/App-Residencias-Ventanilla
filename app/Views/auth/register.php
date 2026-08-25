@@ -17,7 +17,7 @@
             </div>
         <?php endif ?>
 
-        <form method="POST" action="/auth/attempt-register">
+        <?= form_open('/auth/attempt-register') ?>
             <div class="mb-3">
                 <label for="nombre_completo" class="form-label">Nombre completo</label>
                 <input type="text" class="form-control" id="nombre_completo" name="nombre_completo" value="<?= old('nombre_completo') ?>" placeholder="Nombre(s) y apellidos" required>
@@ -45,7 +45,7 @@
             <div class="d-grid gap-2">
                 <button type="submit" class="btn btn-success btn-lg">Crear cuenta</button>
             </div>
-        </form>
+        <?= form_close() ?>
         <div class="mt-4 text-center">
             <p class="mb-0">
                 <a href="/auth/login" class="text-decoration-none">Ya tienes cuenta? Inicia sesión</a>

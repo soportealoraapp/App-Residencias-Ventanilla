@@ -9,7 +9,7 @@ $routes->setDefaultController('Home');
 $routes->setDefaultMethod('index');
 $routes->setTranslateURIDashes(false);
 $routes->set404Override();
-$routes->setPrioritize(false);
+$routes->setPrioritize(true);
 $routes->setAutoRoute(true);
 
 $routes->get('auth/login', 'AuthController::login', ['as' => 'login']);
@@ -48,6 +48,10 @@ $routes->get('/', 'Home::index');
 $routes->get('login', 'AuthController::login');
 $routes->get('register', 'AuthController::register');
 $routes->get('logout', 'AuthController::logout');
+
+$routes->get('portal', static function () {
+    return redirect()->route('portal.dashboard');
+});
 
 $routes->group('portal', ['filter' => 'auth'], static function ($routes) {
     $routes->get('dashboard', 'Portal\PortalController::dashboard', ['as' => 'portal.dashboard']);

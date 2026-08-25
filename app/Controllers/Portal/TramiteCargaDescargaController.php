@@ -83,7 +83,7 @@ class TramiteCargaDescargaController extends Controller
         try {
             $monto = $this->tarifarioService->calcularMontoUrTtT07($tipoSolicitante, $periodo, $numCamiones);
             if ($monto === null) {
-                return $response->setJSON(['success' => false, 'mensaje' => 'No hay tarifa configurada para esta combinación.']);
+                return $response->setJSON(['success' => false, 'mensaje' => 'No hay tarifa configurada para esta combinación.', csrf_token() => csrf_hash()]);
             }
             $placeholder = $this->tarifarioService->esPlaceholderT07($tipoSolicitante, $periodo, $numCamiones);
             return $response->setJSON([
@@ -91,9 +91,10 @@ class TramiteCargaDescargaController extends Controller
                 'monto'     => $monto,
                 'placeholder' => $placeholder,
                 'mensaje'   => 'OK',
+                csrf_token() => csrf_hash(),
             ]);
         } catch (\Exception $e) {
-            return $response->setJSON(['success' => false, 'mensaje' => 'Error al calcular monto: ' . $e->getMessage()]);
+            return $response->setJSON(['success' => false, 'mensaje' => 'Error al calcular monto: ' . $e->getMessage(), csrf_token() => csrf_hash()]);
         }
     }
 
@@ -278,7 +279,8 @@ class TramiteCargaDescargaController extends Controller
         $this->estadoService->cambiarEstatus($solicitudId, 'Pagado', null, 'Pago procesado vía mock BanBajío ref: ' . $gatewayRef);
 
         $datos = $this->solicitudDatoModel->porSolicitudAgrupado($solicitudId);
-        $this->estadoService->calcularVigenciaT07($solicitudId, $datos);
+        $periodo = $datos['periodo'] ?? 'dia';
+        $this->estadoService->calcularVigenciaT07($solicitudId, $periodo);
 
         $this->estadoService->cambiarEstatus($solicitudId, 'Permiso emitido', null, 'Emisión automática después de pago');
         $this->estadoService->cambiarEstatus($solicitudId, 'Vigente', null, 'Permiso activo');

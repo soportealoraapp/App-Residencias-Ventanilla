@@ -16,9 +16,9 @@
 <div class="card border-0 shadow-sm">
     <div class="card-body p-4">
         <?php if ($modo === 'nuevo'): ?>
-            <form method="post" action="/admin/concesiones/guardar">
+            <?= form_open('/admin/concesiones/guardar') ?>
         <?php else: ?>
-            <form method="post" action="/admin/concesiones/actualizar/<?= $concesion->id ?>">
+            <?= form_open('/admin/concesiones/actualizar/' . $concesion->id) ?>
                 <input type="hidden" name="id" value="<?= $concesion->id ?>">
         <?php endif; ?>
 
@@ -84,7 +84,7 @@
                     <?= $modo === 'nuevo' ? 'Crear concesión (stub)' : 'Guardar cambios' ?>
                 </button>
             </div>
-        </form>
+        <?= form_close() ?>
     </div>
 </div>
 

@@ -18,9 +18,9 @@
 <div class="card border-0 shadow-sm">
     <div class="card-body p-4">
         <?php if ($modo === 'nuevo'): ?>
-            <form method="post" action="/admin/tarifas/guardar">
+            <?= form_open('/admin/tarifas/guardar') ?>
         <?php else: ?>
-            <form method="post" action="/admin/tarifas/actualizar/<?= $tarifa->id ?>">
+            <?= form_open('/admin/tarifas/actualizar/' . $tarifa->id) ?>
                 <input type="hidden" name="id" value="<?= $tarifa->id ?>">
         <?php endif; ?>
 
@@ -97,7 +97,7 @@
                     <?= $modo === 'nuevo' ? 'Crear tarifa' : 'Guardar cambios' ?>
                 </button>
             </div>
-        </form>
+        <?= form_close() ?>
     </div>
 </div>
 

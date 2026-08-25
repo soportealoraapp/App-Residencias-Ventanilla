@@ -23,7 +23,7 @@
             </div>
         <?php endif ?>
 
-        <form method="POST" action="/auth/attempt-forgot">
+        <?= form_open('/auth/attempt-forgot') ?>
             <div class="mb-4">
                 <label for="email" class="form-label">Correo electrónico</label>
                 <input type="email" class="form-control" id="email" name="email" value="<?= old('email') ?>" placeholder="correo@ejemplo.com" required>
@@ -31,7 +31,7 @@
             <div class="d-grid gap-2">
                 <button type="submit" class="btn btn-warning btn-lg">Enviar link</button>
             </div>
-        </form>
+        <?= form_close() ?>
         <div class="mt-4 text-center">
             <p class="mb-0">
                 <a href="/auth/login" class="text-decoration-none">Volver al inicio de sesión</a>

@@ -29,6 +29,20 @@ class EstadoSolicitudService
         'RECHAZADO' => 'Rechazado',
     ];
 
+    public const ESTATUS_MAESTRO = [
+        'Recibido',
+        'En revisión documental',
+        'Prevención',
+        'Dictaminado aprobado',
+        'Pago pendiente',
+        'Pagado',
+        'Permiso emitido',
+        'Vigente',
+        'Vencido',
+        'Concluido',
+        'Rechazado',
+    ];
+
     public const TRANSICIONES_VALIDAS = [
         'UR-TT-T-07' => [
             'Recibido' => ['Pago pendiente', 'Rechazado'],
@@ -136,8 +150,8 @@ class EstadoSolicitudService
         }
 
         $solicitudModel->update($solicitudId, [
-            'fecha_vigencia_inicio' => $fechaInicio->format('Y-m-d H:i:s'),
-            'fecha_vigencia_fin' => $fechaFin->format('Y-m-d H:i:s'),
+            'fecha_vigencia_inicio' => $fechaInicio->format('Y-m-d'),
+            'fecha_vigencia_fin' => $fechaFin->format('Y-m-d'),
         ]);
     }
 }

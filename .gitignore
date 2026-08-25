@@ -1,0 +1,36 @@
+# Dependencias
+/vendor/
+
+# Entorno local
+.env
+.env.local
+.env.*.local
+
+# Archivos IDE / editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Writable de CodeIgniter 4 — logs, caché, sesiones, debugbar, uploads privados
+writable/debugbar/*
+writable/logs/*
+writable/session/*
+writable/cache/*
+writable/uploads/*
+writable/database.sqlite
+writable/database.sqlite-shm
+writable/database.sqlite-wal
+!writable/.htaccess
+!writable/index.html
+
+# Archivos temporales / pruebas
+phpunit.xml.bak
+coverage/
+.phpunit.cache/
+
+# Credenciales / tokens
+*.pem
+*.key
+composer.phar

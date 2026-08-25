@@ -293,6 +293,9 @@ $oldMudanza = old('es_mudanza') !== null;
         }
     }
 
+    let csrfActualHash = '<?= csrf_hash() ?>';
+    const csrfActualName = '<?= csrf_token() ?>';
+
     function recalcularMonto() {
         const tipo = document.querySelector('input[name="tipo_solicitante"]:checked').value;
         const periodo = periodoSel.value;
@@ -309,6 +312,7 @@ $oldMudanza = old('es_mudanza') !== null;
         data.append('tipo_solicitante', tipo);
         data.append('periodo', periodo);
         data.append('num_camiones', String(numCam));
+        data.append(csrfActualName, csrfActualHash);
 
         fetch(endpoint, {
             method: 'POST',
@@ -318,6 +322,9 @@ $oldMudanza = old('es_mudanza') !== null;
         })
         .then(r => r.json())
         .then(json => {
+            if (json && json[csrfActualName]) {
+                csrfActualHash = json[csrfActualName];
+            }
             if (json && json.success) {
                 badgePrecio.textContent = formatearDinero(json.monto);
                 if (json.placeholder) {
