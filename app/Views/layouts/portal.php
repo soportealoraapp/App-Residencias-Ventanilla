@@ -16,7 +16,7 @@
 <nav class="navbar navbar-expand-md navbar-uriangato">
     <div class="container">
         <a class="navbar-brand" href="/portal">
-            <img src="/logo-uri.webp" alt="Logo Uriangato" class="d-inline-block align-text-top me-2" style="height: 38px;">
+            <img src="<?= base_url('logo-uri.webp') ?>" alt="Logo Uriangato" class="d-inline-block align-text-top me-2" style="height: 38px;">
             <span>Ventanilla Digital</span>
         </a>
         <button class="navbar-toggler border-0 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#navPortal" aria-controls="navPortal" aria-expanded="false" aria-label="Abrir menú">
@@ -133,7 +133,7 @@
         <div class="row align-items-center gy-3">
             <div class="col-md-6 text-md-start">
                 <div class="d-flex align-items-center">
-                    <img src="/logo-uri.webp" alt="Logo Uriangato" class="me-3" style="height: 48px;">
+                    <img src="<?= base_url('logo-uri.webp') ?>" alt="Logo Uriangato" class="me-3" style="height: 48px;">
                     <div>
                         <h6 class="text-white mb-1 fw-bold">H. Ayuntamiento de Uriangato, Gto.</h6>
                         <p class="mb-0 small text-white-50">Dirección de Movilidad y Transporte · Ventanilla Digital</p>

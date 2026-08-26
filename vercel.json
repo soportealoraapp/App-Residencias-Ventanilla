@@ -10,7 +10,7 @@
   "routes": [
     { "src": "/assets/(.*)", "dest": "/public/assets/$1" },
     { "src": "/(css|js|img)/(.*)", "dest": "/public/$1/$2" },
-    { "src": "/(favicon\\.ico|robots\\.txt)", "dest": "/public/$1" },
+    { "src": "/(favicon\\.ico|robots\\.txt|logo-uri\\.webp)", "dest": "/public/$1" },
     { "src": "/(.*)", "dest": "/api/index.php" }
   ],
   "headers": [

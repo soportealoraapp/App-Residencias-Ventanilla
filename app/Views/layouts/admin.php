@@ -21,7 +21,7 @@
     <aside class="sidebar-admin" id="sidebarAdmin">
         <div class="sidebar-brand">
             <div class="d-flex align-items-center">
-                <img src="/logo-uri.webp" alt="Logo Uriangato" class="me-2" style="height: 32px;">
+                <img src="<?= base_url('logo-uri.webp') ?>" alt="Logo Uriangato" class="me-2" style="height: 32px;">
                 <span>Panel Admin</span>
             </div>
             <button type="button" class="btn-close btn-close-white d-lg-none" id="btnCloseSidebar" aria-label="Cerrar"></button>

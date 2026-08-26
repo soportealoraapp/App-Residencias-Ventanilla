@@ -5,7 +5,7 @@
     <div class="col-lg-10 text-center">
         <div class="mb-4 mb-md-5">
             <div class="mb-3 mb-md-4">
-                <img src="/logo-uri.webp" alt="Logo H. Ayuntamiento de Uriangato" style="height: 96px;">
+                <img src="<?= base_url('logo-uri.webp') ?>" alt="Logo H. Ayuntamiento de Uriangato" style="height: 96px;">
             </div>
             <h1 class="display-5 fw-bold mb-2 mb-md-3">Ventanilla Digital de Movilidad</h1>
             <p class="lead text-muted mb-3 mb-md-4">Gobierno Digital del H. Ayuntamiento de Uriangato, Gto.</p>
