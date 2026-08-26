@@ -51,6 +51,7 @@ $routes->get('logout', 'AuthController::logout');
 
 
 $routes->group('portal', ['filter' => 'auth'], static function ($routes) {
+    $routes->get('', 'Portal\PortalController::dashboard');       // /portal → dashboard
     $routes->get('dashboard', 'Portal\PortalController::dashboard', ['as' => 'portal.dashboard']);
     $routes->get('tramites', 'Portal\PortalController::tramites', ['as' => 'portal.tramites']);
     $routes->get('mis-solicitudes', 'Portal\PortalController::misSolicitudes', ['as' => 'portal.mis_solicitudes']);

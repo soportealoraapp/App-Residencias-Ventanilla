@@ -61,4 +61,36 @@ class UserModel extends Model
 
         return in_array($rolNombre, $roles, true);
     }
+
+    /**
+     * Asigna un rol a un usuario por nombre del rol.
+     * Busca el rol en la tabla roles y crea el registro en user_roles.
+     */
+    public function asignarRol(int $userId, string $rolNombre): bool
+    {
+        $rol = $this->db->table('roles')
+            ->where('nombre', $rolNombre)
+            ->get()
+            ->getRow();
+
+        if ($rol === null) {
+            return false;
+        }
+
+        $exists = $this->db->table('user_roles')
+            ->where('user_id', $userId)
+            ->where('role_id', $rol->id)
+            ->countAllResults();
+
+        if ($exists > 0) {
+            return true; // ya tiene el rol
+        }
+
+        return (bool) $this->db->table('user_roles')->insert([
+            'user_id'    => $userId,
+            'role_id'    => $rol->id,
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
 }
