@@ -4,8 +4,8 @@
 <div class="row justify-content-center align-items-center py-3 py-md-5">
     <div class="col-lg-10 text-center">
         <div class="mb-4 mb-md-5">
-            <div class="bg-primary bg-opacity-10 d-inline-flex p-3 p-md-4 rounded-4 mb-3 mb-md-4 shadow-sm text-primary">
-                <i class="bi bi-bank2 fs-1"></i>
+            <div class="mb-3 mb-md-4">
+                <img src="/logo-uri.webp" alt="Logo H. Ayuntamiento de Uriangato" style="height: 96px;">
             </div>
             <h1 class="display-5 fw-bold mb-2 mb-md-3">Ventanilla Digital de Movilidad</h1>
             <p class="lead text-muted mb-3 mb-md-4">Gobierno Digital del H. Ayuntamiento de Uriangato, Gto.</p>

@@ -15,6 +15,9 @@
 </head>
 <body>
     <div class="auth-wrapper">
+        <div class="text-center mb-4">
+            <img src="/logo-uri.webp" alt="Logo Uriangato" style="height: 72px;">
+        </div>
         <div class="auth-card">
             <?= $this->renderSection('content') ?>
         </div>
