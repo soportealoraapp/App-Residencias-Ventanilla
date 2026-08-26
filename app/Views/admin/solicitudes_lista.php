@@ -31,15 +31,15 @@ if (\App\Libraries\FeatureFlags::habilitarUrTtT06()) {
 $estatusLista = \App\Libraries\EstadoSolicitudService::ESTATUS_MAESTRO;
 ?>
 
-<div class="card mb-4">
-    <div class="card-header">
-        <h6 class="mb-0">Filtros</h6>
+<div class="card mb-3 mb-md-4 border-0 shadow-sm">
+    <div class="card-header bg-white py-2">
+        <h6 class="mb-0 small fw-bold"><i class="bi bi-funnel me-1 text-primary"></i>Filtros de búsqueda</h6>
     </div>
     <div class="card-body">
-        <form method="get" action="<?= site_url('admin/solicitudes') ?>" class="row g-3 align-items-end">
-            <div class="col-md-3">
-                <label for="tramite" class="form-label">Trámite</label>
-                <select name="tramite" id="tramite" class="form-select">
+        <form method="get" action="<?= site_url('admin/solicitudes') ?>" class="row g-2 g-md-3 align-items-end">
+            <div class="col-12 col-md-3">
+                <label for="tramite" class="form-label small fw-semibold">Trámite</label>
+                <select name="tramite" id="tramite" class="form-select form-select-sm">
                     <option value="">— Todos los trámites —</option>
                     <?php foreach ($tramitesDisponibles as $clave => $nombre): ?>
                         <option value="<?= esc($clave) ?>" <?= ($filtros['tramite'] === $clave) ? 'selected' : '' ?>>
@@ -48,9 +48,9 @@ $estatusLista = \App\Libraries\EstadoSolicitudService::ESTATUS_MAESTRO;
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-md-3">
-                <label for="estatus" class="form-label">Estatus</label>
-                <select name="estatus" id="estatus" class="form-select">
+            <div class="col-12 col-md-3">
+                <label for="estatus" class="form-label small fw-semibold">Estatus</label>
+                <select name="estatus" id="estatus" class="form-select form-select-sm">
                     <option value="">— Todos los estatus —</option>
                     <?php foreach ($estatusLista as $e): ?>
                         <option value="<?= esc($e) ?>" <?= ($filtros['estatus'] === $e) ? 'selected' : '' ?>>
@@ -59,27 +59,80 @@ $estatusLista = \App\Libraries\EstadoSolicitudService::ESTATUS_MAESTRO;
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-md-4">
-                <label for="q" class="form-label">Búsqueda</label>
-                <input type="text" name="q" id="q" class="form-control"
+            <div class="col-12 col-md-4">
+                <label for="q" class="form-label small fw-semibold">Búsqueda</label>
+                <input type="text" name="q" id="q" class="form-control form-control-sm"
                     placeholder="folio, RFC, razón social o nombre"
                     value="<?= esc($filtros['q']) ?>">
             </div>
-            <div class="col-md-2 d-grid">
-                <button type="submit" class="btn btn-primary">Aplicar filtros</button>
+            <div class="col-12 col-md-2 d-grid">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-search me-1"></i>Filtrar
+                </button>
             </div>
         </form>
     </div>
 </div>
 
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">Solicitudes (<?= number_format($pager->getTotal()) ?> registros)</h6>
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-list-columns-reverse me-2 text-primary"></i>Solicitudes (<?= number_format($pager->getTotal()) ?> registros)</h6>
         <?php if ($filtros['tramite'] !== '' || $filtros['estatus'] !== '' || $filtros['q'] !== ''): ?>
-            <a href="<?= site_url('admin/solicitudes') ?>" class="btn btn-outline-secondary btn-sm">Limpiar filtros</a>
+            <a href="<?= site_url('admin/solicitudes') ?>" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-x-lg me-1"></i>Limpiar
+            </a>
         <?php endif; ?>
     </div>
-    <div class="table-responsive">
+
+    <!-- Mobile Card List (< 768px) -->
+    <div class="d-block d-md-none">
+        <?php if (empty($solicitudes)): ?>
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-inbox fs-2 mb-2 d-block opacity-50"></i>
+                No se encontraron solicitudes con los filtros indicados.
+            </div>
+        <?php else: ?>
+            <?php foreach ($solicitudes as $s): ?>
+                <?php
+                    $datos = $solicitudDatoModel->porSolicitudAgrupado($s->id);
+                    $ciudadano = !empty($s->ciudadano_id) ? $userModel->find($s->ciudadano_id) : null;
+                    $rfc = $datos['rfc'] ?? $datos['RFC'] ?? ($ciudadano->rfc ?? '');
+                    $nombre = $datos['razon_social_o_nombre'] ?? $datos['solicitante_nombre'] ?? ($ciudadano->nombre_completo ?? ($ciudadano->username ?? '—'));
+                ?>
+                <div class="p-3 border-bottom">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <a href="<?= site_url('admin/solicitudes/' . $s->folio) ?>" class="fw-bold font-monospace text-primary text-decoration-none">
+                                <?= esc($s->folio) ?>
+                            </a>
+                            <div class="small fw-semibold"><?= esc($nombre) ?></div>
+                            <?php if (!empty($rfc)): ?>
+                                <div class="small text-muted"><span class="badge bg-light text-dark border">RFC: <?= esc($rfc) ?></span></div>
+                            <?php endif; ?>
+                        </div>
+                        <span class="badge estatus-badge <?= badge_color_estatus($s->estatus) ?>">
+                            <?= esc($s->estatus) ?>
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2 small text-muted">
+                        <div>
+                            <div><?= tramite_nombre($s->tramite) ?></div>
+                            <div><i class="bi bi-calendar3 me-1"></i><?= formatear_fecha($s->fecha_solicitud) ?></div>
+                        </div>
+                        <div class="fw-bold text-dark fs-6"><?= formatear_dinero((float)$s->monto) ?></div>
+                    </div>
+                    <div class="mt-3">
+                        <a href="<?= site_url('admin/solicitudes/' . $s->folio) ?>" class="btn btn-sm btn-outline-primary w-100">
+                            <i class="bi bi-eye me-1"></i>Ver expediente
+                        </a>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
+
+    <!-- Desktop Table (>= 768px) -->
+    <div class="table-responsive d-none d-md-block">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
@@ -90,7 +143,7 @@ $estatusLista = \App\Libraries\EstadoSolicitudService::ESTATUS_MAESTRO;
                     <th>Estatus</th>
                     <th>Fecha solicitud</th>
                     <th>Monto</th>
-                    <th>Acciones</th>
+                    <th class="text-end">Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -110,8 +163,8 @@ $estatusLista = \App\Libraries\EstadoSolicitudService::ESTATUS_MAESTRO;
                         ?>
                         <tr>
                             <td>
-                                <a href="<?= site_url('admin/solicitudes/' . $s->folio) ?>" class="fw-bold text-decoration-none">
-                                    <code><?= esc($s->folio) ?></code>
+                                <a href="<?= site_url('admin/solicitudes/' . $s->folio) ?>" class="fw-bold text-decoration-none font-monospace">
+                                    <?= esc($s->folio) ?>
                                 </a>
                             </td>
                             <td>
@@ -125,12 +178,12 @@ $estatusLista = \App\Libraries\EstadoSolicitudService::ESTATUS_MAESTRO;
                                     <?= esc($s->estatus) ?>
                                 </span>
                             </td>
-                            <td class="text-nowrap"><?= formatear_fecha($s->fecha_solicitud) ?></td>
-                            <td class="text-nowrap"><?= formatear_dinero((float)$s->monto) ?></td>
-                            <td class="text-nowrap">
+                            <td class="text-nowrap small"><?= formatear_fecha($s->fecha_solicitud) ?></td>
+                            <td class="text-nowrap fw-semibold"><?= formatear_dinero((float)$s->monto) ?></td>
+                            <td class="text-end text-nowrap">
                                 <a href="<?= site_url('admin/solicitudes/' . $s->folio) ?>"
                                     class="btn btn-outline-primary btn-sm">
-                                    Ver
+                                    <i class="bi bi-eye me-1"></i>Ver
                                 </a>
                             </td>
                         </tr>
@@ -140,10 +193,11 @@ $estatusLista = \App\Libraries\EstadoSolicitudService::ESTATUS_MAESTRO;
         </table>
     </div>
     <?php if (!empty($solicitudes) && $pager->getPageCount() > 1): ?>
-        <div class="card-footer d-flex justify-content-center pt-3">
+        <div class="card-footer bg-white d-flex justify-content-center pt-3">
             <?= $pager->links() ?>
         </div>
     <?php endif; ?>
 </div>
 
 <?= $this->endSection() ?>
+

@@ -126,19 +126,19 @@ $tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa'];
                         default => 'bi-file-earmark text-secondary',
                     };
                 ?>
-                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                        <div class="d-flex align-items-center">
-                            <i class="bi <?= $icono ?> fs-3 me-3"></i>
-                            <div>
-                                <div class="fw-semibold small"><?= esc($tipoNombre) ?></div>
-                                <div class="small text-muted">
+                    <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center py-3 gap-2">
+                        <div class="d-flex align-items-center min-w-0">
+                            <i class="bi <?= $icono ?> fs-3 me-3 flex-shrink-0"></i>
+                            <div class="min-w-0">
+                                <div class="fw-semibold small text-truncate"><?= esc($tipoNombre) ?></div>
+                                <div class="small text-muted text-truncate" style="max-width: 200px;">
                                     <?= esc($doc->nombre_original) ?>
                                     <span class="mx-1">·</span>
                                     <?= $tamanoStr ?>
                                 </div>
                             </div>
                         </div>
-                        <a href="<?= site_url('/portal/tramites/carga-descarga/' . $solicitud->folio . '/descargar/' . $doc->id) ?>" class="btn btn-sm btn-outline-primary">
+                        <a href="<?= site_url('/portal/tramites/carga-descarga/' . $solicitud->folio . '/descargar/' . $doc->id) ?>" class="btn btn-sm btn-outline-primary ms-auto">
                             <i class="bi bi-download me-1"></i>Descargar
                         </a>
                     </div>
@@ -150,9 +150,9 @@ $tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa'];
     </div>
 
     <div class="col-lg-4">
-        <div class="card shadow-sm sticky-top" style="top: 90px;">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Historial de estatus</h5>
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fs-6 fw-bold"><i class="bi bi-clock-history me-2 text-primary"></i>Historial de estatus</h5>
             </div>
             <div class="card-body">
                 <?php if (empty($historial)): ?>
@@ -161,15 +161,15 @@ $tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa'];
                 <ol class="timeline list-unstyled mb-0">
                 <?php foreach ($historial as $h):
                     $stClass = $mapEstatusClass[$h->estatus_nuevo] ?? 'bg-secondary';
-                    $esUltimo = $h === end($historial);
                 ?>
                     <li class="timeline-item">
+                        <div class="timeline-badge"></div>
                         <div class="small text-muted mb-1"><?= formatear_fecha($h->fecha) ?></div>
                         <div class="mb-1">
                             <span class="badge estatus-badge <?= $stClass ?>"><?= esc($h->estatus_nuevo) ?></span>
                         </div>
                         <?php if (!empty($h->comentario)): ?>
-                        <div class="small text-muted"><?= esc($h->comentario) ?></div>
+                        <div class="small text-muted mt-1 bg-light p-2 rounded"><?= esc($h->comentario) ?></div>
                         <?php endif; ?>
                     </li>
                 <?php endforeach; ?>
@@ -177,8 +177,8 @@ $tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa'];
                 <?php endif; ?>
             </div>
             <?php if ($solicitud->estatus === 'Pago pendiente'): ?>
-            <div class="card-footer bg-white border-top">
-                <a href="<?= site_url('/portal/tramites/carga-descarga/resumen/' . $solicitud->folio) ?>" class="btn btn-success w-100">
+            <div class="card-footer bg-white border-top p-3">
+                <a href="<?= site_url('/portal/tramites/carga-descarga/resumen/' . $solicitud->folio) ?>" class="btn btn-success btn-lg w-100 shadow-sm" style="background-color: #0e9f6e; border-color: #0e9f6e;">
                     <i class="bi bi-cash-coin me-2"></i>Ir a pagar
                 </a>
             </div>
