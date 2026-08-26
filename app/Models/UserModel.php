@@ -39,8 +39,9 @@ class UserModel extends Model
         return $this->where('username', $username)->first();
     }
 
-    public function conRoles(int $userId): array
+    public function conRoles(int|string $userId): array
     {
+        $userId = (int) $userId;
         $builder = $this->db->table('user_roles ur');
         $builder->select('r.nombre');
         $builder->join('roles r', 'r.id = ur.role_id');
@@ -55,7 +56,7 @@ class UserModel extends Model
         return $result;
     }
 
-    public function tieneRol(int $userId, string $rolNombre): bool
+    public function tieneRol(int|string $userId, string $rolNombre): bool
     {
         $roles = $this->conRoles($userId);
 
@@ -66,8 +67,9 @@ class UserModel extends Model
      * Asigna un rol a un usuario por nombre del rol.
      * Busca el rol en la tabla roles y crea el registro en user_roles.
      */
-    public function asignarRol(int $userId, string $rolNombre): bool
+    public function asignarRol(int|string $userId, string $rolNombre): bool
     {
+        $userId = (int) $userId;
         $rol = $this->db->table('roles')
             ->where('nombre', $rolNombre)
             ->get()

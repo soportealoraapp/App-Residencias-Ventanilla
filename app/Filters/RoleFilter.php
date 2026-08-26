@@ -18,6 +18,7 @@ class RoleFilter implements FilterInterface
             $session->setFlashdata('error', 'Acceso denegado: debes iniciar sesión');
             return redirect()->to('/auth/login');
         }
+        $userId = (int) $userId;
 
         $userModel = new UserModel();
         $rolesArgument = $arguments[0] ?? null;

@@ -56,7 +56,7 @@ class AuthController extends Controller
 
         $session = Services::session();
         $session->set([
-            'user_id'        => $user->id,
+            'user_id'        => (int) $user->id,
             'username'       => $user->username,
             'nombre_completo' => $user->nombre_completo,
             'roles'          => $roles,
