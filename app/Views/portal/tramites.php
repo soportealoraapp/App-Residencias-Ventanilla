@@ -183,14 +183,14 @@
                     </ul>
                 </div>
                 <div>
-                    <button class="btn btn-outline-secondary btn-lg w-100" disabled>
-                        <i class="bi bi-lock me-2"></i>Próximamente
-                    </button>
+                    <a href="<?= site_url('/portal/tramites/cesion-concesion') ?>" class="btn btn-success btn-lg w-100 shadow-sm">
+                        <i class="bi bi-play-circle me-2"></i>Iniciar trámite
+                    </a>
                 </div>
             </div>
             <div class="card-footer bg-white border-0 pt-0 pb-3 px-3 px-md-4">
-                <span class="badge bg-secondary-subtle text-secondary">
-                    <i class="bi bi-hourglass-split me-1"></i>En desarrollo
+                <span class="badge bg-success-subtle text-success">
+                    <i class="bi bi-check-circle me-1"></i>Disponible para solicitud
                 </span>
             </div>
         </div>

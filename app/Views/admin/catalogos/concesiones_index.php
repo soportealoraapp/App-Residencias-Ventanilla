@@ -2,6 +2,15 @@
 <?= $this->section('pageTitle') ?>Catálogo de Concesiones<?= $this->endSection() ?>
 <?= $this->section('content') ?>
 
+<?php
+$filtros = isset($filtros) && is_array($filtros) ? $filtros : ['q' => '', 'estatus' => ''];
+$filtros['q'] = $filtros['q'] ?? '';
+$filtros['estatus'] = $filtros['estatus'] ?? '';
+$estatusOpciones = isset($estatusOpciones) && is_array($estatusOpciones)
+    ? $estatusOpciones
+    : ['' => 'Todos', 'vigente' => 'Vigente', 'vencida' => 'Vencida', 'en_transmision' => 'En trámite de transmisión'];
+?>
+
 <div class="row mb-3">
     <div class="col-md-8">
         <form method="get" class="row g-2 align-items-end">
