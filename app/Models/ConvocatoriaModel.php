@@ -19,23 +19,33 @@ class ConvocatoriaModel extends Model
 
     public function vigente(int $id): ?object
     {
-        $hoy = date('Y-m-d');
+        try {
+            $hoy = date('Y-m-d');
 
-        return $this->where('id', $id)
-            ->where('estatus', 'Vigente')
-            ->where('periodo_registro_inicio <=', $hoy)
-            ->where('periodo_registro_fin >=', $hoy)
-            ->first();
+            return $this->where('id', $id)
+                ->where('estatus', 'Vigente')
+                ->where('periodo_registro_inicio <=', $hoy)
+                ->where('periodo_registro_fin >=', $hoy)
+                ->first();
+        } catch (\Throwable $e) {
+            log_message('error', 'ConvocatoriaModel::vigente error: ' . $e->getMessage());
+            return null;
+        }
     }
 
     public function primeraVigente(): ?object
     {
-        $hoy = date('Y-m-d');
+        try {
+            $hoy = date('Y-m-d');
 
-        return $this->where('estatus', 'Vigente')
-            ->where('periodo_registro_inicio <=', $hoy)
-            ->where('periodo_registro_fin >=', $hoy)
-            ->orderBy('id', 'DESC')
-            ->first();
+            return $this->where('estatus', 'Vigente')
+                ->where('periodo_registro_inicio <=', $hoy)
+                ->where('periodo_registro_fin >=', $hoy)
+                ->orderBy('id', 'DESC')
+                ->first();
+        } catch (\Throwable $e) {
+            log_message('error', 'ConvocatoriaModel::primeraVigente error: ' . $e->getMessage());
+            return null;
+        }
     }
 }

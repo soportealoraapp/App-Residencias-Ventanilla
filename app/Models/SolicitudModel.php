@@ -54,9 +54,14 @@ class SolicitudModel extends Model
 
     public function porConvocatoria(int $convocatoriaId): array
     {
-        return $this->where('tramite', 'UR-TT-T-01')
-            ->where('convocatoria_id', $convocatoriaId)
-            ->orderBy('created_at', 'ASC')
-            ->findAll();
+        try {
+            return $this->where('tramite', 'UR-TT-T-01')
+                ->where('convocatoria_id', $convocatoriaId)
+                ->orderBy('created_at', 'ASC')
+                ->findAll();
+        } catch (\Throwable $e) {
+            log_message('error', 'SolicitudModel::porConvocatoria error: ' . $e->getMessage());
+            return [];
+        }
     }
 }
