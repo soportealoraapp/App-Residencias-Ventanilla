@@ -21,14 +21,24 @@ class RoleFilter implements FilterInterface
         $userId = (int) $userId;
 
         $userModel = new UserModel();
-        $rolesArgument = $arguments[0] ?? null;
 
-        if ($rolesArgument === null) {
+        if (empty($arguments)) {
             $session->setFlashdata('error', 'No tienes permiso para acceder a esta sección');
             return redirect()->to('/');
         }
 
-        $rolesPermitidos = array_map('trim', explode(',', $rolesArgument));
+        $rolesPermitidos = [];
+        foreach ($arguments as $arg) {
+            if (is_string($arg)) {
+                foreach (explode(',', $arg) as $r) {
+                    $trimmed = trim($r);
+                    if ($trimmed !== '') {
+                        $rolesPermitidos[] = $trimmed;
+                    }
+                }
+            }
+        }
+
         $tieneAlgunRol = false;
         foreach ($rolesPermitidos as $rol) {
             if ($userModel->tieneRol($userId, $rol)) {

@@ -32,11 +32,19 @@ class PortalController extends Controller
             ->limit(5)
             ->findAll();
 
+        $stats = [
+            'total'      => (new SolicitudModel())->where('ciudadano_id', $userId)->countAllResults(),
+            'en_proceso' => (new SolicitudModel())->where('ciudadano_id', $userId)->whereIn('estatus', ['Recibido', 'En revisión', 'En revisión documental', 'Cita agendada', 'Evaluación comparativa'])->countAllResults(),
+            'concluidos' => (new SolicitudModel())->where('ciudadano_id', $userId)->whereIn('estatus', ['Verificado', 'Permiso emitido', 'Vigente', 'Seleccionado', 'Concluido', 'Pagado'])->countAllResults(),
+            'pendientes' => (new SolicitudModel())->where('ciudadano_id', $userId)->where('estatus', 'Pago pendiente')->countAllResults(),
+        ];
+
         $habilitaT06 = FeatureFlags::habilitarUrTtT06();
 
         return view('portal/dashboard', [
             'ultimasSolicitudes' => $ultimasSolicitudes,
-            'habilitaT06' => $habilitaT06,
+            'habilitaT06'        => $habilitaT06,
+            'stats'              => $stats,
         ]);
     }
 
@@ -81,11 +89,15 @@ class PortalController extends Controller
         $historialModel = new \App\Models\HistorialEstatusModel();
         $historial = $historialModel->porSolicitud((int)$solicitud->id);
 
+        $verificacionModel = new \App\Models\VerificacionFisicaModel();
+        $verificacion = $verificacionModel->primerPorSolicitud((int)$solicitud->id);
+
         return view('portal/ver_solicitud', [
-            'solicitud'  => $solicitud,
-            'datos'      => $datos,
-            'documentos' => $documentos,
-            'historial'  => $historial,
+            'solicitud'    => $solicitud,
+            'datos'        => $datos,
+            'documentos'   => $documentos,
+            'historial'    => $historial,
+            'verificacion' => $verificacion,
         ]);
     }
 }

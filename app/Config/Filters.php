@@ -36,6 +36,17 @@ class Filters extends BaseConfig
         ],
     ];
 
+    public function __construct()
+    {
+        parent::__construct();
+        if (ENVIRONMENT === 'testing') {
+            $this->globals['before'] = array_values(array_filter(
+                $this->globals['before'],
+                static fn ($filter): bool => $filter !== 'csrf'
+            ));
+        }
+    }
+
     public array $methods = [];
 
     public array $filters = [];

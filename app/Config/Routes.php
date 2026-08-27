@@ -28,6 +28,7 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->get('solicitudes', 'Admin\\AdminController::listaSolicitudes', ['as' => 'admin.solicitudes']);
         $routes->get('solicitudes/(:any)', 'Admin\\AdminController::verSolicitud/$1', ['as' => 'admin.solicitud.ver']);
         $routes->post('solicitudes/cambiar-estatus/(:num)', 'Admin\\AdminController::cambiarEstatus/$1');
+        $routes->post('solicitudes/dictamen-ur02/(:num)', 'Admin\\AdminController::registrarDictamenUr02/$1');
         $routes->get('solicitudes/descargar-documento/(:num)', 'Admin\\AdminController::descargarDocumento/$1');
         $routes->get('tarifas', 'Admin\\CatalogoTarifasController::index');
         $routes->get('tarifas/nuevo', 'Admin\\CatalogoTarifasController::formNuevo');
@@ -41,6 +42,8 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->get('concesiones/editar/(:num)', 'Admin\\CatalogoConcesionesController::formEditar/$1');
         $routes->post('concesiones/actualizar/(:num)', 'Admin\\CatalogoConcesionesController::actualizar/$1');
         $routes->post('concesiones/eliminar/(:num)', 'Admin\\CatalogoConcesionesController::eliminar/$1');
+        $routes->get('convocatorias/(:num)/evaluacion', 'Admin\\AdminController::evaluacionConvocatoria/$1');
+        $routes->post('convocatorias/(:num)/seleccionar', 'Admin\\AdminController::seleccionarGanadorConvocatoria/$1');
     });
 });
 
@@ -58,6 +61,30 @@ $routes->group('portal', ['filter' => 'auth'], static function ($routes) {
     $routes->get('solicitud/(:any)', 'Portal\PortalController::verSolicitud/$1', ['as' => 'portal.ver_solicitud']);
 
     $routes->group('tramites', static function ($routes) {
+        $routes->post('solicitudes', 'Portal\TramitesController::crear', ['filter' => 'role:administrador,operador_ventanilla,ciudadano']);
+        $routes->get('solicitudes/(:segment)', 'Portal\TramitesController::consultar/$1', ['filter' => 'role:administrador,operador_ventanilla,ciudadano']);
+        $routes->post('ur-02/solicitudes/(:num)/cita', 'Portal\TramitesController::agendarVerificacion/$1', ['filter' => 'role:administrador,operador_ventanilla,ciudadano']);
+        $routes->post('ur-02/solicitudes/(:num)/resultado', 'Portal\TramitesController::registrarResultado/$1', ['filter' => 'role:administrador,operador_ventanilla']);
+        $routes->get('ur-01/convocatorias/(:num)/solicitudes', 'Portal\TramitesController::listarConvocatoria/$1', ['filter' => 'role:administrador,operador_ventanilla']);
+        $routes->post('ur-01/convocatorias/(:num)/seleccionar', 'Portal\TramitesController::seleccionar/$1', ['filter' => 'role:administrador,operador_ventanilla']);
+
+        $routes->get('orden-plaqueo', 'Portal\TramiteOrdenPlaqueoController::formulario');
+        $routes->get('ur-03', 'Portal\TramiteOrdenPlaqueoController::formulario');
+        $routes->post('orden-plaqueo/guardar', 'Portal\TramiteOrdenPlaqueoController::guardar');
+        $routes->post('ur-03/guardar', 'Portal\TramiteOrdenPlaqueoController::guardar');
+
+        $routes->get('constancia-despintado', 'Portal\TramiteDespintadoController::formulario');
+        $routes->get('ur-02', 'Portal\TramiteDespintadoController::formulario');
+        $routes->post('constancia-despintado/guardar', 'Portal\TramiteDespintadoController::guardar');
+        $routes->post('ur-02/guardar', 'Portal\TramiteDespintadoController::guardar');
+        $routes->get('ur-02/solicitud/(:any)/cita', 'Portal\TramiteDespintadoController::agendarCitaForm/$1');
+        $routes->post('ur-02/solicitud/(:any)/cita/guardar', 'Portal\TramiteDespintadoController::guardarCita/$1');
+
+        $routes->get('concesion-transporte', 'Portal\TramiteConcesionTransporteController::formulario');
+        $routes->get('ur-01', 'Portal\TramiteConcesionTransporteController::formulario');
+        $routes->post('concesion-transporte/guardar', 'Portal\TramiteConcesionTransporteController::guardar');
+        $routes->post('ur-01/guardar', 'Portal\TramiteConcesionTransporteController::guardar');
+
         $routes->get('cesion-concesion', 'Portal\TramiteCesionConcesionController::formulario');
         $routes->post('cesion-concesion/guardar', 'Portal\TramiteCesionConcesionController::guardar');
         $routes->get('cesion-concesion/validar-concesion/(:any)', 'Portal\TramiteCesionConcesionController::validarConcesionAjax/$1');

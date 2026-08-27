@@ -34,6 +34,15 @@
         <a href="/admin/solicitudes" class="sidebar-link <?= uri_string() === 'admin/solicitudes' ? 'active' : '' ?>">
             <i class="bi bi-folder2-open me-2"></i> Todas las solicitudes
         </a>
+        <a href="/admin/solicitudes?tramite=UR-TT-T-01" class="sidebar-link ms-2 small">
+            <i class="bi bi-award me-2"></i> T-01: Concesiones
+        </a>
+        <a href="/admin/solicitudes?tramite=UR-TT-T-02" class="sidebar-link ms-2 small">
+            <i class="bi bi-paint-bucket me-2"></i> T-02: Despintado
+        </a>
+        <a href="/admin/solicitudes?tramite=UR-TT-T-03" class="sidebar-link ms-2 small">
+            <i class="bi bi-card-heading me-2"></i> T-03: Plaqueo
+        </a>
         <a href="/admin/solicitudes?tramite=UR-TT-T-07" class="sidebar-link ms-2 small">
             <i class="bi bi-truck me-2"></i> T-07: Carga/Descarga
         </a>
@@ -49,6 +58,9 @@
         </a>
         <a href="/admin/concesiones" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/concesiones') ? 'active' : '' ?>">
             <i class="bi bi-card-list me-2"></i> Concesiones
+        </a>
+        <a href="/admin/convocatorias/1/evaluacion" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/convocatorias') ? 'active' : '' ?>">
+            <i class="bi bi-award-fill me-2"></i> Convocatorias UR-01
         </a>
 
         <div class="sidebar-section-title mt-3">Portal</div>

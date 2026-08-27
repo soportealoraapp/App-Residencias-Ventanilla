@@ -146,8 +146,78 @@ $claveEtiquetas = [
                 <?php endif; ?>
             </div>
         </div>
+</div>
+
+<?php if ($solicitud->tramite === 'UR-TT-T-02'): ?>
+<div class="card mb-3 border-warning shadow-sm">
+    <div class="card-header bg-warning bg-opacity-25 d-flex justify-content-between align-items-center py-2">
+        <h6 class="mb-0 text-dark fw-bold">
+            <i class="bi bi-paint-bucket me-2"></i>Inspección Física y Dictamen de Despintado (UR-02)
+        </h6>
+        <?php if (!empty($verificacion->fecha_cita)): ?>
+            <span class="badge bg-primary fs-6"><i class="bi bi-calendar-event me-1"></i>Cita: <?= date('d/m/Y H:i', strtotime($verificacion->fecha_cita)) ?> hrs</span>
+        <?php else: ?>
+            <span class="badge bg-secondary">Sin cita programada</span>
+        <?php endif; ?>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="p-3 bg-light rounded border h-100">
+                    <div class="small text-muted mb-1">Estado de la Inspección</div>
+                    <div class="fw-bold mb-2">
+                        <?php if (!empty($verificacion->resultado)): ?>
+                            <?php if ($verificacion->resultado === 'aprobado'): ?>
+                                <span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i>Aprobado (Despintado Conforme)</span>
+                            <?php else: ?>
+                                <span class="badge bg-danger fs-6"><i class="bi bi-x-circle me-1"></i>Rechazado (No Conforme)</span>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <span class="badge bg-warning text-dark fs-6"><i class="bi bi-hourglass-split me-1"></i>Pendiente de Dictamen</span>
+                        <?php endif; ?>
+                    </div>
+                    <?php if (!empty($verificacion->observaciones)): ?>
+                        <div class="small text-muted border-top pt-2">
+                            <strong>Observaciones del inspector:</strong><br>
+                            <?= nl2br(esc($verificacion->observaciones)) ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <form method="post" action="<?= site_url('admin/solicitudes/dictamen-ur02/' . $solicitud->id) ?>">
+                    <?= csrf_field() ?>
+                    <h6 class="fw-bold mb-2 text-dark">Registrar o Actualizar Dictamen</h6>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Resultado de la inspección <span class="text-danger">*</span></label>
+                        <div class="d-flex gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="resultado" id="dict_aprobado" value="aprobado" <?= (!empty($verificacion->resultado) && $verificacion->resultado === 'aprobado') ? 'checked' : '' ?> required>
+                                <label class="form-check-label text-success fw-bold" for="dict_aprobado">
+                                    <i class="bi bi-check2-circle me-1"></i>Aprobar (Despintado)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="resultado" id="dict_rechazado" value="rechazado" <?= (!empty($verificacion->resultado) && $verificacion->resultado === 'rechazado') ? 'checked' : '' ?> required>
+                                <label class="form-check-label text-danger fw-bold" for="dict_rechazado">
+                                    <i class="bi bi-x-circle me-1"></i>Rechazar (Incumple)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label for="obs_verificacion" class="form-label small fw-bold">Observaciones del dictamen <span class="text-danger">*</span></label>
+                        <textarea name="observaciones" id="obs_verificacion" rows="2" class="form-control form-control-sm" required placeholder="Describe las condiciones físicas de la unidad inspeccionada..."><?= esc($verificacion->observaciones ?? '') ?></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-warning btn-sm fw-bold w-100 shadow-sm">
+                        <i class="bi bi-file-earmark-check me-1"></i>Guardar Dictamen de Verificación
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
+<?php endif; ?>
 
 <div class="card mb-3">
     <div class="card-header">

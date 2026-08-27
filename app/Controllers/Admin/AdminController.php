@@ -48,7 +48,7 @@ class AdminController extends Controller
             ->monto ?? 0.0;
 
         $porTramite = [];
-        $tramites = ['UR-TT-T-07'];
+        $tramites = ['UR-TT-T-01', 'UR-TT-T-02', 'UR-TT-T-03', 'UR-TT-T-07'];
         if (FeatureFlags::habilitarUrTtT06()) {
             $tramites[] = 'UR-TT-T-06';
         }
@@ -175,6 +175,7 @@ class AdminController extends Controller
         }
 
         $estatusSiguientes = EstadoSolicitudService::TRANSICIONES_VALIDAS[$solicitud->tramite][$solicitud->estatus] ?? [];
+        $verificacion = (new \App\Models\VerificacionFisicaModel())->primerPorSolicitud((int)$solicitud->id);
 
         return view('admin/solicitudes_ver', [
             'solicitud'         => $solicitud,
@@ -183,7 +184,55 @@ class AdminController extends Controller
             'historial'         => $historialCompleto,
             'ciudadano'         => $ciudadano,
             'estatusSiguientes' => $estatusSiguientes,
+            'verificacion'      => $verificacion,
         ]);
+    }
+
+    public function registrarDictamenUr02(int $solicitudId)
+    {
+        $session = Services::session();
+        $userId = (int) $session->get('user_id');
+        $resultado = (string) $this->request->getPost('resultado');
+        $observaciones = trim((string) $this->request->getPost('observaciones'));
+
+        if (! in_array($resultado, ['aprobado', 'rechazado'], true)) {
+            return redirect()->back()->with('error', 'El resultado debe ser aprobado o rechazado.');
+        }
+        if ($observaciones === '') {
+            return redirect()->back()->with('error', 'Las observaciones son obligatorias para emitir el dictamen.');
+        }
+
+        $solicitudModel = new SolicitudModel();
+        $solicitud = $solicitudModel->find($solicitudId);
+        if (! $solicitud || $solicitud->tramite !== 'UR-TT-T-02') {
+            return redirect()->back()->with('error', 'Solicitud no válida para verificación de despintado.');
+        }
+
+        $verificacionModel = new \App\Models\VerificacionFisicaModel();
+        $verificacion = $verificacionModel->primerPorSolicitud($solicitudId);
+        if ($verificacion) {
+            $verificacionModel->update($verificacion->id, [
+                'resultado'     => $resultado,
+                'observaciones' => $observaciones,
+                'updated_at'    => date('Y-m-d H:i:s'),
+            ]);
+        } else {
+            $verificacionModel->insert([
+                'solicitud_id'  => $solicitudId,
+                'fecha_cita'    => date('Y-m-d H:i:s'),
+                'resultado'     => $resultado,
+                'observaciones' => $observaciones,
+                'created_at'    => date('Y-m-d H:i:s'),
+                'updated_at'    => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        $nuevoEstatus = ($resultado === 'aprobado') ? 'Verificado' : 'Rechazado';
+        $estadoService = new EstadoSolicitudService();
+        $estadoService->cambiarEstatus($solicitudId, $nuevoEstatus, $userId, 'Dictamen de inspección física: ' . $observaciones);
+
+        return redirect()->to('/admin/solicitudes/ver/' . $solicitud->folio)
+            ->with('message', '¡Dictamen de verificación física registrado con éxito con estatus: ' . $nuevoEstatus . '!');
     }
 
     public function cambiarEstatus(int $solicitudId)
@@ -224,5 +273,60 @@ class AdminController extends Controller
         }
 
         return Services::response()->download($rutaCompleta, $doc->nombre_original, true);
+    }
+
+    public function evaluacionConvocatoria(int $convocatoriaId)
+    {
+        $convocatoriaModel = new \App\Models\ConvocatoriaModel();
+        $convocatoria = $convocatoriaModel->find($convocatoriaId);
+        if (!$convocatoria) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        $solicitudModel = new SolicitudModel();
+        $solicitudDatoModel = new SolicitudDatoModel();
+
+        $solicitudesRaw = $solicitudModel->where('convocatoria_id', $convocatoriaId)->findAll();
+        $solicitudes = [];
+        foreach ($solicitudesRaw as $sol) {
+            $datos = $solicitudDatoModel->porSolicitudAgrupado((int)$sol->id);
+            $solicitudes[] = [
+                'solicitud' => $sol,
+                'datos'     => $datos,
+            ];
+        }
+
+        return view('admin/convocatorias/evaluacion', [
+            'convocatoria' => $convocatoria,
+            'solicitudes'  => $solicitudes,
+        ]);
+    }
+
+    public function seleccionarGanadorConvocatoria(int $convocatoriaId)
+    {
+        $session = Services::session();
+        $userId = (int) $session->get('user_id');
+        $solicitudId = (int) $this->request->getPost('solicitud_id');
+
+        $solicitudModel = new SolicitudModel();
+        $solicitud = $solicitudModel->find($solicitudId);
+        if (! $solicitud || (int)$solicitud->convocatoria_id !== $convocatoriaId) {
+            return redirect()->back()->with('error', 'Solicitud no encontrada para esta convocatoria.');
+        }
+
+        $participantes = $solicitudModel->where('convocatoria_id', $convocatoriaId)->findAll();
+        $estadoService = new EstadoSolicitudService();
+
+        foreach ($participantes as $part) {
+            $partId = (int) $part->id;
+            if ($partId === $solicitudId) {
+                $estadoService->cambiarEstatus($partId, 'Seleccionado', $userId, 'Dictamen comparativo: Seleccionado como GANADOR de la Convocatoria #' . $convocatoriaId);
+            } else {
+                $estadoService->cambiarEstatus($partId, 'No seleccionado', $userId, 'Dictamen comparativo: No seleccionado en Convocatoria #' . $convocatoriaId);
+            }
+        }
+
+        return redirect()->to('/admin/convocatorias/' . $convocatoriaId . '/evaluacion')
+            ->with('message', '¡Participante seleccionado exitosamente como GANADOR de la Convocatoria!');
     }
 }

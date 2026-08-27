@@ -52,6 +52,16 @@
                 </div>
 
                 <div class="col-md-3">
+                    <label class="form-label fw-semibold">Tipo de persona</label>
+                    <select name="tipo_persona" class="form-select">
+                        <?php $tipoPersona = old('tipo_persona', $concesion->tipo_persona ?? ''); ?>
+                        <option value="">Sin definir</option>
+                        <option value="fisica" <?= $tipoPersona === 'fisica' ? 'selected' : '' ?>>Física</option>
+                        <option value="moral" <?= $tipoPersona === 'moral' ? 'selected' : '' ?>>Moral</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
                     <label class="form-label fw-semibold">Vigencia inicio <span class="text-danger">*</span></label>
                     <input type="date" name="vigencia_inicio" class="form-control" required
                         value="<?= esc(old('vigencia_inicio', $concesion->vigencia_inicio)) ?>">

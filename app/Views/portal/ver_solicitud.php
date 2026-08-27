@@ -20,9 +20,20 @@ $labelsDatos = [
     'horario_inicio' => 'Horario inicio',
     'horario_fin' => 'Horario fin',
     'es_mudanza' => '¿Es mudanza?',
+    'numero_titulo_concesion' => 'Número de título de concesión',
+    'nombre_concesionario' => 'Nombre del concesionario',
+    'tipo_persona' => 'Tipo de persona',
+    'numero_factura' => 'Número de factura',
+    'vehiculo_placas' => 'Placas del vehículo',
+    'vehiculo_num_serie' => 'Número de serie (VIN)',
+    'tramite_concepto' => 'Concepto del trámite',
+    'motivo' => 'Motivo de la solicitud',
+    'solicitante' => 'Nombre del solicitante',
+    'tipo_servicio' => 'Tipo de servicio',
+    'observaciones' => 'Observaciones',
 ];
 $periodoLabels = ['dia' => 'Día', 'mes' => 'Mes', 'semestre' => 'Semestre', 'anio' => 'Año'];
-$tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa'];
+$tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa', 'fisica' => 'Persona Física', 'moral' => 'Persona Moral'];
 ?>
 <?= $this->extend('layouts/portal') ?>
 <?= $this->section('content') ?>
@@ -93,14 +104,85 @@ $tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa'];
                         if ($valor === '' || $valor === null) continue;
                         if ($clave === 'periodo' && isset($periodoLabels[$valor])) $valor = $periodoLabels[$valor];
                         if ($clave === 'tipo_solicitante' && isset($tipoLabels[$valor])) $valor = $tipoLabels[$valor];
+                        if ($clave === 'tipo_persona' && isset($tipoLabels[$valor])) $valor = $tipoLabels[$valor];
                         if ($clave === 'es_mudanza') $valor = $valor === '1' ? 'Sí' : 'No';
                     ?>
                     <dt class="col-sm-5 col-md-4 text-muted small pt-1"><?= esc($label) ?></dt>
-                    <dd class="col-sm-7 col-md-8 fw-medium mb-2"><?= nl2br(esc($valor)) ?></dd>
+                    <dd class="col-sm-7 col-md-8 fw-medium mb-2"><?= nl2br(esc((string)$valor)) ?></dd>
+                <?php endforeach; ?>
+                <?php foreach ($datos as $clave => $valor): ?>
+                    <?php
+                        if (array_key_exists($clave, $labelsDatos)) continue;
+                        if ($valor === '' || $valor === null) continue;
+                        $label = ucwords(str_replace('_', ' ', $clave));
+                    ?>
+                    <dt class="col-sm-5 col-md-4 text-muted small pt-1"><?= esc($label) ?></dt>
+                    <dd class="col-sm-7 col-md-8 fw-medium mb-2"><?= nl2br(esc((string)$valor)) ?></dd>
                 <?php endforeach; ?>
                 </dl>
             </div>
         </div>
+
+        <?php if ($solicitud->tramite === 'UR-TT-T-02'): ?>
+        <div class="card shadow-sm mb-4 border-primary border-opacity-50">
+            <div class="card-header bg-primary bg-opacity-10 d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0 text-primary fw-bold">
+                    <i class="bi bi-calendar2-check me-2"></i>Inspección Física de Despintado
+                </h5>
+                <?php if (!empty($verificacion->fecha_cita)): ?>
+                    <span class="badge bg-primary fs-6"><i class="bi bi-clock me-1"></i><?= date('d/m/Y H:i', strtotime($verificacion->fecha_cita)) ?> hrs</span>
+                <?php else: ?>
+                    <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-circle me-1"></i>Pendiente de agendar</span>
+                <?php endif; ?>
+            </div>
+            <div class="card-body">
+                <?php if (!empty($verificacion->fecha_cita)): ?>
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-6">
+                            <div class="border rounded p-3 bg-light">
+                                <div class="small text-muted mb-1">Fecha y hora de la cita</div>
+                                <div class="fw-bold fs-5 text-dark"><?= date('d/m/Y H:i', strtotime($verificacion->fecha_cita)) ?> hrs</div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="border rounded p-3 bg-light">
+                                <div class="small text-muted mb-1">Dictamen de verificación</div>
+                                <div>
+                                    <?php if ($verificacion->resultado === 'aprobado'): ?>
+                                        <span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i>Aprobado (Despintado Conforme)</span>
+                                    <?php elseif ($verificacion->resultado === 'rechazado'): ?>
+                                        <span class="badge bg-danger fs-6"><i class="bi bi-x-circle me-1"></i>Rechazado (No Conforme)</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-info text-dark fs-6"><i class="bi bi-hourglass-split me-1"></i>Inspección programada</span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <?php if (!empty($verificacion->observaciones)): ?>
+                        <div class="alert alert-secondary small mb-3">
+                            <strong>Observaciones del inspector:</strong><br>
+                            <?= nl2br(esc($verificacion->observaciones)) ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (empty($verificacion->resultado)): ?>
+                        <div class="d-flex justify-content-end">
+                            <a href="<?= site_url('/portal/tramites/ur-02/solicitud/' . $solicitud->folio . '/cita') ?>" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-arrow-repeat me-1"></i>Reagendar Fecha de Cita
+                            </a>
+                        </div>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <p class="text-muted small mb-3">Tu solicitud requiere una inspección física presencial en el patio de control municipal para verificar el despintado total de la unidad.</p>
+                    <a href="<?= site_url('/portal/tramites/ur-02/solicitud/' . $solicitud->folio . '/cita') ?>" class="btn btn-primary">
+                        <i class="bi bi-calendar-plus me-2"></i>Agendar Cita de Inspección Física
+                    </a>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-white">
