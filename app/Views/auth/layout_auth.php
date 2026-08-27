@@ -15,10 +15,12 @@
 </head>
 <body>
     <div class="auth-wrapper">
-        <div class="text-center mb-4">
-            <img src="<?= base_url('logo-uri.webp') ?>" alt="Logo Uriangato" style="height: 72px;">
-        </div>
         <div class="auth-card">
+            <div class="auth-logo-wrapper">
+                <img src="<?= base_url('logo-uri.webp') ?>" alt="Logo Uriangato"
+                     class="auth-logo"
+                     width="280" height="72">
+            </div>
             <?= $this->renderSection('content') ?>
         </div>
     </div>

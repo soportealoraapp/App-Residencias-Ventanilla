@@ -4,9 +4,6 @@
 <?= $this->section('content') ?>
 
 <div class="auth-header">
-    <div class="auth-brand-icon">
-        <i class="bi bi-bank2"></i>
-    </div>
     <h2 class="h4 mb-1 fw-bold">Iniciar Sesión</h2>
     <p class="text-muted small mb-0">Ventanilla Digital · Uriangato, Gto.</p>
 </div>

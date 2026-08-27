@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    Ventanilla Digital Uriangato - Mobile First Responsive & Modern CSS System
    ========================================================================== */
 
@@ -459,10 +459,27 @@ button, input, select, textarea, .btn {
 }
 
 .auth-header {
-  padding: 1.75rem 1.5rem 1.25rem;
+  padding: 1rem 1.5rem 1.25rem;
   text-align: center;
   background: #ffffff;
   border-bottom: 1px solid var(--border-color);
+}
+
+.auth-logo-wrapper {
+  padding: 1.5rem 1.5rem 0.75rem;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(13, 71, 161, 0.04) 0%, #ffffff 100%);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.auth-logo {
+  display: inline-block;
+  max-width: 100%;
+  height: auto;
+  width: 100%;
+  max-height: 72px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 3px rgba(13, 71, 161, 0.15));
 }
 
 .auth-brand-icon {
@@ -490,8 +507,21 @@ button, input, select, textarea, .btn {
   .auth-card {
     border-radius: var(--radius-md);
   }
+  .auth-logo-wrapper {
+    padding: 1.25rem 1rem 0.5rem;
+  }
+  .auth-logo {
+    max-height: 56px;
+    width: 100%;
+  }
   .auth-header {
-    padding: 1.25rem 1rem 1rem;
+    padding: 1rem 1rem 0.75rem;
+  }
+  .auth-brand-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
   }
   .auth-body {
     padding: 1.25rem 1rem;
