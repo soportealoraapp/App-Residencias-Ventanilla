@@ -15,6 +15,8 @@ class SolicitudModel extends Model
         'folio',
         'tramite',
         'ciudadano_id',
+        'concesion_id',
+        'convocatoria_id',
         'estatus',
         'monto',
         'fecha_solicitud',
@@ -48,5 +50,13 @@ class SolicitudModel extends Model
     public function porEstatus(string $estatus)
     {
         return $this->where('estatus', $estatus)->orderBy('fecha_solicitud', 'DESC');
+    }
+
+    public function porConvocatoria(int $convocatoriaId): array
+    {
+        return $this->where('tramite', 'UR-TT-T-01')
+            ->where('convocatoria_id', $convocatoriaId)
+            ->orderBy('created_at', 'ASC')
+            ->findAll();
     }
 }

@@ -4,13 +4,23 @@ namespace App\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
 
+/**
+ * Estructura provisional, pendiente de sustituir por el padron oficial
+ * cuando este disponible. Columnas actuales: id, numero_titulo,
+ * titular_actual, vehiculo_placas, vehiculo_num_serie, vigencia_inicio,
+ * vigencia_fin, estatus, created_at, updated_at.
+ * Ya cubren vigencia_inicio, vigencia_fin y estatus. Falta tipo_persona
+ * (se agrega en migracion posterior, sin reemplazar este catalogo stub).
+ */
 class CreateConcesionesTable extends Migration
 {
     public function up()
     {
+        $idType = $this->db->DBDriver === 'SQLite3' ? 'INTEGER' : 'BIGSERIAL';
+
         $this->forge->addField([
             'id' => [
-                'type'           => 'BIGSERIAL',
+                'type'           => $idType,
                 'auto_increment' => true,
             ],
             'numero_titulo' => [

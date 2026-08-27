@@ -43,7 +43,12 @@ class UsuariosDemoSeeder extends Seeder
             ],
         ];
 
-        $this->db->table('users')->insertBatch($usuarios);
+        foreach ($usuarios as $row) {
+            $exists = $this->db->table('users')->where('id', $row['id'])->orWhere('email', $row['email'])->countAllResults();
+            if ($exists === 0) {
+                $this->db->table('users')->insert($row);
+            }
+        }
 
         $userRoles = [
             ['user_id' => 1, 'role_id' => 1],
@@ -51,7 +56,12 @@ class UsuariosDemoSeeder extends Seeder
             ['user_id' => 3, 'role_id' => 3],
         ];
 
-        $this->db->table('user_roles')->insertBatch($userRoles);
+        foreach ($userRoles as $row) {
+            $exists = $this->db->table('user_roles')->where('user_id', $row['user_id'])->where('role_id', $row['role_id'])->countAllResults();
+            if ($exists === 0) {
+                $this->db->table('user_roles')->insert($row);
+            }
+        }
 
         if ($this->db->DBDriver === 'Postgre') {
             $this->db->query("SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE((SELECT MAX(id) FROM users), 1))");

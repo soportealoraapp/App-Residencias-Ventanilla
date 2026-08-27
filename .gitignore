@@ -29,8 +29,14 @@ writable/database.sqlite-wal
 phpunit.xml.bak
 coverage/
 .phpunit.cache/
+writable/test_tmp/
 
 # Credenciales / tokens
 *.pem
 *.key
 composer.phar
+scripts/*secret*
+
+# Runtime local distribuido para pruebas
+php82/
+php-*.zip

@@ -8,9 +8,11 @@ class CreateUserRolesTable extends Migration
 {
     public function up()
     {
+        $idType = $this->db->DBDriver === 'SQLite3' ? 'INTEGER' : 'BIGSERIAL';
+
         $this->forge->addField([
             'id' => [
-                'type'           => 'BIGSERIAL',
+                'type'           => $idType,
                 'auto_increment' => true,
             ],
             'user_id' => [

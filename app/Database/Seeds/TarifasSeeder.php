@@ -81,9 +81,41 @@ class TarifasSeeder extends Seeder
                 'placeholder_oficial' => 1,
                 'descripcion'      => 'TODO: valor dudoso, revisar con Movilidad',
             ],
+            [
+                'tramite'          => 'UR-TT-T-01',
+                'criterio'         => 'base',
+                'monto'            => 9055.20,
+                'vigente_desde'    => date('Y-m-d'),
+                'placeholder_oficial' => 1,
+                'descripcion'      => 'Valor de prueba editable: revisar con Movilidad',
+            ],
+            [
+                'tramite'          => 'UR-TT-T-02',
+                'criterio'         => 'base',
+                'monto'            => 64.90,
+                'vigente_desde'    => date('Y-m-d'),
+                'placeholder_oficial' => 1,
+                'descripcion'      => 'Valor de prueba editable: revisar con Movilidad',
+            ],
+            [
+                'tramite'          => 'UR-TT-T-03',
+                'criterio'         => 'base',
+                'monto'            => 50.00,
+                'vigente_desde'    => date('Y-m-d'),
+                'placeholder_oficial' => 1,
+                'descripcion'      => 'Valor de prueba editable: revisar con Movilidad',
+            ],
         ];
 
-        $this->db->table('tarifas')->insertBatch($data);
+        foreach ($data as $row) {
+            $exists = $this->db->table('tarifas')
+                ->where('tramite', $row['tramite'])
+                ->where('criterio', $row['criterio'])
+                ->countAllResults();
+            if ($exists === 0) {
+                $this->db->table('tarifas')->insert($row);
+            }
+        }
 
         if ($this->db->DBDriver === 'Postgre') {
             $this->db->query("SELECT setval(pg_get_serial_sequence('tarifas', 'id'), COALESCE((SELECT MAX(id) FROM tarifas), 1))");

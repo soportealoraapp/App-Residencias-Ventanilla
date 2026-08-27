@@ -29,8 +29,38 @@ class EstadoSolicitudService
         'RECHAZADO' => 'Rechazado',
     ];
 
+    public const ESTATUS_UR_TT_T_01 = [
+        'RECIBIDO' => 'Recibido',
+        'EN_REVISION' => 'En revisión',
+        'EVALUACION_COMPARATIVA' => 'Evaluación comparativa',
+        'SELECCIONADO' => 'Seleccionado',
+        'NO_SELECCIONADO' => 'No seleccionado',
+        'RECHAZADO' => 'Rechazado',
+    ];
+
+    public const ESTATUS_UR_TT_T_02 = [
+        'RECIBIDO' => 'Recibido',
+        'CITA_AGENDADA' => 'Cita agendada',
+        'VERIFICADO' => 'Verificado',
+        'RECHAZADO' => 'Rechazado',
+    ];
+
+    public const ESTATUS_UR_TT_T_03 = [
+        'RECIBIDO' => 'Recibido',
+        'EN_REVISION' => 'En revisión',
+        'APROBADO' => 'Aprobado',
+        'RECHAZADO' => 'Rechazado',
+    ];
+
     public const ESTATUS_MAESTRO = [
         'Recibido',
+        'En revisión',
+        'Evaluación comparativa',
+        'Seleccionado',
+        'No seleccionado',
+        'Cita agendada',
+        'Verificado',
+        'Aprobado',
         'En revisión documental',
         'Prevención',
         'Dictaminado aprobado',
@@ -44,6 +74,26 @@ class EstadoSolicitudService
     ];
 
     public const TRANSICIONES_VALIDAS = [
+        'UR-TT-T-01' => [
+            'Recibido' => ['En revisión', 'Evaluación comparativa', 'Seleccionado', 'No seleccionado', 'Rechazado'],
+            'En revisión' => ['Evaluación comparativa', 'Seleccionado', 'No seleccionado', 'Rechazado'],
+            'Evaluación comparativa' => ['Seleccionado', 'No seleccionado', 'Rechazado'],
+            'Seleccionado' => [],
+            'No seleccionado' => [],
+            'Rechazado' => [],
+        ],
+        'UR-TT-T-02' => [
+            'Recibido' => ['Cita agendada', 'Rechazado'],
+            'Cita agendada' => ['Verificado', 'Rechazado'],
+            'Verificado' => [],
+            'Rechazado' => [],
+        ],
+        'UR-TT-T-03' => [
+            'Recibido' => ['En revisión', 'Rechazado'],
+            'En revisión' => ['Aprobado', 'Rechazado'],
+            'Aprobado' => [],
+            'Rechazado' => [],
+        ],
         'UR-TT-T-07' => [
             'Recibido' => ['Pago pendiente', 'Rechazado'],
             'Pago pendiente' => ['Pagado', 'Rechazado'],
@@ -79,6 +129,7 @@ class EstadoSolicitudService
 
     public function cambiarEstatus(int $solicitudId, string $nuevoEstatus, ?int $usuarioId = null, ?string $comentario = null, ?array $auditoriaDetalle = null): bool
     {
+        $usuarioId = ($usuarioId !== null && $usuarioId > 0) ? $usuarioId : null;
         $solicitudModel = new SolicitudModel();
         $solicitud = $solicitudModel->find($solicitudId);
 

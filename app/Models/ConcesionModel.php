@@ -16,6 +16,7 @@ class ConcesionModel extends Model
         'titular_actual',
         'vehiculo_placas',
         'vehiculo_num_serie',
+        'tipo_persona',
         'vigencia_inicio',
         'vigencia_fin',
         'estatus',

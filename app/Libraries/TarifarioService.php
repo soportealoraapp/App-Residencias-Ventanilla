@@ -40,6 +40,13 @@ class TarifarioService
         return floatval($tarifa->monto);
     }
 
+    public function calcularMonto(string $tramite, string $criterio = 'base'): ?float
+    {
+        $tarifa = (new TarifaModel())->vigente($tramite, $criterio);
+
+        return $tarifa === null ? null : (float) $tarifa->monto;
+    }
+
     public function esPlaceholder(string $tramite, string $criterio): bool
     {
         $tarifaModel = new TarifaModel();

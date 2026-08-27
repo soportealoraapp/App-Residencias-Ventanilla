@@ -11,6 +11,7 @@ class DatabaseSeeder extends Seeder
         $this->call('RolesSeeder');
         $this->call('UsuariosDemoSeeder');
         $this->call('ConcesionesSeeder');
+        $this->call('ConvocatoriasSeeder');
         $this->call('TarifasSeeder');
     }
 }

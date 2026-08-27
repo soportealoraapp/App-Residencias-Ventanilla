@@ -8,9 +8,11 @@ class CreateUsersTable extends Migration
 {
     public function up()
     {
+        $idType = $this->db->DBDriver === 'SQLite3' ? 'INTEGER' : 'BIGSERIAL';
+
         $this->forge->addField([
             'id' => [
-                'type'           => 'BIGSERIAL',
+                'type'           => $idType,
                 'auto_increment' => true,
             ],
             'username' => [

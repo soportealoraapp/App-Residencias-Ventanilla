@@ -26,7 +26,12 @@ class RolesSeeder extends Seeder
             ],
         ];
 
-        $this->db->table('roles')->insertBatch($data);
+        foreach ($data as $row) {
+            $exists = $this->db->table('roles')->where('id', $row['id'])->orWhere('nombre', $row['nombre'])->countAllResults();
+            if ($exists === 0) {
+                $this->db->table('roles')->insert($row);
+            }
+        }
 
         if ($this->db->DBDriver === 'Postgre') {
             $this->db->query("SELECT setval(pg_get_serial_sequence('roles', 'id'), COALESCE((SELECT MAX(id) FROM roles), 1))");
