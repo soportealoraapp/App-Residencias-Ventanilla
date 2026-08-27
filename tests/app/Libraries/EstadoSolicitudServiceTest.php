@@ -23,12 +23,11 @@ class EstadoSolicitudServiceTest extends DatabaseTestCase
         $this->userModel = new UserModel();
 
         $this->demoUserId = (int)$this->userModel->insert([
-            'username'     => 'testuser',
-            'email'        => 'test@example.com',
-            'password_hash' => password_hash('12345678', PASSWORD_BCRYPT),
-            'nombre'       => 'Usuario',
-            'apellidos'    => 'Prueba',
-            'activo'       => 1,
+            'username'        => 'testuser',
+            'email'           => 'test@example.com',
+            'password_hash'   => password_hash('12345678', PASSWORD_BCRYPT),
+            'nombre_completo' => 'Usuario Prueba',
+            'activo'          => 1,
         ]);
     }
 
@@ -108,6 +107,23 @@ class EstadoSolicitudServiceTest extends DatabaseTestCase
 
         $actualizada = $this->solicitudModel->find($solicitudId);
         $this->assertEquals('Prevención', $actualizada->estatus);
+    }
+
+    public function testTransicionValida_T01_EvaluacionASeleccionado_True(): void
+    {
+        $this->assertTrue($this->service->transicionValida('UR-TT-T-01', 'Evaluación comparativa', 'Seleccionado'));
+        $this->assertTrue($this->service->transicionValida('UR-TT-T-01', 'Evaluación comparativa', 'No seleccionado'));
+    }
+
+    public function testTransicionValida_T02_CitaAVerificado_True(): void
+    {
+        $this->assertTrue($this->service->transicionValida('UR-TT-T-02', 'Recibido', 'Cita agendada'));
+        $this->assertTrue($this->service->transicionValida('UR-TT-T-02', 'Cita agendada', 'Verificado'));
+    }
+
+    public function testTransicionValida_T03_RevisionAAprobado_True(): void
+    {
+        $this->assertTrue($this->service->transicionValida('UR-TT-T-03', 'En revisión', 'Aprobado'));
     }
 
     public function testCalcularVigenciaT07_PeriodoAnio_FechaFinCoincide(): void

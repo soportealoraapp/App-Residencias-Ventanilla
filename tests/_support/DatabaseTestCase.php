@@ -2,10 +2,13 @@
 
 namespace Tests\Support;
 
-use CodeIgniter\Test\DatabaseTestCase as CIDatabaseTestCase;
+use CodeIgniter\Test\CIUnitTestCase;
+use CodeIgniter\Test\DatabaseTestTrait;
 
-class DatabaseTestCase extends CIDatabaseTestCase
+class DatabaseTestCase extends CIUnitTestCase
 {
+    use DatabaseTestTrait;
+
     protected $DBGroup = 'tests';
 
     protected $migrate = true;
@@ -16,7 +19,7 @@ class DatabaseTestCase extends CIDatabaseTestCase
 
     protected $namespace = null;
 
-    protected $seed = false;
+    protected $seed = '';
 
     protected $seedOnce = false;
 
