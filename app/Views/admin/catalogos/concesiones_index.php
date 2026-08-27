@@ -1,11 +1,6 @@
 <?= $this->extend('layouts/admin') ?>
-<?= $this->section('pageTitle') ?>Catálogo de Concesiones (stub provisorio)<?= $this->endSection() ?>
+<?= $this->section('pageTitle') ?>Catálogo de Concesiones<?= $this->endSection() ?>
 <?= $this->section('content') ?>
-
-<div class="alert alert-danger mb-4">
-    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-    <strong>⚠️ Catálogo provisional (stub)</strong> — Este padrón será reemplazado cuando el módulo de Concesiones oficial (Caleb) se integre. Los datos aquí son solo de prueba para desarrollo del trámite T-06.
-</div>
 
 <div class="row mb-3">
     <div class="col-md-8">
@@ -35,7 +30,7 @@
         </form>
     </div>
     <div class="col-md-4 text-end">
-        <a href="/admin/concesiones/nuevo" class="btn btn-success btn-sm"><i class="bi bi-plus-lg me-1"></i> Nueva concesión (stub)</a>
+        <a href="/admin/concesiones/nuevo" class="btn btn-success btn-sm"><i class="bi bi-plus-lg me-1"></i> Nueva concesión</a>
     </div>
 </div>
 
@@ -48,6 +43,7 @@
                         <th>ID</th>
                         <th>Número título</th>
                         <th>Titular actual</th>
+                        <th>Tipo persona</th>
                         <th>Placas</th>
                         <th>Núm. Serie</th>
                         <th>Vigencia inicio</th>
@@ -59,7 +55,7 @@
                 <tbody>
                     <?php if (empty($concesiones)): ?>
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">No hay concesiones registradas en el catálogo stub</td>
+                            <td colspan="10" class="text-center text-muted py-4">No hay concesiones registradas</td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($concesiones as $c): ?>
@@ -67,6 +63,15 @@
                                 <td class="fw-semibold">#<?= $c->id ?></td>
                                 <td><code class="text-dark"><?= esc($c->numero_titulo) ?></code></td>
                                 <td><?= esc($c->titular_actual) ?></td>
+                                <td>
+                                    <?php if (!empty($c->tipo_persona)): ?>
+                                        <span class="badge <?= $c->tipo_persona === 'fisica' ? 'bg-secondary' : 'bg-dark' ?>">
+                                            <?= esc($c->tipo_persona === 'fisica' ? 'Física' : 'Moral') ?>
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="text-muted small">-</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td>
                                     <?php if (!empty($c->vehiculo_placas)): ?>
                                         <span class="badge bg-info-subtle text-info"><?= esc($c->vehiculo_placas) ?></span>
@@ -118,7 +123,7 @@
 
 <script>
 function confirmarEliminar(id) {
-    if (confirm('¿Estás seguro de eliminar este registro del catálogo stub? No afectará solicitudes ya creadas.')) {
+    if (confirm('¿Estás seguro de eliminar esta concesión? Los cambios se registrarán en auditoría y no afectarán solicitudes ya creadas.')) {
         document.getElementById('form-eliminar-' + id).submit();
     }
 }

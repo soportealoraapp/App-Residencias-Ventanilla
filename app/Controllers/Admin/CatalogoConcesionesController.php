@@ -119,7 +119,7 @@ class CatalogoConcesionesController extends Controller
         $userId = session('user_id');
         $auditoriaModel->registrar('concesiones', $nuevoId, 'crear', $userId, $data);
 
-        return redirect()->to(site_url('admin/concesiones'))->with('message', 'Concesión creada en catálogo provisional. El padrón real se sincronizará con el módulo de Concesiones.');
+        return redirect()->to(site_url('admin/concesiones'))->with('message', 'Concesión creada correctamente en el padrón oficial.');
     }
 
     public function formEditar(int $id)
@@ -185,7 +185,7 @@ class CatalogoConcesionesController extends Controller
         $userId = session('user_id');
         $auditoriaModel->registrar('concesiones', $id, 'editar', $userId, $data);
 
-        return redirect()->to(site_url('admin/concesiones'))->with('message', 'Concesión actualizada en catálogo provisional.');
+        return redirect()->to(site_url('admin/concesiones'))->with('message', 'Concesión actualizada correctamente.');
     }
 
     public function eliminar(int $id)
@@ -203,6 +203,6 @@ class CatalogoConcesionesController extends Controller
         $userId = session('user_id');
         $auditoriaModel->registrar('concesiones', $id, 'eliminar', $userId, (array)$concesion);
 
-        return redirect()->to(site_url('admin/concesiones'))->with('message', 'Registro eliminado del catálogo stub. No afecta solicitudes ya creadas.');
+        return redirect()->to(site_url('admin/concesiones'))->with('message', 'Concesión eliminada correctamente del padrón. Los cambios se registraron en auditoría.');
     }
 }
