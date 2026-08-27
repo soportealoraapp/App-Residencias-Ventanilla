@@ -277,29 +277,39 @@ class AdminController extends Controller
 
     public function evaluacionConvocatoria(int $convocatoriaId)
     {
-        $convocatoriaModel = new \App\Models\ConvocatoriaModel();
-        $convocatoria = $convocatoriaModel->find($convocatoriaId);
-        if (!$convocatoria) {
-            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        try {
+            $convocatoriaModel = new \App\Models\ConvocatoriaModel();
+            $convocatoria = $convocatoriaModel->find($convocatoriaId);
+            
+            if (!$convocatoria) {
+                $convocatoria = $convocatoriaModel->orderBy('id', 'DESC')->first();
+            }
+
+            if (!$convocatoria) {
+                return view('admin/convocatorias/sin_convocatoria');
+            }
+
+            $solicitudModel = new SolicitudModel();
+            $solicitudDatoModel = new SolicitudDatoModel();
+
+            $solicitudesRaw = $solicitudModel->where('convocatoria_id', $convocatoria->id)->findAll();
+            $solicitudes = [];
+            foreach ($solicitudesRaw as $sol) {
+                $datos = $solicitudDatoModel->porSolicitudAgrupado((int)$sol->id);
+                $solicitudes[] = [
+                    'solicitud' => $sol,
+                    'datos'     => $datos,
+                ];
+            }
+
+            return view('admin/convocatorias/evaluacion', [
+                'convocatoria' => $convocatoria,
+                'solicitudes'  => $solicitudes,
+            ]);
+        } catch (\Throwable $e) {
+            log_message('error', 'AdminController::evaluacionConvocatoria error: ' . $e->getMessage());
+            return view('admin/convocatorias/sin_convocatoria');
         }
-
-        $solicitudModel = new SolicitudModel();
-        $solicitudDatoModel = new SolicitudDatoModel();
-
-        $solicitudesRaw = $solicitudModel->where('convocatoria_id', $convocatoriaId)->findAll();
-        $solicitudes = [];
-        foreach ($solicitudesRaw as $sol) {
-            $datos = $solicitudDatoModel->porSolicitudAgrupado((int)$sol->id);
-            $solicitudes[] = [
-                'solicitud' => $sol,
-                'datos'     => $datos,
-            ];
-        }
-
-        return view('admin/convocatorias/evaluacion', [
-            'convocatoria' => $convocatoria,
-            'solicitudes'  => $solicitudes,
-        ]);
     }
 
     public function seleccionarGanadorConvocatoria(int $convocatoriaId)
