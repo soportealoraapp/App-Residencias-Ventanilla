@@ -80,11 +80,16 @@ Ambos módulos comparten:
    ```
    Se cargan: roles de sistema, usuarios demo, tarifas placeholder (con `placeholder_oficial=1`), concesiones reales con `tipo_persona` y convocatorias demo para UR-01.
 
-6. **Arrancar servidor:**
-   ```bash
-   php spark serve
-   ```
-   Acceder a http://localhost:8080
+6. **Arrancar servidor local:**
+   - **Opción recomendada (Doble clic o en terminal):**
+     ```cmd
+     iniciar-servidor.bat
+     ```
+   - **O mediante PowerShell / CLI:**
+     ```bash
+     .\php82\php.exe spark serve --php="php82/php.exe"
+     ```
+   Acceder en el navegador a: [http://localhost:8080](http://localhost:8080)
 
 ## Usuarios demo (password de todos: `12345678`)
 
