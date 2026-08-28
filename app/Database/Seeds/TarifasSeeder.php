@@ -18,6 +18,14 @@ class TarifasSeeder extends Seeder
                 'descripcion'      => 'Tarifa provisional del prototipo: Permiso Eventual de Transporte',
             ],
             [
+                'tramite'          => 'UR-TT-T-05',
+                'criterio'         => 'base',
+                'monto'            => 287.00,
+                'vigente_desde'    => date('Y-m-d'),
+                'placeholder_oficial' => 1,
+                'descripcion'      => 'Tarifa provisional del prototipo: Cierre de Calle',
+            ],
+            [
                 'tramite'          => 'UR-TT-T-07',
                 'criterio'         => 'particular_dia',
                 'monto'            => 50.00,

@@ -12,6 +12,7 @@ function badge_color_estatus(string $estatus): string {
     return match($estatus) {
         'Recibido' => 'bg-secondary',
         'En revisión' => 'bg-primary',
+        'En validación' => 'bg-primary',
         'En revisión documental' => 'bg-primary',
         'Documentos completos' => 'bg-info text-dark',
         'En estudio técnico' => 'bg-primary',
@@ -33,6 +34,7 @@ function badge_color_estatus(string $estatus): string {
 
 $tramitesDisponibles = [
     'UR-TT-T-04' => 'Permiso Eventual de Transporte (T-04)',
+    'UR-TT-T-05' => 'Permiso para Cierre de Calle (T-05)',
     'UR-TT-T-07' => 'Permiso de Carga y Descarga (T-07)',
 ];
 if (\App\Libraries\FeatureFlags::habilitarUrTtT06()) {

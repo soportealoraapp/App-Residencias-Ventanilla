@@ -268,6 +268,47 @@ class AdminController extends Controller
             ->with('message', 'Evaluación provisional de UR-04 guardada.');
     }
 
+    public function validarCierreCalleUr05(int $solicitudId)
+    {
+        $solicitudModel = new SolicitudModel();
+        $solicitud = $solicitudModel->find($solicitudId);
+        if ($solicitud === null || $solicitud->tramite !== 'UR-TT-T-05') {
+            return redirect()->back()->with('error', 'Solicitud no válida para validación UR-05.');
+        }
+
+        $datosModel = new SolicitudDatoModel();
+        $datos = $datosModel->porSolicitudAgrupado($solicitudId);
+        $criterios = [
+            'afluencia_baja' => 'Criterio: afluencia vehicular baja',
+            'sin_transporte_publico' => 'Criterio: sin transporte público',
+            'horario_no_entorpece' => 'Criterio: horario sin afectación al tráfico',
+        ];
+        $aprobado = true;
+        foreach ($criterios as $campo => $comentario) {
+            $cumple = $this->request->getPost($campo) === '1';
+            $datos[$campo] = $cumple ? '1' : '0';
+            $aprobado = $aprobado && $cumple;
+        }
+        $datos['observaciones_validacion'] = trim((string) $this->request->getPost('observaciones_validacion'));
+        $datosModel->guardarDatos($solicitudId, $datos);
+
+        $estadoService = new EstadoSolicitudService();
+        $usuarioId = (int) session('user_id');
+        $comentario = $datos['observaciones_validacion'] !== ''
+            ? $datos['observaciones_validacion']
+            : ($aprobado ? 'Criterios de cierre validados.' : 'No se cumplen los criterios de seguridad vial.');
+        if ($aprobado && $solicitud->estatus === 'Recibido' && ! $estadoService->cambiarEstatus($solicitudId, 'En validación', $usuarioId, 'Solicitud recibida para validación inmediata.')) {
+            return redirect()->back()->with('error', 'No se pudo iniciar la validación de UR-05.');
+        }
+        $nuevoEstatus = $aprobado ? 'Pago pendiente' : 'Rechazado';
+        if (! $estadoService->cambiarEstatus($solicitudId, $nuevoEstatus, $usuarioId, $comentario)) {
+            return redirect()->back()->with('error', 'No se pudo aplicar la validación desde el estado actual.');
+        }
+
+        return redirect()->to('/admin/solicitudes/' . $solicitud->folio)
+            ->with('message', 'Validación de criterios UR-05 registrada.');
+    }
+
     public function cambiarEstatus(int $solicitudId)
     {
         $solicitudModel = new SolicitudModel();

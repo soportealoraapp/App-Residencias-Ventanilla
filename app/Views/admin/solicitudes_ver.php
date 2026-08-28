@@ -251,6 +251,25 @@ $claveEtiquetas = [
 </div>
 <?php endif; ?>
 
+<?php if ($solicitud->tramite === 'UR-TT-T-05' && in_array($solicitud->estatus, ['Recibido', 'En validación'], true)): ?>
+<div class="card mb-3 border-primary shadow-sm">
+    <div class="card-header bg-primary bg-opacity-10"><h6 class="mb-0 text-primary fw-bold"><i class="bi bi-shield-check me-2"></i>Validación rápida UR-05</h6></div>
+    <div class="card-body">
+        <p class="small text-muted">Marca los criterios provisionales de seguridad vial para autorizar el pago.</p>
+        <form method="post" action="<?= site_url('admin/solicitudes/ur05/validacion/' . $solicitud->id) ?>">
+            <?= csrf_field() ?>
+            <div class="row g-2 mb-3">
+                <?php foreach (['afluencia_baja' => 'La calle tiene baja afluencia vehicular', 'sin_transporte_publico' => 'No circula transporte público', 'horario_no_entorpece' => 'El horario no entorpece el tráfico'] as $campo => $etiqueta): ?>
+                <div class="col-12"><label class="form-check"><input class="form-check-input" type="checkbox" name="<?= $campo ?>" value="1" <?= ($datosSolicitud[$campo] ?? '') === '1' ? 'checked' : '' ?>><span class="form-check-label"><?= esc($etiqueta) ?></span></label></div>
+                <?php endforeach; ?>
+            </div>
+            <textarea name="observaciones_validacion" class="form-control mb-3" rows="2" placeholder="Observaciones de la validación..."><?= esc($datosSolicitud['observaciones_validacion'] ?? '') ?></textarea>
+            <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-check2-circle me-1"></i>Validar y autorizar pago</button>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
+
 <div class="card mb-3">
     <div class="card-header">
         <h6 class="mb-0">Datos del trámite (captura)</h6>

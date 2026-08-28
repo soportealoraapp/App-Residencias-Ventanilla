@@ -36,6 +36,15 @@ class EstadoSolicitudService
         'RECHAZADO' => 'Rechazado',
     ];
 
+    public const ESTATUS_UR_TT_T_05 = [
+        'RECIBIDO' => 'Recibido',
+        'EN_VALIDACION' => 'En validación',
+        'PAGO_PENDIENTE' => 'Pago pendiente',
+        'PAGADO' => 'Pagado',
+        'PERMISO_EMITIDO' => 'Permiso emitido',
+        'RECHAZADO' => 'Rechazado',
+    ];
+
     public const ESTATUS_UR_TT_T_06 = [
         'RECIBIDO' => 'Recibido',
         'EN_REVISION' => 'En revisión documental',
@@ -79,6 +88,7 @@ class EstadoSolicitudService
         'Verificado',
         'Aprobado',
         'En revisión documental',
+        'En validación',
         'Documentos completos',
         'En estudio técnico',
         'Dictamen favorable',
@@ -138,6 +148,14 @@ class EstadoSolicitudService
             'Pendiente de revista mecánica' => ['Seguro pendiente de validación', 'Rechazado'],
             'Seguro pendiente de validación' => ['Autorizado para pago', 'Rechazado'],
             'Autorizado para pago' => ['Pago pendiente', 'Rechazado'],
+            'Pago pendiente' => ['Pagado', 'Rechazado'],
+            'Pagado' => ['Permiso emitido'],
+            'Permiso emitido' => [],
+            'Rechazado' => [],
+        ],
+        'UR-TT-T-05' => [
+            'Recibido' => ['En validación', 'Rechazado'],
+            'En validación' => ['Pago pendiente', 'Rechazado'],
             'Pago pendiente' => ['Pagado', 'Rechazado'],
             'Pagado' => ['Permiso emitido'],
             'Permiso emitido' => [],

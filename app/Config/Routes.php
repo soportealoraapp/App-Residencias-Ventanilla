@@ -29,6 +29,7 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->get('solicitudes/(:any)', 'Admin\\AdminController::verSolicitud/$1', ['as' => 'admin.solicitud.ver']);
         $routes->post('solicitudes/cambiar-estatus/(:num)', 'Admin\\AdminController::cambiarEstatus/$1');
         $routes->post('solicitudes/ur04/evaluacion/(:num)', 'Admin\\AdminController::guardarEvaluacionUr04/$1');
+        $routes->post('solicitudes/ur05/validacion/(:num)', 'Admin\\AdminController::validarCierreCalleUr05/$1');
         $routes->post('solicitudes/dictamen-ur02/(:num)', 'Admin\\AdminController::registrarDictamenUr02/$1');
         $routes->get('solicitudes/descargar-documento/(:num)', 'Admin\\AdminController::descargarDocumento/$1');
         $routes->get('tarifas', 'Admin\\CatalogoTarifasController::index');
@@ -103,6 +104,12 @@ $routes->group('portal', ['filter' => 'auth'], static function ($routes) {
         $routes->post('permiso-eventual/guardar', 'Portal\TramitePermisoEventualController::guardar');
         $routes->get('permiso-eventual/resumen/(:any)', 'Portal\TramitePermisoEventualController::resumen/$1');
         $routes->post('permiso-eventual/pagar/(:num)', 'Portal\TramitePermisoEventualController::pagar/$1');
+
+        $routes->get('cierre-calle', 'Portal\\TramiteCierreCalleController::formulario');
+        $routes->post('cierre-calle/guardar', 'Portal\\TramiteCierreCalleController::guardar');
+        $routes->get('cierre-calle/resumen/(:any)', 'Portal\\TramiteCierreCalleController::resumen/$1');
+        $routes->post('cierre-calle/pagar/(:num)', 'Portal\\TramiteCierreCalleController::pagar/$1');
+        $routes->get('cierre-calle/permiso/(:any)', 'Portal\\TramiteCierreCalleController::permiso/$1');
     });
 });
 

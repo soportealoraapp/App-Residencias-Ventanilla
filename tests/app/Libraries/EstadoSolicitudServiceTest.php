@@ -90,6 +90,14 @@ class EstadoSolicitudServiceTest extends DatabaseTestCase
         $this->assertFalse($this->service->transicionValida('UR-TT-T-04', 'Autorizado para pago', 'Pagado'));
     }
 
+    public function testTransicionesUr05_FlujoDirectoYRechazo(): void
+    {
+        $this->assertTrue($this->service->transicionValida('UR-TT-T-05', 'Recibido', 'En validación'));
+        $this->assertTrue($this->service->transicionValida('UR-TT-T-05', 'En validación', 'Pago pendiente'));
+        $this->assertTrue($this->service->transicionValida('UR-TT-T-05', 'En validación', 'Rechazado'));
+        $this->assertFalse($this->service->transicionValida('UR-TT-T-05', 'Recibido', 'Pagado'));
+    }
+
     public function testCambiarEstatus_SinComentarioEnPrevencion_ReturnsFalse(): void
     {
         $solicitudId = $this->crearSolicitud('UR-TT-T-06', 'En revisión documental');
