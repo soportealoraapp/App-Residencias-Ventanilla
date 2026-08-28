@@ -10,6 +10,14 @@ class TarifasSeeder extends Seeder
     {
         $data = [
             [
+                'tramite'          => 'UR-TT-T-04',
+                'criterio'         => 'base',
+                'monto'            => 156.94,
+                'vigente_desde'    => date('Y-m-d'),
+                'placeholder_oficial' => 1,
+                'descripcion'      => 'Tarifa provisional del prototipo: Permiso Eventual de Transporte',
+            ],
+            [
                 'tramite'          => 'UR-TT-T-07',
                 'criterio'         => 'particular_dia',
                 'monto'            => 50.00,

@@ -28,6 +28,7 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->get('solicitudes', 'Admin\\AdminController::listaSolicitudes', ['as' => 'admin.solicitudes']);
         $routes->get('solicitudes/(:any)', 'Admin\\AdminController::verSolicitud/$1', ['as' => 'admin.solicitud.ver']);
         $routes->post('solicitudes/cambiar-estatus/(:num)', 'Admin\\AdminController::cambiarEstatus/$1');
+        $routes->post('solicitudes/ur04/evaluacion/(:num)', 'Admin\\AdminController::guardarEvaluacionUr04/$1');
         $routes->post('solicitudes/dictamen-ur02/(:num)', 'Admin\\AdminController::registrarDictamenUr02/$1');
         $routes->get('solicitudes/descargar-documento/(:num)', 'Admin\\AdminController::descargarDocumento/$1');
         $routes->get('tarifas', 'Admin\\CatalogoTarifasController::index');
@@ -97,6 +98,11 @@ $routes->group('portal', ['filter' => 'auth'], static function ($routes) {
         $routes->get('carga-descarga/resumen/(:any)', 'Portal\TramiteCargaDescargaController::resumen/$1');
         $routes->post('carga-descarga/pagar/(:num)', 'Portal\TramiteCargaDescargaController::pagar/$1');
         $routes->get('carga-descarga/(:any)/descargar/(:num)', 'Portal\TramiteCargaDescargaController::descargarDocumento/$1/$2');
+
+        $routes->get('permiso-eventual', 'Portal\TramitePermisoEventualController::formulario');
+        $routes->post('permiso-eventual/guardar', 'Portal\TramitePermisoEventualController::guardar');
+        $routes->get('permiso-eventual/resumen/(:any)', 'Portal\TramitePermisoEventualController::resumen/$1');
+        $routes->post('permiso-eventual/pagar/(:num)', 'Portal\TramitePermisoEventualController::pagar/$1');
     });
 });
 

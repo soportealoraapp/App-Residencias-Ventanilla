@@ -116,4 +116,12 @@ class TarifarioServiceTest extends DatabaseTestCase
         $this->assertEqualsWithDelta(64.90, $this->service->calcularMonto('UR-TT-T-02'), 0.001);
         $this->assertEqualsWithDelta(50.00, $this->service->calcularMonto('UR-TT-T-03'), 0.001);
     }
+
+    public function testCalcularMonto_Ur04_ValorProvisional(): void
+    {
+        $this->crearTarifa('UR-TT-T-04', 'base', 156.94, 1);
+
+        $this->assertEqualsWithDelta(156.94, $this->service->calcularMonto('UR-TT-T-04'), 0.001);
+        $this->assertTrue($this->service->esPlaceholder('UR-TT-T-04', 'base'));
+    }
 }

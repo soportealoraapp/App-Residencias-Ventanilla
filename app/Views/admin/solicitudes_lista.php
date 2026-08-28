@@ -12,6 +12,14 @@ function badge_color_estatus(string $estatus): string {
     return match($estatus) {
         'Recibido' => 'bg-secondary',
         'En revisión' => 'bg-primary',
+        'En revisión documental' => 'bg-primary',
+        'Documentos completos' => 'bg-info text-dark',
+        'En estudio técnico' => 'bg-primary',
+        'Dictamen favorable' => 'bg-success',
+        'Pendiente de inspección' => 'bg-warning text-dark',
+        'Pendiente de revista mecánica' => 'bg-warning text-dark',
+        'Seguro pendiente de validación' => 'bg-warning text-dark',
+        'Autorizado para pago' => 'bg-info text-dark',
         'Prevención' => 'bg-warning text-dark',
         'Pago pendiente' => 'bg-info text-dark',
         'Pagado' => 'bg-success',
@@ -23,7 +31,10 @@ function badge_color_estatus(string $estatus): string {
     };
 }
 
-$tramitesDisponibles = ['UR-TT-T-07' => 'Permiso de Carga y Descarga (T-07)'];
+$tramitesDisponibles = [
+    'UR-TT-T-04' => 'Permiso Eventual de Transporte (T-04)',
+    'UR-TT-T-07' => 'Permiso de Carga y Descarga (T-07)',
+];
 if (\App\Libraries\FeatureFlags::habilitarUrTtT06()) {
     $tramitesDisponibles['UR-TT-T-06'] = 'Cesión de Concesión (T-06)';
 }

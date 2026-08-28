@@ -75,6 +75,21 @@ class EstadoSolicitudServiceTest extends DatabaseTestCase
         $this->assertTrue($resultado);
     }
 
+    public function testTransicionesUr04_RecorridoInicialEsValido(): void
+    {
+        $this->assertTrue($this->service->transicionValida('UR-TT-T-04', 'Recibido', 'En revisión documental'));
+        $this->assertTrue($this->service->transicionValida('UR-TT-T-04', 'En revisión documental', 'Documentos completos'));
+        $this->assertTrue($this->service->transicionValida('UR-TT-T-04', 'Documentos completos', 'En estudio técnico'));
+        $this->assertFalse($this->service->transicionValida('UR-TT-T-04', 'Recibido', 'Pago pendiente'));
+    }
+
+    public function testTransicionesUr04_AutorizacionPagoEsAnteriorAlPago(): void
+    {
+        $this->assertTrue($this->service->transicionValida('UR-TT-T-04', 'Seguro pendiente de validación', 'Autorizado para pago'));
+        $this->assertTrue($this->service->transicionValida('UR-TT-T-04', 'Autorizado para pago', 'Pago pendiente'));
+        $this->assertFalse($this->service->transicionValida('UR-TT-T-04', 'Autorizado para pago', 'Pagado'));
+    }
+
     public function testCambiarEstatus_SinComentarioEnPrevencion_ReturnsFalse(): void
     {
         $solicitudId = $this->crearSolicitud('UR-TT-T-06', 'En revisión documental');

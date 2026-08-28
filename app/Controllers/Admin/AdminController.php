@@ -235,6 +235,39 @@ class AdminController extends Controller
             ->with('message', '¡Dictamen de verificación física registrado con éxito con estatus: ' . $nuevoEstatus . '!');
     }
 
+    public function guardarEvaluacionUr04(int $solicitudId)
+    {
+        $solicitudModel = new SolicitudModel();
+        $solicitud = $solicitudModel->find($solicitudId);
+        if ($solicitud === null || $solicitud->tramite !== 'UR-TT-T-04') {
+            return redirect()->back()->with('error', 'Solicitud no válida para evaluación UR-04.');
+        }
+
+        $datosModel = new SolicitudDatoModel();
+        $datos = $datosModel->porSolicitudAgrupado($solicitudId);
+        $campos = [
+            'observaciones_revision',
+            'resultado_estudio_tecnico',
+            'observaciones_estudio_tecnico',
+            'resultado_inspeccion',
+            'observaciones_inspeccion',
+            'resultado_revista_mecanica',
+            'observaciones_revista_mecanica',
+            'seguro_validado',
+            'numero_poliza',
+            'aseguradora',
+            'observaciones_seguro',
+        ];
+
+        foreach ($campos as $campo) {
+            $datos[$campo] = trim((string) $this->request->getPost($campo));
+        }
+        $datosModel->guardarDatos($solicitudId, $datos);
+
+        return redirect()->to('/admin/solicitudes/' . $solicitud->folio)
+            ->with('message', 'Evaluación provisional de UR-04 guardada.');
+    }
+
     public function cambiarEstatus(int $solicitudId)
     {
         $solicitudModel = new SolicitudModel();

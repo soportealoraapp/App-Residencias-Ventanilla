@@ -8,6 +8,14 @@ function badge_color_estatus(string $estatus): string {
     return match($estatus) {
         'Recibido' => 'bg-secondary',
         'En revisión' => 'bg-primary',
+        'En revisión documental' => 'bg-primary',
+        'Documentos completos' => 'bg-info text-dark',
+        'En estudio técnico' => 'bg-primary',
+        'Dictamen favorable' => 'bg-success',
+        'Pendiente de inspección' => 'bg-warning text-dark',
+        'Pendiente de revista mecánica' => 'bg-warning text-dark',
+        'Seguro pendiente de validación' => 'bg-warning text-dark',
+        'Autorizado para pago' => 'bg-info text-dark',
         'Prevención' => 'bg-warning text-dark',
         'Pago pendiente' => 'bg-info text-dark',
         'Pagado' => 'bg-success',
@@ -215,6 +223,30 @@ $claveEtiquetas = [
                 </form>
             </div>
         </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if ($solicitud->tramite === 'UR-TT-T-04'): ?>
+<div class="card mb-3 border-primary shadow-sm">
+    <div class="card-header bg-primary bg-opacity-10"><h6 class="mb-0 text-primary fw-bold"><i class="bi bi-clipboard2-check me-2"></i>Evaluación provisional UR-04</h6></div>
+    <div class="card-body">
+        <form method="post" action="<?= site_url('admin/solicitudes/ur04/evaluacion/' . $solicitud->id) ?>">
+            <?= csrf_field() ?>
+            <div class="row g-3">
+                <div class="col-12"><label class="form-label small fw-bold">Observaciones de revisión documental</label><textarea name="observaciones_revision" class="form-control" rows="2"><?= esc($datosSolicitud['observaciones_revision'] ?? '') ?></textarea></div>
+                <div class="col-md-6"><label class="form-label small fw-bold">Resultado del estudio técnico</label><select name="resultado_estudio_tecnico" class="form-select"><option value="">Pendiente</option><option value="favorable" <?= ($datosSolicitud['resultado_estudio_tecnico'] ?? '') === 'favorable' ? 'selected' : '' ?>>Favorable</option><option value="no_favorable" <?= ($datosSolicitud['resultado_estudio_tecnico'] ?? '') === 'no_favorable' ? 'selected' : '' ?>>No favorable</option></select></div>
+                <div class="col-md-6"><label class="form-label small fw-bold">Resultado de inspección</label><select name="resultado_inspeccion" class="form-select"><option value="">Pendiente</option><option value="aprobada" <?= ($datosSolicitud['resultado_inspeccion'] ?? '') === 'aprobada' ? 'selected' : '' ?>>Aprobada</option><option value="no_aprobada" <?= ($datosSolicitud['resultado_inspeccion'] ?? '') === 'no_aprobada' ? 'selected' : '' ?>>No aprobada</option></select></div>
+                <div class="col-12"><label class="form-label small fw-bold">Observaciones del estudio técnico</label><textarea name="observaciones_estudio_tecnico" class="form-control" rows="2"><?= esc($datosSolicitud['observaciones_estudio_tecnico'] ?? '') ?></textarea></div>
+                <div class="col-md-6"><label class="form-label small fw-bold">Resultado de revista mecánica</label><select name="resultado_revista_mecanica" class="form-select"><option value="">Pendiente</option><option value="aprobada" <?= ($datosSolicitud['resultado_revista_mecanica'] ?? '') === 'aprobada' ? 'selected' : '' ?>>Aprobada</option><option value="no_aprobada" <?= ($datosSolicitud['resultado_revista_mecanica'] ?? '') === 'no_aprobada' ? 'selected' : '' ?>>No aprobada</option></select></div>
+                <div class="col-md-6"><label class="form-label small fw-bold">Seguro validado</label><select name="seguro_validado" class="form-select"><option value="">Pendiente</option><option value="si" <?= ($datosSolicitud['seguro_validado'] ?? '') === 'si' ? 'selected' : '' ?>>Sí</option><option value="no" <?= ($datosSolicitud['seguro_validado'] ?? '') === 'no' ? 'selected' : '' ?>>No</option></select></div>
+                <div class="col-md-6"><label class="form-label small fw-bold">Número de póliza</label><input name="numero_poliza" class="form-control" value="<?= esc($datosSolicitud['numero_poliza'] ?? '') ?>"></div>
+                <div class="col-md-6"><label class="form-label small fw-bold">Aseguradora</label><input name="aseguradora" class="form-control" value="<?= esc($datosSolicitud['aseguradora'] ?? '') ?>"></div>
+                <div class="col-12"><label class="form-label small fw-bold">Observaciones de inspección</label><textarea name="observaciones_inspeccion" class="form-control" rows="2"><?= esc($datosSolicitud['observaciones_inspeccion'] ?? '') ?></textarea></div>
+                <div class="col-12"><label class="form-label small fw-bold">Observaciones de revista / seguro</label><textarea name="observaciones_revista_mecanica" class="form-control" rows="2"><?= esc($datosSolicitud['observaciones_revista_mecanica'] ?? '') ?></textarea><textarea name="observaciones_seguro" class="form-control mt-2" rows="2"><?= esc($datosSolicitud['observaciones_seguro'] ?? '') ?></textarea></div>
+            </div>
+            <button class="btn btn-primary btn-sm mt-3" type="submit"><i class="bi bi-save me-1"></i>Guardar evaluación</button>
+        </form>
     </div>
 </div>
 <?php endif; ?>

@@ -29,6 +29,7 @@ if (!function_exists('tramite_nombre')) {
     function tramite_nombre(string $clave): string
     {
         return match ($clave) {
+            'UR-TT-T-04' => 'Permiso Eventual de Transporte',
             'UR-TT-T-07' => 'Permiso de Carga y Descarga',
             'UR-TT-T-06' => 'Cesión de Concesión',
             default      => 'Trámite desconocido',
