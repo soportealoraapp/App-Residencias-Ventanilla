@@ -50,18 +50,54 @@ class TramitePermisoEventualController extends Controller
         $tipoPersona = (string) ($request->getPost('tipo_persona') ?? '');
 
         $rules = [
-            'nombre_razon_social' => 'required|min_length[3]|max_length[180]',
-            'tipo_persona' => 'required|in_list[fisica,moral]',
-            'rfc' => 'required|regex_match[/^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/]',
-            'domicilio' => 'required|min_length[5]|max_length[250]',
-            'tipo_servicio' => 'required|max_length[100]',
-            'tipo_unidad' => 'required|max_length[100]',
-            'cantidad_unidades' => 'required|is_natural_no_zero|less_than_equal_to[50]',
-            'lugar_servicio' => 'required|max_length[250]',
-            'zona_servicio' => 'required|max_length[180]',
-            'motivo_necesidad' => 'required|in_list[descompostura,falta_unidades,otra_necesidad]',
-            'descripcion_necesidad' => 'required|min_length[10]|max_length[500]',
-            'vigencia_observacion' => 'required|max_length[250]',
+            'nombre_razon_social' => [
+                'rules' => 'required|min_length[3]|max_length[180]',
+                'label' => 'Nombre o razón social',
+            ],
+            'tipo_persona' => [
+                'rules' => 'required|in_list[fisica,moral]',
+                'label' => 'Tipo de persona',
+            ],
+            'rfc' => [
+                'rules' => 'required|regex_match[/^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/]',
+                'label' => 'RFC',
+            ],
+            'domicilio' => [
+                'rules' => 'required|min_length[5]|max_length[250]',
+                'label' => 'Domicilio',
+            ],
+            'tipo_servicio' => [
+                'rules' => 'required|max_length[100]',
+                'label' => 'Tipo de servicio',
+            ],
+            'tipo_unidad' => [
+                'rules' => 'required|max_length[100]',
+                'label' => 'Tipo de unidad',
+            ],
+            'cantidad_unidades' => [
+                'rules' => 'required|is_natural_no_zero|less_than_equal_to[50]',
+                'label' => 'Cantidad de unidades',
+            ],
+            'lugar_servicio' => [
+                'rules' => 'required|max_length[250]',
+                'label' => 'Lugar del servicio',
+            ],
+            'zona_servicio' => [
+                'rules' => 'required|max_length[180]',
+                'label' => 'Zona del servicio',
+            ],
+            'motivo_necesidad' => [
+                'rules' => 'required|in_list[descompostura,falta_unidades,otra_necesidad]',
+                'label' => 'Motivo de la necesidad',
+            ],
+            'descripcion_necesidad' => [
+                'rules' => 'required|min_length[10]|max_length[500]',
+                'label' => 'Descripción de la necesidad',
+            ],
+            'vigencia_observacion' => [
+                'rules' => 'required|max_length[250]',
+                'label' => 'Vigencia u observación',
+            ],
         ];
 
         $documentos = [

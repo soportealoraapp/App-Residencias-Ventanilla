@@ -110,46 +110,74 @@ class TramiteCargaDescargaController extends Controller
         $numCamiones = $request->getPost('num_camiones');
 
         $rules = [
-            'tipo_solicitante'        => 'required|in_list[particular,empresa]',
-            'razon_social_o_nombre'   => 'required|min_length[3]|max_length[180]',
-            'rfc'                     => 'required|regex_match[/^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/]',
-            'domicilio_negocio'       => 'required|max_length[250]',
-            'direccion_carga_descarga' => 'required|max_length[250]',
-            'periodo'                 => 'required|in_list[dia,mes,semestre,anio]',
-            'horario_inicio'          => 'required',
-            'horario_fin'             => 'required',
-            'es_mudanza'              => 'permit_empty',
+            'tipo_solicitante' => [
+                'rules' => 'required|in_list[particular,empresa]',
+                'label' => 'Tipo de solicitante',
+            ],
+            'razon_social_o_nombre' => [
+                'rules' => 'required|min_length[3]|max_length[180]',
+                'label' => 'Nombre o razón social',
+            ],
+            'rfc' => [
+                'rules' => 'required|regex_match[/^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/]',
+                'label' => 'RFC',
+            ],
+            'domicilio_negocio' => [
+                'rules' => 'required|max_length[250]',
+                'label' => 'Domicilio del negocio o particular',
+            ],
+            'direccion_carga_descarga' => [
+                'rules' => 'required|max_length[250]',
+                'label' => 'Dirección donde se realizará la carga/descarga',
+            ],
+            'periodo' => [
+                'rules' => 'required|in_list[dia,mes,semestre,anio]',
+                'label' => 'Periodo de vigencia',
+            ],
+            'horario_inicio' => [
+                'rules' => 'required',
+                'label' => 'Horario de inicio',
+            ],
+            'horario_fin' => [
+                'rules' => 'required',
+                'label' => 'Horario de término',
+            ],
+            'es_mudanza' => [
+                'rules' => 'permit_empty',
+                'label' => '¿Es mudanza?',
+            ],
+            'identificacion_oficial' => [
+                'rules' => 'uploaded[identificacion_oficial]|max_size[identificacion_oficial,10240]|mime_in[identificacion_oficial,image/png,image/jpeg,application/pdf]',
+                'label' => 'Identificación oficial',
+            ],
+            'tarjeta_circulacion' => [
+                'rules' => 'uploaded[tarjeta_circulacion]|max_size[tarjeta_circulacion,10240]|mime_in[tarjeta_circulacion,image/png,image/jpeg,application/pdf]',
+                'label' => 'Tarjeta de circulación',
+            ],
         ];
 
         if ($tipoSolicitante === 'empresa') {
-            $rules['num_camiones'] = 'required|is_natural_no_zero|less_than_equal_to[15]';
+            $rules['num_camiones'] = [
+                'rules' => 'required|is_natural_no_zero|less_than_equal_to[15]',
+                'label' => 'Número de camiones',
+            ];
         } else {
-            $rules['num_camiones'] = 'permit_empty';
+            $rules['num_camiones'] = [
+                'rules' => 'permit_empty',
+                'label' => 'Número de camiones',
+            ];
         }
 
-        $fileRules = [
-            'uploaded[identificacion_oficial]',
-            'max_size[identificacion_oficial,10240]',
-            'mime_in[identificacion_oficial,image/png,image/jpeg,application/pdf]',
-        ];
-        $rules['identificacion_oficial'] = implode('|', $fileRules);
-
-        $fileRules2 = [
-            'uploaded[tarjeta_circulacion]',
-            'max_size[tarjeta_circulacion,10240]',
-            'mime_in[tarjeta_circulacion,image/png,image/jpeg,application/pdf]',
-        ];
-        $rules['tarjeta_circulacion'] = implode('|', $fileRules2);
-
         if (!$esMudanza) {
-            $fileRules3 = [
-                'uploaded[documento_carga_descarga]',
-                'max_size[documento_carga_descarga,10240]',
-                'mime_in[documento_carga_descarga,image/png,image/jpeg,application/pdf]',
+            $rules['documento_carga_descarga'] = [
+                'rules' => 'uploaded[documento_carga_descarga]|max_size[documento_carga_descarga,10240]|mime_in[documento_carga_descarga,image/png,image/jpeg,application/pdf]',
+                'label' => 'Comprobante de domicilio o documento de carga/descarga',
             ];
-            $rules['documento_carga_descarga'] = implode('|', $fileRules3);
         } else {
-            $rules['documento_carga_descarga'] = 'permit_empty';
+            $rules['documento_carga_descarga'] = [
+                'rules' => 'permit_empty',
+                'label' => 'Comprobante de domicilio o documento de carga/descarga',
+            ];
         }
 
         if (!$this->validate($rules)) {

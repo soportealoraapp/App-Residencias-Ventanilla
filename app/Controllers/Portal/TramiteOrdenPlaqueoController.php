@@ -52,12 +52,30 @@ class TramiteOrdenPlaqueoController extends Controller
         $tipoPersona = $request->getPost('tipo_persona') ?? 'fisica';
 
         $rules = [
-            'numero_titulo_concesion' => 'required|min_length[3]|max_length[50]',
-            'nombre_concesionario'    => 'required|min_length[3]|max_length[180]',
-            'tipo_persona'            => 'required|in_list[fisica,moral]',
-            'numero_factura'          => 'required|min_length[2]|max_length[60]',
-            'vehiculo_placas'         => 'permit_empty|max_length[20]',
-            'vehiculo_num_serie'      => 'permit_empty|max_length[30]',
+            'numero_titulo_concesion' => [
+                'rules' => 'required|min_length[3]|max_length[50]',
+                'label' => 'Número de título de concesión',
+            ],
+            'nombre_concesionario' => [
+                'rules' => 'required|min_length[3]|max_length[180]',
+                'label' => 'Nombre del concesionario',
+            ],
+            'tipo_persona' => [
+                'rules' => 'required|in_list[fisica,moral]',
+                'label' => 'Tipo de persona',
+            ],
+            'numero_factura' => [
+                'rules' => 'required|min_length[2]|max_length[60]',
+                'label' => 'Número de factura',
+            ],
+            'vehiculo_placas' => [
+                'rules' => 'permit_empty|max_length[20]',
+                'label' => 'Placas actuales del vehículo',
+            ],
+            'vehiculo_num_serie' => [
+                'rules' => 'permit_empty|max_length[30]',
+                'label' => 'Número de serie (VIN)',
+            ],
         ];
 
         $docRules = [

@@ -16,10 +16,11 @@ class CatalogoTarifasController extends Controller
 
         $tramite = $this->request->getGet('tramite') ?? '';
 
-        $tramites = ['UR-TT-T-07'];
+        $tramites = ['UR-TT-T-01', 'UR-TT-T-02', 'UR-TT-T-03', 'UR-TT-T-04', 'UR-TT-T-05'];
         if (FeatureFlags::habilitarUrTtT06()) {
             $tramites[] = 'UR-TT-T-06';
         }
+        $tramites[] = 'UR-TT-T-07';
 
         if ($tramite !== '') {
             $tarifaModel->where('tramite', $tramite);
@@ -44,10 +45,11 @@ class CatalogoTarifasController extends Controller
 
     public function formNuevo()
     {
-        $tramites = ['UR-TT-T-07'];
+        $tramites = ['UR-TT-T-01', 'UR-TT-T-02', 'UR-TT-T-03', 'UR-TT-T-04', 'UR-TT-T-05'];
         if (FeatureFlags::habilitarUrTtT06()) {
             $tramites[] = 'UR-TT-T-06';
         }
+        $tramites[] = 'UR-TT-T-07';
 
         $hoy = date('Y-m-d');
 
@@ -75,13 +77,34 @@ class CatalogoTarifasController extends Controller
         $auditoriaModel = new AuditoriaModel();
 
         $reglas = [
-            'tramite'            => 'required|max_length[20]',
-            'criterio'           => 'required|max_length[50]',
-            'monto'              => 'required|decimal|greater_than_equal_to[0]',
-            'vigente_desde'      => 'required|valid_date',
-            'vigente_hasta'      => 'permit_empty|valid_date',
-            'descripcion'        => 'permit_empty|max_length[250]',
-            'placeholder_oficial' => 'permit_empty|in_list[0,1]',
+            'tramite' => [
+                'rules' => 'required|max_length[20]',
+                'label' => 'Trámite',
+            ],
+            'criterio' => [
+                'rules' => 'required|max_length[50]',
+                'label' => 'Criterio',
+            ],
+            'monto' => [
+                'rules' => 'required|decimal|greater_than_equal_to[0]',
+                'label' => 'Monto',
+            ],
+            'vigente_desde' => [
+                'rules' => 'required|valid_date',
+                'label' => 'Vigente desde',
+            ],
+            'vigente_hasta' => [
+                'rules' => 'permit_empty|valid_date',
+                'label' => 'Vigente hasta',
+            ],
+            'descripcion' => [
+                'rules' => 'permit_empty|max_length[250]',
+                'label' => 'Descripción',
+            ],
+            'placeholder_oficial' => [
+                'rules' => 'permit_empty|in_list[0,1]',
+                'label' => 'Tarifa de referencia',
+            ],
         ];
 
         if (!$this->validate($reglas)) {
@@ -104,7 +127,7 @@ class CatalogoTarifasController extends Controller
         $userId = session('user_id');
         $auditoriaModel->registrar('tarifas', $nuevoId, 'crear', $userId, $data);
 
-        return redirect()->to(site_url('admin/tarifas'))->with('message', 'Tarifa creada');
+        return redirect()->to(site_url('admin/tarifas'))->with('message', 'Tarifa creada correctamente.');
     }
 
     public function formEditar(int $id)
@@ -116,10 +139,11 @@ class CatalogoTarifasController extends Controller
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
 
-        $tramites = ['UR-TT-T-07'];
+        $tramites = ['UR-TT-T-01', 'UR-TT-T-02', 'UR-TT-T-03', 'UR-TT-T-04', 'UR-TT-T-05'];
         if (FeatureFlags::habilitarUrTtT06()) {
             $tramites[] = 'UR-TT-T-06';
         }
+        $tramites[] = 'UR-TT-T-07';
 
         return view('admin/catalogos/tarifas_form', [
             'tarifa'   => $tarifa,
@@ -139,13 +163,34 @@ class CatalogoTarifasController extends Controller
         }
 
         $reglas = [
-            'tramite'            => 'required|max_length[20]',
-            'criterio'           => 'required|max_length[50]',
-            'monto'              => 'required|decimal|greater_than_equal_to[0]',
-            'vigente_desde'      => 'required|valid_date',
-            'vigente_hasta'      => 'permit_empty|valid_date',
-            'descripcion'        => 'permit_empty|max_length[250]',
-            'placeholder_oficial' => 'permit_empty|in_list[0,1]',
+            'tramite' => [
+                'rules' => 'required|max_length[20]',
+                'label' => 'Trámite',
+            ],
+            'criterio' => [
+                'rules' => 'required|max_length[50]',
+                'label' => 'Criterio',
+            ],
+            'monto' => [
+                'rules' => 'required|decimal|greater_than_equal_to[0]',
+                'label' => 'Monto',
+            ],
+            'vigente_desde' => [
+                'rules' => 'required|valid_date',
+                'label' => 'Vigente desde',
+            ],
+            'vigente_hasta' => [
+                'rules' => 'permit_empty|valid_date',
+                'label' => 'Vigente hasta',
+            ],
+            'descripcion' => [
+                'rules' => 'permit_empty|max_length[250]',
+                'label' => 'Descripción',
+            ],
+            'placeholder_oficial' => [
+                'rules' => 'permit_empty|in_list[0,1]',
+                'label' => 'Tarifa de referencia',
+            ],
         ];
 
         if (!$this->validate($reglas)) {

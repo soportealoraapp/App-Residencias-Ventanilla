@@ -30,8 +30,14 @@ class AuthController extends Controller
     public function attemptLogin()
     {
         $rules = [
-            'username' => 'required',
-            'password' => 'required',
+            'username' => [
+                'rules' => 'required',
+                'label' => 'Usuario o correo electrónico',
+            ],
+            'password' => [
+                'rules' => 'required',
+                'label' => 'Contraseña',
+            ],
         ];
 
         if (! $this->validate($rules)) {
@@ -85,12 +91,30 @@ class AuthController extends Controller
     public function attemptRegister()
     {
         $rules = [
-            'nombre_completo' => 'required|min_length[3]',
-            'email'           => 'required|valid_email|is_unique[users.email]',
-            'username'        => 'required|alpha_numeric|min_length[5]|is_unique[users.username]',
-            'password'        => 'required|min_length[8]',
-            'password_confirm'=> 'required|matches[password]',
-            'rfc'             => 'permit_empty|exact_length[13]|regex_match[/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/]',
+            'nombre_completo' => [
+                'rules' => 'required|min_length[3]',
+                'label' => 'Nombre completo',
+            ],
+            'email' => [
+                'rules' => 'required|valid_email|is_unique[users.email]',
+                'label' => 'Correo electrónico',
+            ],
+            'username' => [
+                'rules' => 'required|alpha_numeric|min_length[5]|is_unique[users.username]',
+                'label' => 'Nombre de usuario',
+            ],
+            'password' => [
+                'rules' => 'required|min_length[8]',
+                'label' => 'Contraseña',
+            ],
+            'password_confirm' => [
+                'rules' => 'required|matches[password]',
+                'label' => 'Confirmar contraseña',
+            ],
+            'rfc' => [
+                'rules' => 'permit_empty|exact_length[13]|regex_match[/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/]',
+                'label' => 'RFC',
+            ],
         ];
 
         if (! $this->validate($rules)) {

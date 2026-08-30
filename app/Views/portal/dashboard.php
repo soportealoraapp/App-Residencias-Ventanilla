@@ -168,31 +168,6 @@
         </div>
     </div>
 
-    <!-- Card UR-07 -->
-    <div class="col-12 col-md-6 col-lg-3">
-        <div class="card tramite-card h-100 shadow-sm border-0">
-            <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
-                <div>
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="bg-primary text-white p-2 rounded-3 me-2 flex-shrink-0">
-                            <i class="bi bi-truck fs-5"></i>
-                        </div>
-                        <div>
-                            <span class="badge bg-primary-subtle text-primary small">UR-TT-T-07</span>
-                            <h3 class="h6 card-title mb-0 fw-bold text-dark">Carga y Descarga</h3>
-                        </div>
-                    </div>
-                    <p class="card-text small text-muted mb-3">Autorización para operaciones de carga y descarga en vía pública municipal.</p>
-                </div>
-                <div>
-                    <a href="<?= site_url('/portal/tramites/carga-descarga/formulario') ?>" class="btn btn-primary btn-sm w-100 shadow-sm fw-semibold">
-                        <i class="bi bi-play-circle me-1"></i>Iniciar trámite
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Card UR-04 -->
     <div class="col-12 col-md-6 col-lg-3">
         <div class="card tramite-card h-100 shadow-sm border-0">
@@ -269,6 +244,31 @@
         </div>
     </div>
     <?php endif; ?>
+
+    <!-- Card UR-07 -->
+    <div class="col-12 col-md-6 col-lg-3">
+        <div class="card tramite-card h-100 shadow-sm border-0">
+            <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-primary text-white p-2 rounded-3 me-2 flex-shrink-0">
+                            <i class="bi bi-truck fs-5"></i>
+                        </div>
+                        <div>
+                            <span class="badge bg-primary-subtle text-primary small">UR-TT-T-07</span>
+                            <h3 class="h6 card-title mb-0 fw-bold text-dark">Carga y Descarga</h3>
+                        </div>
+                    </div>
+                    <p class="card-text small text-muted mb-3">Autorización para operaciones de carga y descarga en vía pública municipal.</p>
+                </div>
+                <div>
+                    <a href="<?= site_url('/portal/tramites/carga-descarga/formulario') ?>" class="btn btn-primary btn-sm w-100 shadow-sm fw-semibold">
+                        <i class="bi bi-play-circle me-1"></i>Iniciar trámite
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- SECCIÓN: ÚLTIMAS SOLICITUDES -->

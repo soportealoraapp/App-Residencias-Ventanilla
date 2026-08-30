@@ -53,15 +53,27 @@ class TramiteDespintadoController extends Controller
         $session = Services::session();
         $userId = (int) $session->get('user_id');
 
-        $rules = [
-            'numero_titulo_concesion' => 'required|min_length[3]|max_length[50]',
-            'nombre_titular'          => 'required|min_length[3]|max_length[180]',
-            'vehiculo_placas'         => 'required|min_length[3]|max_length[20]',
-            'vehiculo_num_serie'      => 'required|min_length[5]|max_length[30]',
-            'motivo_despintado'       => 'required|min_length[5]|max_length[250]',
-        ];
-
-        $docRules = [
+        $allRules = [
+            'numero_titulo_concesion' => [
+                'rules' => 'required|min_length[3]|max_length[50]',
+                'label' => 'Número de título de concesión',
+            ],
+            'nombre_titular' => [
+                'rules' => 'required|min_length[3]|max_length[180]',
+                'label' => 'Nombre completo del titular / concesionario',
+            ],
+            'vehiculo_placas' => [
+                'rules' => 'required|min_length[3]|max_length[20]',
+                'label' => 'Placas actuales del vehículo',
+            ],
+            'vehiculo_num_serie' => [
+                'rules' => 'required|min_length[5]|max_length[30]',
+                'label' => 'Número de Serie (VIN)',
+            ],
+            'motivo_despintado' => [
+                'rules' => 'required|min_length[5]|max_length[250]',
+                'label' => 'Motivo de desincorporación / despintado',
+            ],
             'doc_identificacion' => [
                 'rules' => 'uploaded[doc_identificacion]|max_size[doc_identificacion,10240]|mime_in[doc_identificacion,application/pdf,image/jpeg,image/png]',
                 'label' => 'Identificación oficial del titular',
@@ -71,8 +83,6 @@ class TramiteDespintadoController extends Controller
                 'label' => 'Factura o documento de propiedad del vehículo',
             ],
         ];
-
-        $allRules = array_merge($rules, $docRules);
 
         if (! $this->validate($allRules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());

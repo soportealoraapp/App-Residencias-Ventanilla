@@ -120,42 +120,6 @@
         </div>
     </div>
 
-    <!-- T-07: Permiso de Carga y Descarga -->
-    <div class="col-12 col-md-6 col-lg-4">
-        <div class="card tramite-card h-100 shadow-sm border-0">
-            <div class="card-header bg-primary bg-opacity-10 border-0 p-3 p-md-4">
-                <div class="d-flex align-items-center">
-                    <div class="bg-primary text-white p-2 p-md-3 rounded-3 me-3 flex-shrink-0">
-                        <i class="bi bi-truck fs-4"></i>
-                    </div>
-                    <div>
-                        <div class="badge bg-primary-subtle text-primary mb-1">UR-TT-T-07</div>
-                        <h2 class="h5 mb-0 text-primary fw-bold">Permiso de Carga y Descarga</h2>
-                    </div>
-                </div>
-            </div>
-            <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
-                <div>
-                    <p class="card-text text-muted small mb-3">Autorización oficial para llevar a cabo operaciones de carga y descarga de mercancías en la vía pública, con control de horarios y periodos de vigencia.</p>
-                    <ul class="small text-muted mb-4 ps-3">
-                        <li>Para particulares y empresas</li>
-                        <li>Vigencia: Día, Mes, Semestre o Año</li>
-                        <li>Pago en línea seguro (BanBajío)</li>
-                        <li>Emisión inmediata tras confirmación de pago</li>
-                    </ul>
-                </div>
-                <div>
-                    <a href="<?= site_url('/portal/tramites/carga-descarga/formulario') ?>" class="btn btn-primary btn-lg w-100 shadow-sm">
-                        <i class="bi bi-play-circle me-2"></i>Iniciar trámite
-                    </a>
-                </div>
-            </div>
-            <div class="card-footer bg-white border-0 pt-0 pb-3 px-3 px-md-4">
-                <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
-            </div>
-        </div>
-    </div>
-
     <!-- T-04: Permiso Eventual de Transporte -->
     <div class="col-12 col-md-6 col-lg-4">
         <div class="card tramite-card h-100 shadow-sm border-0">
@@ -179,9 +143,13 @@
                         <li>Costo de referencia: <strong>$156.94</strong></li>
                     </ul>
                 </div>
-                <a href="<?= site_url('/portal/tramites/permiso-eventual') ?>" class="btn btn-primary btn-lg w-100 shadow-sm"><i class="bi bi-play-circle me-2"></i>Iniciar trámite</a>
+                <a href="<?= site_url('/portal/tramites/permiso-eventual') ?>" class="btn btn-primary btn-lg w-100 shadow-sm">
+                    <i class="bi bi-play-circle me-2"></i>Iniciar trámite
+                </a>
             </div>
-            <div class="card-footer bg-white border-0 pt-0 pb-3 px-3 px-md-4"><span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span></div>
+            <div class="card-footer bg-white border-0 pt-0 pb-3 px-3 px-md-4">
+                <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
+            </div>
         </div>
     </div>
 
@@ -252,6 +220,42 @@
         </div>
     </div>
     <?php endif; ?>
+
+    <!-- T-07: Permiso de Carga y Descarga -->
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card tramite-card h-100 shadow-sm border-0">
+            <div class="card-header bg-primary bg-opacity-10 border-0 p-3 p-md-4">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary text-white p-2 p-md-3 rounded-3 me-3 flex-shrink-0">
+                        <i class="bi bi-truck fs-4"></i>
+                    </div>
+                    <div>
+                        <div class="badge bg-primary-subtle text-primary mb-1">UR-TT-T-07</div>
+                        <h2 class="h5 mb-0 text-primary fw-bold">Permiso de Carga y Descarga</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
+                <div>
+                    <p class="card-text text-muted small mb-3">Autorización oficial para llevar a cabo operaciones de carga y descarga de mercancías en la vía pública, con control de horarios y periodos de vigencia.</p>
+                    <ul class="small text-muted mb-4 ps-3">
+                        <li>Para particulares y empresas</li>
+                        <li>Vigencia: Día, Mes, Semestre o Año</li>
+                        <li>Pago en línea seguro (BanBajío)</li>
+                        <li>Emisión inmediata tras confirmación de pago</li>
+                    </ul>
+                </div>
+                <div>
+                    <a href="<?= site_url('/portal/tramites/carga-descarga/formulario') ?>" class="btn btn-primary btn-lg w-100 shadow-sm">
+                        <i class="bi bi-play-circle me-2"></i>Iniciar trámite
+                    </a>
+                </div>
+            </div>
+            <div class="card-footer bg-white border-0 pt-0 pb-3 px-3 px-md-4">
+                <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
+            </div>
+        </div>
+    </div>
 
 </div>
 <?= $this->endSection() ?>

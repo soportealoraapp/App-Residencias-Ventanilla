@@ -88,14 +88,38 @@ class CatalogoConcesionesController extends Controller
         $auditoriaModel = new AuditoriaModel();
 
         $reglas = [
-            'numero_titulo'      => 'required|is_unique[concesiones.numero_titulo]|max_length[50]',
-            'titular_actual'     => 'required|max_length[180]',
-            'vehiculo_placas'    => 'permit_empty|max_length[10]',
-            'vehiculo_num_serie'  => 'permit_empty|max_length[20]',
-            'tipo_persona'       => 'permit_empty|in_list[fisica,moral]',
-            'vigencia_inicio'    => 'required|valid_date',
-            'vigencia_fin'       => 'required|valid_date',
-            'estatus'            => 'required|in_list[vigente,vencida,en_transmision]',
+            'numero_titulo' => [
+                'rules' => 'required|is_unique[concesiones.numero_titulo]|max_length[50]',
+                'label' => 'Número de título',
+            ],
+            'titular_actual' => [
+                'rules' => 'required|max_length[180]',
+                'label' => 'Titular actual',
+            ],
+            'vehiculo_placas' => [
+                'rules' => 'permit_empty|max_length[10]',
+                'label' => 'Placas del vehículo',
+            ],
+            'vehiculo_num_serie' => [
+                'rules' => 'permit_empty|max_length[20]',
+                'label' => 'Número de serie (VIN)',
+            ],
+            'tipo_persona' => [
+                'rules' => 'permit_empty|in_list[fisica,moral]',
+                'label' => 'Tipo de persona',
+            ],
+            'vigencia_inicio' => [
+                'rules' => 'required|valid_date',
+                'label' => 'Inicio de vigencia',
+            ],
+            'vigencia_fin' => [
+                'rules' => 'required|valid_date',
+                'label' => 'Fin de vigencia',
+            ],
+            'estatus' => [
+                'rules' => 'required|in_list[vigente,vencida,en_transmision]',
+                'label' => 'Estatus',
+            ],
         ];
 
         if (!$this->validate($reglas)) {
@@ -155,14 +179,38 @@ class CatalogoConcesionesController extends Controller
         }
 
         $reglas = [
-            'numero_titulo'      => "required|is_unique[concesiones.numero_titulo,id,{$id}]|max_length[50]",
-            'titular_actual'     => 'required|max_length[180]',
-            'vehiculo_placas'    => 'permit_empty|max_length[10]',
-            'vehiculo_num_serie'  => 'permit_empty|max_length[20]',
-            'tipo_persona'       => 'permit_empty|in_list[fisica,moral]',
-            'vigencia_inicio'    => 'required|valid_date',
-            'vigencia_fin'       => 'required|valid_date',
-            'estatus'            => 'required|in_list[vigente,vencida,en_transmision]',
+            'numero_titulo' => [
+                'rules' => "required|is_unique[concesiones.numero_titulo,id,{$id}]|max_length[50]",
+                'label' => 'Número de título',
+            ],
+            'titular_actual' => [
+                'rules' => 'required|max_length[180]',
+                'label' => 'Titular actual',
+            ],
+            'vehiculo_placas' => [
+                'rules' => 'permit_empty|max_length[10]',
+                'label' => 'Placas del vehículo',
+            ],
+            'vehiculo_num_serie' => [
+                'rules' => 'permit_empty|max_length[20]',
+                'label' => 'Número de serie (VIN)',
+            ],
+            'tipo_persona' => [
+                'rules' => 'permit_empty|in_list[fisica,moral]',
+                'label' => 'Tipo de persona',
+            ],
+            'vigencia_inicio' => [
+                'rules' => 'required|valid_date',
+                'label' => 'Inicio de vigencia',
+            ],
+            'vigencia_fin' => [
+                'rules' => 'required|valid_date',
+                'label' => 'Fin de vigencia',
+            ],
+            'estatus' => [
+                'rules' => 'required|in_list[vigente,vencida,en_transmision]',
+                'label' => 'Estatus',
+            ],
         ];
 
         if (!$this->validate($reglas)) {

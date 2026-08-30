@@ -59,17 +59,35 @@ class TramiteConcesionTransporteController extends Controller
             return redirect()->back()->withInput()->with('error', 'No fue posible registrar la solicitud: la convocatoria especificada no está vigente o ha expirado.');
         }
 
-        $rules = [
-            'convocatoria_id'   => 'required|is_natural_no_zero',
-            'solicitante_nombre' => 'required|min_length[3]|max_length[180]',
-            'tipo_persona'       => 'required|in_list[fisica,moral]',
-            'rfc'                => 'required|regex_match[/^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/]',
-            'domicilio'          => 'required|min_length[5]|max_length[250]',
-            'tipo_servicio'      => 'required|min_length[3]|max_length[100]',
-            'num_vehiculos'      => 'required|is_natural_no_zero|less_than_equal_to[50]',
-        ];
-
-        $docRules = [
+        $allRules = [
+            'convocatoria_id' => [
+                'rules' => 'required|is_natural_no_zero',
+                'label' => 'Convocatoria',
+            ],
+            'solicitante_nombre' => [
+                'rules' => 'required|min_length[3]|max_length[180]',
+                'label' => 'Nombre del solicitante',
+            ],
+            'tipo_persona' => [
+                'rules' => 'required|in_list[fisica,moral]',
+                'label' => 'Tipo de persona',
+            ],
+            'rfc' => [
+                'rules' => 'required|regex_match[/^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/]',
+                'label' => 'RFC',
+            ],
+            'domicilio' => [
+                'rules' => 'required|min_length[5]|max_length[250]',
+                'label' => 'Domicilio',
+            ],
+            'tipo_servicio' => [
+                'rules' => 'required|min_length[3]|max_length[100]',
+                'label' => 'Tipo de servicio',
+            ],
+            'num_vehiculos' => [
+                'rules' => 'required|is_natural_no_zero|less_than_equal_to[50]',
+                'label' => 'Número de vehículos',
+            ],
             'doc_acta' => [
                 'rules' => 'uploaded[doc_acta]|max_size[doc_acta,10240]|mime_in[doc_acta,application/pdf,image/jpeg,image/png]',
                 'label' => 'Acta de nacimiento o Acta constitutiva',
@@ -99,8 +117,6 @@ class TramiteConcesionTransporteController extends Controller
                 'label' => 'Documentación técnica de los vehículos propuestos',
             ],
         ];
-
-        $allRules = array_merge($rules, $docRules);
 
         if (! $this->validate($allRules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());

@@ -53,14 +53,14 @@
         <a href="/admin/solicitudes?tramite=UR-TT-T-05" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-05' ? 'active' : '' ?>">
             <i class="bi bi-sign-stop me-2"></i> T-05: Cierre Calle
         </a>
-        <a href="/admin/solicitudes?tramite=UR-TT-T-07" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-07' ? 'active' : '' ?>">
-            <i class="bi bi-truck me-2"></i> T-07: Carga/Descarga
-        </a>
         <?php if (getenv('APP_ENABLE_UR_TT_T_06') === 'true'): ?>
             <a href="/admin/solicitudes?tramite=UR-TT-T-06" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-06' ? 'active' : '' ?>">
                 <i class="bi bi-arrow-left-right me-2"></i> T-06: Cesión
             </a>
         <?php endif; ?>
+        <a href="/admin/solicitudes?tramite=UR-TT-T-07" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-07' ? 'active' : '' ?>">
+            <i class="bi bi-truck me-2"></i> T-07: Carga/Descarga
+        </a>
 
         <div class="sidebar-section-title mt-3">Catálogos</div>
         <a href="/admin/tarifas" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/tarifas') ? 'active' : '' ?>">

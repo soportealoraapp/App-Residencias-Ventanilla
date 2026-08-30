@@ -108,20 +108,35 @@ class TramiteCesionConcesionController extends Controller
         $tipoCesion = $request->getPost('tipo_cesion') ?? '';
 
         $rules = [
-            'solicitante_nombre'       => 'required|min_length[3]|max_length[180]',
-            'solicitante_domicilio'    => 'required|max_length[250]',
-            'tipo_cesion'              => 'required|in_list[muerte_incapacidad,cesion_derechos,mandamiento_judicial]',
-            'numero_titulo_concesion'  => 'required|max_length[50]',
-            'vehiculo_placas'          => 'required|max_length[10]',
-            'vehiculo_num_serie'       => 'required|max_length[20]',
+            'solicitante_nombre' => [
+                'rules' => 'required|min_length[3]|max_length[180]',
+                'label' => 'Nombre del solicitante',
+            ],
+            'solicitante_domicilio' => [
+                'rules' => 'required|max_length[250]',
+                'label' => 'Domicilio del solicitante',
+            ],
+            'tipo_cesion' => [
+                'rules' => 'required|in_list[muerte_incapacidad,cesion_derechos,mandamiento_judicial]',
+                'label' => 'Tipo de cesión',
+            ],
+            'numero_titulo_concesion' => [
+                'rules' => 'required|max_length[50]',
+                'label' => 'Número de título de concesión',
+            ],
+            'vehiculo_placas' => [
+                'rules' => 'required|max_length[10]',
+                'label' => 'Placas del vehículo',
+            ],
+            'vehiculo_num_serie' => [
+                'rules' => 'required|max_length[20]',
+                'label' => 'Número de serie (VIN)',
+            ],
+            'titulo_concesion_archivo' => [
+                'rules' => 'uploaded[titulo_concesion_archivo]|max_size[titulo_concesion_archivo,10240]|mime_in[titulo_concesion_archivo,image/png,image/jpeg,application/pdf]',
+                'label' => 'Título de concesión (archivo)',
+            ],
         ];
-
-        $fileRulesComun = [
-            'uploaded[titulo_concesion_archivo]',
-            'max_size[titulo_concesion_archivo,10240]',
-            'mime_in[titulo_concesion_archivo,image/png,image/jpeg,application/pdf]',
-        ];
-        $rules['titulo_concesion_archivo'] = implode('|', $fileRulesComun);
 
         $docCapacidadFiles = $request->getFiles();
         $hayDocCapacidad = isset($docCapacidadFiles['documentos_capacidad']) && is_array($docCapacidadFiles['documentos_capacidad']) && !empty($docCapacidadFiles['documentos_capacidad'][0]);
@@ -130,14 +145,17 @@ class TramiteCesionConcesionController extends Controller
             $docs = $docCapacidadFiles['documentos_capacidad'];
             foreach ($docs as $idx => $doc) {
                 if ($doc !== null && $doc->isValid() && !$doc->hasMoved()) {
-                    $rules['documentos_capacidad.' . $idx] = implode('|', [
-                        'max_size[documentos_capacidad.' . $idx . ',10240]',
-                        'mime_in[documentos_capacidad.' . $idx . ',image/png,image/jpeg,application/pdf]',
-                    ]);
+                    $rules['documentos_capacidad.' . $idx] = [
+                        'rules' => 'max_size[documentos_capacidad.' . $idx . ',10240]|mime_in[documentos_capacidad.' . $idx . ',image/png,image/jpeg,application/pdf]',
+                        'label' => 'Documentos de acreditación de capacidad (' . ($idx + 1) . ')',
+                    ];
                 }
             }
         } else {
-            $rules['documentos_capacidad'] = 'required';
+            $rules['documentos_capacidad'] = [
+                'rules' => 'required',
+                'label' => 'Documentos de capacidad legal, técnica y financiera',
+            ];
         }
 
         $archivosCondicionales = [];
@@ -165,11 +183,10 @@ class TramiteCesionConcesionController extends Controller
         }
 
         foreach ($archivosCondicionales as $campo => $nombre) {
-            $rules[$campo] = implode('|', [
-                'uploaded[' . $campo . ']',
-                'max_size[' . $campo . ',10240]',
-                'mime_in[' . $campo . ',image/png,image/jpeg,application/pdf]',
-            ]);
+            $rules[$campo] = [
+                'rules' => 'uploaded[' . $campo . ']|max_size[' . $campo . ',10240]|mime_in[' . $campo . ',image/png,image/jpeg,application/pdf]',
+                'label' => $nombre,
+            ];
         }
 
         if (!$this->validate($rules)) {

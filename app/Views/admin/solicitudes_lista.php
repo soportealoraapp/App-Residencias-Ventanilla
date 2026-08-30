@@ -38,11 +38,11 @@ $tramitesDisponibles = [
     'UR-TT-T-03' => 'T-03: Orden de Plaqueo',
     'UR-TT-T-04' => 'T-04: Permiso Eventual de Transporte',
     'UR-TT-T-05' => 'T-05: Permiso para Cierre de Calle',
-    'UR-TT-T-07' => 'T-07: Permiso de Carga y Descarga',
 ];
 if (\App\Libraries\FeatureFlags::habilitarUrTtT06()) {
     $tramitesDisponibles['UR-TT-T-06'] = 'T-06: Cesión de Concesión';
 }
+$tramitesDisponibles['UR-TT-T-07'] = 'T-07: Permiso de Carga y Descarga';
 
 $estatusLista = \App\Libraries\EstadoSolicitudService::ESTATUS_MAESTRO;
 ?>

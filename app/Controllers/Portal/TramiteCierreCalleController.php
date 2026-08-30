@@ -49,18 +49,54 @@ class TramiteCierreCalleController extends Controller
         $userId = (int) Services::session()->get('user_id');
 
         $rules = [
-            'nombre_solicitante' => 'required|min_length[3]|max_length[180]',
-            'domicilio' => 'required|min_length[5]|max_length[250]',
-            'fecha_cierre' => 'required|valid_date[Y-m-d]',
-            'hora_inicio' => 'required|regex_match[/^([01][0-9]|2[0-3]):[0-5][0-9]$/]',
-            'hora_fin' => 'required|regex_match[/^([01][0-9]|2[0-3]):[0-5][0-9]$/]',
-            'calle_tramo' => 'required|min_length[3]|max_length[250]',
-            'colonia' => 'required|max_length[120]',
-            'tipo_cierre' => 'required|in_list[parcial,total]',
-            'motivo_evento' => 'required|min_length[3]|max_length[180]',
-            'descripcion_evento' => 'required|min_length[10]|max_length[500]',
-            'identificacion_oficial' => 'uploaded[identificacion_oficial]|max_size[identificacion_oficial,10240]|mime_in[identificacion_oficial,application/pdf,image/jpeg,image/png]',
-            'solicitud_escrita' => 'uploaded[solicitud_escrita]|max_size[solicitud_escrita,10240]|mime_in[solicitud_escrita,application/pdf,image/jpeg,image/png]',
+            'nombre_solicitante' => [
+                'rules' => 'required|min_length[3]|max_length[180]',
+                'label' => 'Nombre del solicitante',
+            ],
+            'domicilio' => [
+                'rules' => 'required|min_length[5]|max_length[250]',
+                'label' => 'Domicilio',
+            ],
+            'fecha_cierre' => [
+                'rules' => 'required|valid_date[Y-m-d]',
+                'label' => 'Fecha del cierre',
+            ],
+            'hora_inicio' => [
+                'rules' => 'required|regex_match[/^([01][0-9]|2[0-3]):[0-5][0-9]$/]',
+                'label' => 'Hora de inicio',
+            ],
+            'hora_fin' => [
+                'rules' => 'required|regex_match[/^([01][0-9]|2[0-3]):[0-5][0-9]$/]',
+                'label' => 'Hora de término',
+            ],
+            'calle_tramo' => [
+                'rules' => 'required|min_length[3]|max_length[250]',
+                'label' => 'Calle y tramo a cerrar',
+            ],
+            'colonia' => [
+                'rules' => 'required|max_length[120]',
+                'label' => 'Colonia',
+            ],
+            'tipo_cierre' => [
+                'rules' => 'required|in_list[parcial,total]',
+                'label' => 'Tipo de cierre',
+            ],
+            'motivo_evento' => [
+                'rules' => 'required|min_length[3]|max_length[180]',
+                'label' => 'Motivo del evento',
+            ],
+            'descripcion_evento' => [
+                'rules' => 'required|min_length[10]|max_length[500]',
+                'label' => 'Descripción del evento',
+            ],
+            'identificacion_oficial' => [
+                'rules' => 'uploaded[identificacion_oficial]|max_size[identificacion_oficial,10240]|mime_in[identificacion_oficial,application/pdf,image/jpeg,image/png]',
+                'label' => 'Identificación oficial',
+            ],
+            'solicitud_escrita' => [
+                'rules' => 'uploaded[solicitud_escrita]|max_size[solicitud_escrita,10240]|mime_in[solicitud_escrita,application/pdf,image/jpeg,image/png]',
+                'label' => 'Solicitud escrita',
+            ],
         ];
 
         if (! $this->validate($rules)) {

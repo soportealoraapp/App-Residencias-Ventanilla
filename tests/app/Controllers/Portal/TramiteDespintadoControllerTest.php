@@ -262,4 +262,58 @@ class TramiteDespintadoControllerTest extends DatabaseTestCase
         Services::resetSingle('request');
         Services::resetSingle('validation');
     }
+
+    public function testMensajesValidacionEnEspanolYEtiquetasAmigables(): void
+    {
+        $appConfig = new App();
+        $uri = new SiteURI($appConfig, 'portal/tramites/constancia-despintado/guardar');
+        $userAgent = new UserAgent();
+        $request = new IncomingRequest($appConfig, $uri, 'php://input', $userAgent);
+        $request->setMethod('POST');
+        $request->setGlobal('post', []);
+        $request->setGlobal('request', []);
+
+        Services::injectMock('request', $request);
+        $validation = Services::validation(null, false);
+        Services::injectMock('validation', $validation);
+
+        $_SESSION = [
+            'user_id'         => $this->ciudadanoId,
+            'username'        => 'ciudadano_ur02',
+            'nombre_completo' => 'María Fernández Despintado',
+            'roles'           => ['ciudadano'],
+        ];
+        Services::session()->set($_SESSION);
+
+        $controller = new TramiteDespintadoController();
+        $controller->initController($request, new Response($appConfig), Services::logger());
+
+        $response = $controller->guardar();
+        $this->assertInstanceOf(\CodeIgniter\HTTP\RedirectResponse::class, $response);
+
+        $errors = session('errors') ?? [];
+        $this->assertNotEmpty($errors);
+        $this->assertArrayHasKey('numero_titulo_concesion', $errors);
+        $this->assertStringContainsString('Número de título de concesión', $errors['numero_titulo_concesion']);
+        $this->assertStringContainsString('obligatorio', $errors['numero_titulo_concesion']);
+
+        $this->assertArrayHasKey('nombre_titular', $errors);
+        $this->assertStringContainsString('Nombre completo del titular', $errors['nombre_titular']);
+        $this->assertStringContainsString('obligatorio', $errors['nombre_titular']);
+
+        $this->assertArrayHasKey('vehiculo_placas', $errors);
+        $this->assertStringContainsString('Placas actuales del vehículo', $errors['vehiculo_placas']);
+
+        $this->assertArrayHasKey('vehiculo_num_serie', $errors);
+        $this->assertStringContainsString('Número de Serie (VIN)', $errors['vehiculo_num_serie']);
+
+        $this->assertArrayHasKey('motivo_despintado', $errors);
+        $this->assertStringContainsString('Motivo de desincorporación', $errors['motivo_despintado']);
+
+        Services::injectMock('request', null);
+        Services::injectMock('validation', null);
+        Services::resetSingle('request');
+        Services::resetSingle('validation');
+    }
 }
+
