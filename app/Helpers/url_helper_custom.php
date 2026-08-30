@@ -29,11 +29,14 @@ if (!function_exists('tramite_nombre')) {
     function tramite_nombre(string $clave): string
     {
         return match ($clave) {
+            'UR-TT-T-01' => 'Concesión de Transporte',
+            'UR-TT-T-02' => 'Constancia de Despintado',
+            'UR-TT-T-03' => 'Orden de Plaqueo',
             'UR-TT-T-04' => 'Permiso Eventual de Transporte',
-            'UR-TT-T-05' => 'Permiso para Cierre Parcial o Total de Calle',
-            'UR-TT-T-07' => 'Permiso de Carga y Descarga',
+            'UR-TT-T-05' => 'Permiso para Cierre de Calle',
             'UR-TT-T-06' => 'Cesión de Concesión',
-            default      => 'Trámite desconocido',
+            'UR-TT-T-07' => 'Permiso de Carga y Descarga',
+            default       => $clave,
         };
     }
 }

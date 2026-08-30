@@ -100,4 +100,34 @@ class PortalController extends Controller
             'verificacion' => $verificacion,
         ]);
     }
+
+    public function descargarDocumento(string $folio, int $documentoId)
+    {
+        $session = Services::session();
+        $userId = (int)$session->get('user_id');
+
+        $solicitudModel = new SolicitudModel();
+        $solicitud = $solicitudModel->findByFolio($folio);
+
+        if ($solicitud === null || (int)$solicitud->ciudadano_id !== $userId) {
+            return redirect()->to('/portal/mis-solicitudes')->with('error', 'Acceso denegado.');
+        }
+
+        $documentoModel = new DocumentoModel();
+        $doc = $documentoModel->find($documentoId);
+        if ($doc === null || (int)$doc->solicitud_id !== (int)$solicitud->id) {
+            return redirect()->back()->with('error', 'Documento no encontrado.');
+        }
+
+        $rutaInterna = $doc->ruta_interna ?? '';
+        $directorio = WRITEPATH . 'uploads' . DIRECTORY_SEPARATOR . 'documentos' . DIRECTORY_SEPARATOR;
+        $rutaCompleta = $directorio . $rutaInterna;
+
+        if ($rutaInterna === '' || !file_exists($rutaCompleta)) {
+            return redirect()->back()->with('error', 'El archivo no existe en el servidor.');
+        }
+
+        return Services::response()->download($rutaCompleta, null, true)
+            ->setFileName($doc->nombre_original ?? 'documento');
+    }
 }

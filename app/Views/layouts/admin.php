@@ -27,27 +27,37 @@
             <button type="button" class="btn-close btn-close-white d-lg-none" id="btnCloseSidebar" aria-label="Cerrar"></button>
         </div>
 
+        <?php
+            $qTramite = $_GET['tramite'] ?? '';
+            $isAllSolicitudes = uri_string() === 'admin/solicitudes' && $qTramite === '';
+        ?>
         <div class="sidebar-section-title">Operaciones</div>
         <a href="/admin/dashboard" class="sidebar-link <?= uri_string() === 'admin/dashboard' || uri_string() === 'admin' ? 'active' : '' ?>">
             <i class="bi bi-speedometer2 me-2"></i> Dashboard
         </a>
-        <a href="/admin/solicitudes" class="sidebar-link <?= uri_string() === 'admin/solicitudes' ? 'active' : '' ?>">
+        <a href="/admin/solicitudes" class="sidebar-link <?= $isAllSolicitudes ? 'active' : '' ?>">
             <i class="bi bi-folder2-open me-2"></i> Todas las solicitudes
         </a>
-        <a href="/admin/solicitudes?tramite=UR-TT-T-01" class="sidebar-link ms-2 small">
+        <a href="/admin/solicitudes?tramite=UR-TT-T-01" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-01' ? 'active' : '' ?>">
             <i class="bi bi-award me-2"></i> T-01: Concesiones
         </a>
-        <a href="/admin/solicitudes?tramite=UR-TT-T-02" class="sidebar-link ms-2 small">
+        <a href="/admin/solicitudes?tramite=UR-TT-T-02" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-02' ? 'active' : '' ?>">
             <i class="bi bi-paint-bucket me-2"></i> T-02: Despintado
         </a>
-        <a href="/admin/solicitudes?tramite=UR-TT-T-03" class="sidebar-link ms-2 small">
+        <a href="/admin/solicitudes?tramite=UR-TT-T-03" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-03' ? 'active' : '' ?>">
             <i class="bi bi-card-heading me-2"></i> T-03: Plaqueo
         </a>
-        <a href="/admin/solicitudes?tramite=UR-TT-T-07" class="sidebar-link ms-2 small">
+        <a href="/admin/solicitudes?tramite=UR-TT-T-04" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-04' ? 'active' : '' ?>">
+            <i class="bi bi-bus-front me-2"></i> T-04: P. Eventual
+        </a>
+        <a href="/admin/solicitudes?tramite=UR-TT-T-05" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-05' ? 'active' : '' ?>">
+            <i class="bi bi-sign-stop me-2"></i> T-05: Cierre Calle
+        </a>
+        <a href="/admin/solicitudes?tramite=UR-TT-T-07" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-07' ? 'active' : '' ?>">
             <i class="bi bi-truck me-2"></i> T-07: Carga/Descarga
         </a>
         <?php if (getenv('APP_ENABLE_UR_TT_T_06') === 'true'): ?>
-            <a href="/admin/solicitudes?tramite=UR-TT-T-06" class="sidebar-link ms-2 small">
+            <a href="/admin/solicitudes?tramite=UR-TT-T-06" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-06' ? 'active' : '' ?>">
                 <i class="bi bi-arrow-left-right me-2"></i> T-06: Cesión
             </a>
         <?php endif; ?>

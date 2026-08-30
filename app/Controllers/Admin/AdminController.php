@@ -48,7 +48,7 @@ class AdminController extends Controller
             ->monto ?? 0.0;
 
         $porTramite = [];
-        $tramites = ['UR-TT-T-01', 'UR-TT-T-02', 'UR-TT-T-03', 'UR-TT-T-07'];
+        $tramites = ['UR-TT-T-01', 'UR-TT-T-02', 'UR-TT-T-03', 'UR-TT-T-04', 'UR-TT-T-05', 'UR-TT-T-07'];
         if (FeatureFlags::habilitarUrTtT06()) {
             $tramites[] = 'UR-TT-T-06';
         }

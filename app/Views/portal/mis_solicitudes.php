@@ -57,7 +57,15 @@
                             <i class="bi bi-eye me-1"></i>Ver detalle
                         </a>
                         <?php if ($s->estatus === 'Pago pendiente'): ?>
-                            <a href="<?= site_url('/portal/tramites/carga-descarga/resumen/' . $s->folio) ?>" class="btn btn-sm btn-success flex-fill" style="background-color: #0e9f6e; border-color: #0e9f6e;">
+                            <?php
+                                $pagoUrl = match($s->tramite) {
+                                    'UR-TT-T-07' => site_url('/portal/tramites/carga-descarga/resumen/' . $s->folio),
+                                    'UR-TT-T-04' => site_url('/portal/tramites/permiso-eventual/resumen/' . $s->folio),
+                                    'UR-TT-T-05' => site_url('/portal/tramites/cierre-calle/resumen/' . $s->folio),
+                                    default      => site_url('/portal/solicitud/' . $s->folio),
+                                };
+                            ?>
+                            <a href="<?= $pagoUrl ?>" class="btn btn-sm btn-success flex-fill">
                                 <i class="bi bi-cash-coin me-1"></i>Pagar
                             </a>
                         <?php endif; ?>
@@ -107,7 +115,15 @@
                                 <i class="bi bi-eye me-1"></i>Ver detalle
                             </a>
                             <?php if ($s->estatus === 'Pago pendiente'): ?>
-                            <a href="<?= site_url('/portal/tramites/carga-descarga/resumen/' . $s->folio) ?>" class="btn btn-sm btn-success" style="background-color: #0e9f6e; border-color: #0e9f6e;">
+                            <?php
+                                $pagoUrl = match($s->tramite) {
+                                    'UR-TT-T-07' => site_url('/portal/tramites/carga-descarga/resumen/' . $s->folio),
+                                    'UR-TT-T-04' => site_url('/portal/tramites/permiso-eventual/resumen/' . $s->folio),
+                                    'UR-TT-T-05' => site_url('/portal/tramites/cierre-calle/resumen/' . $s->folio),
+                                    default      => site_url('/portal/solicitud/' . $s->folio),
+                                };
+                            ?>
+                            <a href="<?= $pagoUrl ?>" class="btn btn-sm btn-success">
                                 <i class="bi bi-cash-coin me-1"></i>Pagar
                             </a>
                             <?php endif; ?>

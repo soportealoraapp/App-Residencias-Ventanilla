@@ -93,24 +93,49 @@
 </div>
 
 <div class="row g-3 mb-5">
-    <!-- Card UR-07 -->
+    <!-- Card UR-01 -->
+    <div class="col-12 col-md-6 col-lg-3">
+        <div class="card tramite-card h-100 shadow-sm border-0">
+            <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-success text-white p-2 rounded-3 me-2 flex-shrink-0">
+                            <i class="bi bi-award fs-5"></i>
+                        </div>
+                        <div>
+                            <span class="badge bg-success-subtle text-success small">UR-TT-T-01</span>
+                            <h3 class="h6 card-title mb-0 fw-bold text-dark">Concesión Transporte</h3>
+                        </div>
+                    </div>
+                    <p class="card-text small text-muted mb-3">Postulación de expediente técnico bajo Convocatoria Pública ($9,055.20).</p>
+                </div>
+                <div>
+                    <a href="<?= site_url('/portal/tramites/concesion-transporte') ?>" class="btn btn-success btn-sm w-100 shadow-sm fw-semibold">
+                        <i class="bi bi-play-circle me-1"></i>Ver Convocatoria
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card UR-02 -->
     <div class="col-12 col-md-6 col-lg-3">
         <div class="card tramite-card h-100 shadow-sm border-0">
             <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
                 <div>
                     <div class="d-flex align-items-center mb-3">
                         <div class="bg-primary text-white p-2 rounded-3 me-2 flex-shrink-0">
-                            <i class="bi bi-truck fs-5"></i>
+                            <i class="bi bi-paint-bucket fs-5"></i>
                         </div>
                         <div>
-                            <span class="badge bg-primary-subtle text-primary small">UR-TT-T-07</span>
-                            <h3 class="h6 card-title mb-0 fw-bold text-dark">Carga y Descarga</h3>
+                            <span class="badge bg-primary-subtle text-primary small">UR-TT-T-02</span>
+                            <h3 class="h6 card-title mb-0 fw-bold text-dark">Constancia Despintado</h3>
                         </div>
                     </div>
-                    <p class="card-text small text-muted mb-3">Autorización para operaciones de carga y descarga en vía pública municipal.</p>
+                    <p class="card-text small text-muted mb-3">Constancia e inspección física presencial de despintado de unidades ($64.90).</p>
                 </div>
                 <div>
-                    <a href="<?= site_url('/portal/tramites/carga-descarga/formulario') ?>" class="btn btn-primary btn-sm w-100 shadow-sm fw-semibold">
+                    <a href="<?= site_url('/portal/tramites/constancia-despintado') ?>" class="btn btn-primary btn-sm w-100 shadow-sm fw-semibold">
                         <i class="bi bi-play-circle me-1"></i>Iniciar trámite
                     </a>
                 </div>
@@ -143,24 +168,24 @@
         </div>
     </div>
 
-    <!-- Card UR-02 -->
+    <!-- Card UR-07 -->
     <div class="col-12 col-md-6 col-lg-3">
         <div class="card tramite-card h-100 shadow-sm border-0">
             <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
                 <div>
                     <div class="d-flex align-items-center mb-3">
                         <div class="bg-primary text-white p-2 rounded-3 me-2 flex-shrink-0">
-                            <i class="bi bi-paint-bucket fs-5"></i>
+                            <i class="bi bi-truck fs-5"></i>
                         </div>
                         <div>
-                            <span class="badge bg-primary-subtle text-primary small">UR-TT-T-02</span>
-                            <h3 class="h6 card-title mb-0 fw-bold text-dark">Constancia Despintado</h3>
+                            <span class="badge bg-primary-subtle text-primary small">UR-TT-T-07</span>
+                            <h3 class="h6 card-title mb-0 fw-bold text-dark">Carga y Descarga</h3>
                         </div>
                     </div>
-                    <p class="card-text small text-muted mb-3">Constancia e inspección física presencial de despintado de unidades ($64.90).</p>
+                    <p class="card-text small text-muted mb-3">Autorización para operaciones de carga y descarga en vía pública municipal.</p>
                 </div>
                 <div>
-                    <a href="<?= site_url('/portal/tramites/constancia-despintado') ?>" class="btn btn-primary btn-sm w-100 shadow-sm fw-semibold">
+                    <a href="<?= site_url('/portal/tramites/carga-descarga/formulario') ?>" class="btn btn-primary btn-sm w-100 shadow-sm fw-semibold">
                         <i class="bi bi-play-circle me-1"></i>Iniciar trámite
                     </a>
                 </div>
@@ -168,30 +193,82 @@
         </div>
     </div>
 
-    <!-- Card UR-01 -->
+    <!-- Card UR-04 -->
+    <div class="col-12 col-md-6 col-lg-3">
+        <div class="card tramite-card h-100 shadow-sm border-0">
+            <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-primary text-white p-2 rounded-3 me-2 flex-shrink-0">
+                            <i class="bi bi-bus-front fs-5"></i>
+                        </div>
+                        <div>
+                            <span class="badge bg-primary-subtle text-primary small">UR-TT-T-04</span>
+                            <h3 class="h6 card-title mb-0 fw-bold text-dark">Permiso Eventual</h3>
+                        </div>
+                    </div>
+                    <p class="card-text small text-muted mb-3">Permiso temporal para cubrir necesidad del servicio por descompostura ($156.94).</p>
+                </div>
+                <div>
+                    <a href="<?= site_url('/portal/tramites/permiso-eventual') ?>" class="btn btn-primary btn-sm w-100 shadow-sm fw-semibold">
+                        <i class="bi bi-play-circle me-1"></i>Iniciar trámite
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card UR-05 -->
+    <div class="col-12 col-md-6 col-lg-3">
+        <div class="card tramite-card h-100 shadow-sm border-0">
+            <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-primary text-white p-2 rounded-3 me-2 flex-shrink-0">
+                            <i class="bi bi-sign-stop fs-5"></i>
+                        </div>
+                        <div>
+                            <span class="badge bg-primary-subtle text-primary small">UR-TT-T-05</span>
+                            <h3 class="h6 card-title mb-0 fw-bold text-dark">Cierre de Calle</h3>
+                        </div>
+                    </div>
+                    <p class="card-text small text-muted mb-3">Permiso para cierre parcial o total de calle por evento, vigencia de un día ($287.00).</p>
+                </div>
+                <div>
+                    <a href="<?= site_url('/portal/tramites/cierre-calle') ?>" class="btn btn-primary btn-sm w-100 shadow-sm fw-semibold">
+                        <i class="bi bi-play-circle me-1"></i>Iniciar trámite
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card UR-06 (feature flag) -->
+    <?php if (!empty($habilitaT06)): ?>
     <div class="col-12 col-md-6 col-lg-3">
         <div class="card tramite-card h-100 shadow-sm border-0">
             <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
                 <div>
                     <div class="d-flex align-items-center mb-3">
                         <div class="bg-success text-white p-2 rounded-3 me-2 flex-shrink-0">
-                            <i class="bi bi-award fs-5"></i>
+                            <i class="bi bi-arrow-left-right fs-5"></i>
                         </div>
                         <div>
-                            <span class="badge bg-success-subtle text-success small">UR-TT-T-01</span>
-                            <h3 class="h6 card-title mb-0 fw-bold text-dark">Concesión Transporte</h3>
+                            <span class="badge bg-success-subtle text-success small">UR-TT-T-06</span>
+                            <h3 class="h6 card-title mb-0 fw-bold text-dark">Cesión de Concesión</h3>
                         </div>
                     </div>
-                    <p class="card-text small text-muted mb-3">Postulación de expediente técnico bajo Convocatoria Pública ($9,055.20).</p>
+                    <p class="card-text small text-muted mb-3">Transferencia de derechos y obligaciones de una concesión de transporte.</p>
                 </div>
                 <div>
-                    <a href="<?= site_url('/portal/tramites/concesion-transporte') ?>" class="btn btn-success btn-sm w-100 shadow-sm fw-semibold">
-                        <i class="bi bi-play-circle me-1"></i>Ver Convocatoria
+                    <a href="<?= site_url('/portal/tramites/cesion-concesion') ?>" class="btn btn-success btn-sm w-100 shadow-sm fw-semibold">
+                        <i class="bi bi-play-circle me-1"></i>Iniciar trámite
                     </a>
                 </div>
             </div>
         </div>
     </div>
+    <?php endif; ?>
 </div>
 
 <!-- SECCIÓN: ÚLTIMAS SOLICITUDES -->

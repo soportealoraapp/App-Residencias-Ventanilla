@@ -1,22 +1,42 @@
 <?php declare(strict_types=1);
 $mapEstatusClass = [
-    'Recibido' => 'bg-info text-dark',
+    'Recibido' => 'bg-secondary',
+    'En revisión' => 'bg-primary',
+    'En validación' => 'bg-primary',
+    'En revisión documental' => 'bg-primary',
+    'Documentos completos' => 'bg-info text-dark',
+    'En estudio técnico' => 'bg-primary',
+    'Dictamen favorable' => 'bg-success',
+    'Pendiente de inspección' => 'bg-warning text-dark',
+    'Pendiente de revista mecánica' => 'bg-warning text-dark',
+    'Seguro pendiente de validación' => 'bg-warning text-dark',
+    'Autorizado para pago' => 'bg-info text-dark',
+    'Prevención' => 'bg-warning text-dark',
+    'Dictaminado aprobado' => 'bg-success',
     'Pago pendiente' => 'bg-warning text-dark',
-    'Pagado' => 'bg-primary',
+    'Pagado' => 'bg-success',
     'Permiso emitido' => 'bg-success',
     'Vigente' => 'bg-success',
+    'Vencido' => 'bg-danger',
     'Rechazado' => 'bg-danger',
-    'Vencido' => 'bg-secondary',
+    'Concluido' => 'bg-dark',
+    'Cita agendada' => 'bg-info text-dark',
+    'Verificado' => 'bg-success',
+    'Aprobado' => 'bg-success',
+    'Seleccionado' => 'bg-success',
+    'No seleccionado' => 'bg-secondary',
 ];
 $estatusClass = $mapEstatusClass[$solicitud->estatus] ?? 'bg-secondary';
 $labelsDatos = [
     'tipo_solicitante' => 'Tipo de solicitante',
     'razon_social_o_nombre' => 'Nombre / Razón social',
     'rfc' => 'RFC',
+    'RFC' => 'RFC',
     'domicilio_negocio' => 'Domicilio del negocio o particular',
     'direccion_carga_descarga' => 'Dirección de carga/descarga',
     'periodo' => 'Periodo',
     'num_camiones' => 'Número de camiones',
+    'num_vehiculos' => 'Número de vehículos',
     'horario_inicio' => 'Horario inicio',
     'horario_fin' => 'Horario fin',
     'es_mudanza' => '¿Es mudanza?',
@@ -29,8 +49,20 @@ $labelsDatos = [
     'tramite_concepto' => 'Concepto del trámite',
     'motivo' => 'Motivo de la solicitud',
     'solicitante' => 'Nombre del solicitante',
+    'solicitante_nombre' => 'Nombre del solicitante',
+    'solicitante_email' => 'Correo electrónico',
+    'solicitante_telefono' => 'Teléfono',
     'tipo_servicio' => 'Tipo de servicio',
     'observaciones' => 'Observaciones',
+    'calle' => 'Calle o vialidad',
+    'entre_calles' => 'Entre calles',
+    'colonia' => 'Colonia',
+    'fecha_evento' => 'Fecha del evento',
+    'horario' => 'Horario solicitado',
+    'tipo_evento' => 'Tipo de evento',
+    'cesionario_nombre' => 'Nombre del cesionario',
+    'cesionario_rfc' => 'RFC del cesionario',
+    'cedente_nombre' => 'Nombre del cedente',
 ];
 $periodoLabels = ['dia' => 'Día', 'mes' => 'Mes', 'semestre' => 'Semestre', 'anio' => 'Año'];
 $tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa', 'fisica' => 'Persona Física', 'moral' => 'Persona Moral'];
@@ -220,7 +252,7 @@ $tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa', 'fisica' =>
                                 </div>
                             </div>
                         </div>
-                        <a href="<?= site_url('/portal/tramites/carga-descarga/' . $solicitud->folio . '/descargar/' . $doc->id) ?>" class="btn btn-sm btn-outline-primary ms-auto">
+                        <a href="<?= site_url('/portal/solicitud/' . $solicitud->folio . '/descargar/' . $doc->id) ?>" class="btn btn-sm btn-outline-primary ms-auto">
                             <i class="bi bi-download me-1"></i>Descargar
                         </a>
                     </div>
@@ -259,8 +291,16 @@ $tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa', 'fisica' =>
                 <?php endif; ?>
             </div>
             <?php if ($solicitud->estatus === 'Pago pendiente'): ?>
+            <?php
+                $pagoUrl = match($solicitud->tramite) {
+                    'UR-TT-T-07' => site_url('/portal/tramites/carga-descarga/resumen/' . $solicitud->folio),
+                    'UR-TT-T-04' => site_url('/portal/tramites/permiso-eventual/resumen/' . $solicitud->folio),
+                    'UR-TT-T-05' => site_url('/portal/tramites/cierre-calle/resumen/' . $solicitud->folio),
+                    default      => site_url('/portal/solicitud/' . $solicitud->folio),
+                };
+            ?>
             <div class="card-footer bg-white border-top p-3">
-                <a href="<?= site_url('/portal/tramites/carga-descarga/resumen/' . $solicitud->folio) ?>" class="btn btn-success btn-lg w-100 shadow-sm" style="background-color: #0e9f6e; border-color: #0e9f6e;">
+                <a href="<?= $pagoUrl ?>" class="btn btn-success btn-lg w-100 shadow-sm" style="background-color: #0e9f6e; border-color: #0e9f6e;">
                     <i class="bi bi-cash-coin me-2"></i>Ir a pagar
                 </a>
             </div>

@@ -33,12 +33,15 @@ function badge_color_estatus(string $estatus): string {
 }
 
 $tramitesDisponibles = [
-    'UR-TT-T-04' => 'Permiso Eventual de Transporte (T-04)',
-    'UR-TT-T-05' => 'Permiso para Cierre de Calle (T-05)',
-    'UR-TT-T-07' => 'Permiso de Carga y Descarga (T-07)',
+    'UR-TT-T-01' => 'T-01: Concesión de Transporte',
+    'UR-TT-T-02' => 'T-02: Constancia de Despintado',
+    'UR-TT-T-03' => 'T-03: Orden de Plaqueo',
+    'UR-TT-T-04' => 'T-04: Permiso Eventual de Transporte',
+    'UR-TT-T-05' => 'T-05: Permiso para Cierre de Calle',
+    'UR-TT-T-07' => 'T-07: Permiso de Carga y Descarga',
 ];
 if (\App\Libraries\FeatureFlags::habilitarUrTtT06()) {
-    $tramitesDisponibles['UR-TT-T-06'] = 'Cesión de Concesión (T-06)';
+    $tramitesDisponibles['UR-TT-T-06'] = 'T-06: Cesión de Concesión';
 }
 
 $estatusLista = \App\Libraries\EstadoSolicitudService::ESTATUS_MAESTRO;

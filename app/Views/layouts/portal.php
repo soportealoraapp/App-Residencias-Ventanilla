@@ -103,6 +103,14 @@
         </div>
     <?php endif; ?>
 
+    <?php if (session('error')): ?>
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert">
+            <i class="bi bi-exclamation-circle-fill fs-5 me-2 text-danger"></i>
+            <div><?= esc(session('error')) ?></div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    <?php endif ?>
+
     <?= $this->renderSection('content') ?>
 </main>
 
