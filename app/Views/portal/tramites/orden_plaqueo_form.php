@@ -219,7 +219,7 @@ $oldNumSerie = old('vehiculo_num_serie', '');
 
     <!-- Columna Lateral Sticky: Resumen de Derechos y Requisitos -->
     <div class="col-lg-4">
-        <div class="card shadow-sm border-0 sticky-top" style="top: 90px;">
+        <div class="card shadow-sm border-0 tramite-sidebar-sticky">
             <div class="card-header bg-white py-3">
                 <h5 class="mb-0 text-primary fw-bold">
                     <i class="bi bi-cash-coin me-2"></i>Costo de Derechos
@@ -228,15 +228,13 @@ $oldNumSerie = old('vehiculo_num_serie', '');
             <div class="card-body text-center p-4">
                 <div class="small text-muted mb-1 text-uppercase fw-semibold">Tarifa Oficial Vigente</div>
                 <div class="mb-3">
-                    <span class="badge fs-2 bg-primary px-4 py-3 rounded-pill d-inline-block shadow-sm">
+                    <span class="badge bg-primary rounded-pill d-inline-block shadow-sm tramite-cost-badge">
                         $ <?= number_format((float) $tarifaMonto, 2) ?>
                     </span>
                 </div>
-                <?php if (!empty($esPlaceholder)): ?>
-                    <div class="alert alert-warning small mb-3 text-start py-2" role="alert">
-                        <i class="bi bi-info-circle me-1"></i>Monto sujeto a validación reglamentaria municipal.
-                    </div>
-                <?php endif; ?>
+                <div class="alert alert-info small mb-3 text-start py-2" role="alert">
+                    <i class="bi bi-info-circle me-1"></i>Tarifa oficial conforme a la Ley de Ingresos Municipal.
+                </div>
                 <div class="small text-muted border-top pt-3 text-start">
                     <div class="fw-semibold text-dark mb-1"><i class="bi bi-check2-circle text-success me-1"></i>Incluye:</div>
                     <ul class="ps-3 mb-0 text-muted">

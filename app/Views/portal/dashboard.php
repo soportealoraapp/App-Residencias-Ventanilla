@@ -4,15 +4,16 @@
 <?= $this->section('content') ?>
 
 <!-- ENCABEZADO Y HERO BANNER BIENVENIDA -->
-<div class="card border-0 shadow-sm mb-4 overflow-hidden" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
+<div class="card border-0 shadow-sm mb-4 overflow-hidden" style="background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);">
     <div class="card-body p-4 p-md-5 text-white">
         <div class="row align-items-center">
             <div class="col-lg-8">
-                <span class="badge bg-white bg-opacity-20 text-white mb-2 px-3 py-2 fw-semibold">
-                    <i class="bi bi-shield-check me-1"></i>Ventanilla Digital Oficial · Uriangato, Gto.
-                </span>
+                <div class="d-inline-flex align-items-center mb-2 px-3 py-1 rounded-pill" style="background-color: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.35);">
+                    <i class="bi bi-shield-check me-2 text-warning fs-6"></i>
+                    <span class="text-white fw-bold small" style="letter-spacing: 0.02em;">Ventanilla Digital Oficial · Uriangato, Gto.</span>
+                </div>
                 <h1 class="h2 text-white fw-bold mb-2">¡Bienvenido(a), <?= esc(session('nombre_completo') ?? session('username') ?? 'Ciudadano') ?>!</h1>
-                <p class="text-white opacity-90 mb-0 lead fs-6">
+                <p class="text-white mb-0 lead fs-6" style="opacity: 0.95;">
                     Gestiona tus solicitudes de transporte y movilidad municipal de forma rápida, segura y 100% digital.
                 </p>
             </div>

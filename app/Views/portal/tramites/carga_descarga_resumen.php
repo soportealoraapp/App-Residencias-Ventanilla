@@ -154,9 +154,9 @@ $puedePagar = $solicitud->estatus === 'Pago pendiente';
     </div>
 
     <div class="col-lg-4">
-        <div class="card shadow-sm sticky-top" style="top: 90px;">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="bi bi-bank me-2 text-primary"></i>Proceso de pago</h5>
+        <div class="card shadow-sm border-0 tramite-sidebar-sticky">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 text-primary fw-bold"><i class="bi bi-bank me-2 text-primary"></i>Proceso de Pago</h5>
             </div>
             <div class="card-body">
                 <div class="border rounded p-3 bg-light mb-3 text-center">

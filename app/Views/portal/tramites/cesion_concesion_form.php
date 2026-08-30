@@ -253,42 +253,42 @@ $oldNumSerie = old('vehiculo_num_serie', '');
     </div>
 
     <div class="col-lg-4">
-        <div class="card shadow-sm sticky-top" style="top: 90px;">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="bi bi-cash-stack me-2 text-primary"></i>Monto de la solicitud</h5>
+        <div class="card shadow-sm border-0 tramite-sidebar-sticky">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 text-primary fw-bold"><i class="bi bi-cash-stack me-2 text-primary"></i>Costo de Derechos</h5>
             </div>
-            <div class="card-body text-center">
+            <div class="card-body text-center p-4">
+                <div class="small text-muted mb-1 text-uppercase fw-semibold">Tarifa Oficial Vigente</div>
                 <div class="mb-3">
                     <?php
                     $tarifario = new \App\Libraries\TarifarioService();
                     $montoEstimado = $tarifario->calcularMontoUrTtT06();
-                    $esPlaceholder = false;
-                    if ($montoEstimado !== null) {
-                        $esPlaceholder = $tarifario->esPlaceholder('UR-TT-T-06', 'cesion_concesion_base');
-                    }
                     ?>
                     <?php if ($montoEstimado !== null): ?>
-                        <span class="badge fs-3 px-4 py-3 rounded-pill d-inline-block <?= $esPlaceholder ? 'badge-placeholder' : 'bg-primary' ?>" style="min-width: 160px;">
+                        <span class="badge bg-primary rounded-pill d-inline-block shadow-sm tramite-cost-badge">
                             $ <?= number_format($montoEstimado, 2, '.', ',') ?>
                         </span>
-                        <?php if ($esPlaceholder): ?>
-                            <div class="alert alert-warning small mt-3 mb-0 py-2" role="alert">
-                                <i class="bi bi-exclamation-triangle me-1"></i>
-                                Monto placeholder. El monto final se validará en revisión documental.
-                            </div>
-                        <?php endif; ?>
+                        <div class="alert alert-info small mt-3 mb-0 py-2 text-start" role="alert">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Tarifa oficial conforme a la Ley de Ingresos Municipal.
+                        </div>
                     <?php else: ?>
-                        <span class="badge fs-3 bg-secondary px-4 py-3 rounded-pill d-inline-block" style="min-width: 160px;">
+                        <span class="badge bg-secondary rounded-pill d-inline-block tramite-cost-badge">
                             N/D
                         </span>
                         <div class="alert alert-danger small mt-3 mb-0 py-2" role="alert">
                             <i class="bi bi-x-circle me-1"></i>
-                            Tarifa no configurada. Contáctanos.
+                            Tarifa en actualización en la Dirección de Movilidad.
                         </div>
                     <?php endif; ?>
                 </div>
-                <div class="small text-muted">
-                    El pago se realizará después de la revisión documental.
+                <div class="small text-muted border-top pt-3 text-start">
+                    <div class="fw-semibold text-dark mb-1"><i class="bi bi-shield-check text-primary me-1"></i>Procedimiento Oficial:</div>
+                    <ul class="ps-3 mb-0 text-muted">
+                        <li>Validación exhaustiva de antecedentes de la concesión.</li>
+                        <li>Cotejo presencial de firmas de cedente y cesionario.</li>
+                        <li>Emisión del nuevo título de concesión.</li>
+                    </ul>
                 </div>
             </div>
         </div>

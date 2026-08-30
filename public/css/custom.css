@@ -175,7 +175,7 @@ button, input, select, textarea, .btn {
   padding: 0.75rem 0;
   position: sticky;
   top: 0;
-  z-index: 1020;
+  z-index: 1050;
 }
 
 .navbar-uriangato .navbar-brand {
@@ -233,6 +233,39 @@ button, input, select, textarea, .btn {
   #navPortal .nav-link {
     padding: 0.75rem 0.5rem !important;
   }
+}
+
+/* ==========================================================================
+   TRAMITES SIDEBAR STICKY & COST BADGE
+   ========================================================================== */
+.tramite-sidebar-sticky {
+  border-radius: var(--radius-md);
+  transition: box-shadow 0.2s ease;
+}
+
+@media (min-width: 992px) {
+  .tramite-sidebar-sticky {
+    position: sticky !important;
+    top: 85px !important;
+    z-index: 20 !important;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .tramite-sidebar-sticky {
+    position: static !important;
+    top: auto !important;
+    z-index: auto !important;
+    margin-top: 1rem;
+  }
+}
+
+.tramite-cost-badge {
+  font-size: clamp(1.4rem, 2.5vw, 2.2rem) !important;
+  max-width: 100%;
+  white-space: normal;
+  word-break: break-word;
+  padding: 0.65rem 1.25rem !important;
 }
 
 .footer-ciudadano {

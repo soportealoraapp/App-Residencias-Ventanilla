@@ -241,8 +241,8 @@
                     <ul class="small text-muted mb-4 ps-3">
                         <li>Para particulares y empresas</li>
                         <li>Vigencia: Día, Mes, Semestre o Año</li>
-                        <li>Pago en línea seguro (BanBajío)</li>
-                        <li>Emisión inmediata tras confirmación de pago</li>
+                        <li>Pago en línea disponible (BanBajío) o en ventanilla</li>
+                        <li>Emisión digital oficial con código QR de autenticidad</li>
                     </ul>
                 </div>
                 <div>

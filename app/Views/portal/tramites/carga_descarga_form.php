@@ -203,38 +203,39 @@ $oldMudanza = old('es_mudanza') !== null;
     </div>
 
     <div class="col-lg-4">
-        <div class="card shadow-sm sticky-top" style="top: 90px;">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="bi bi-cash-stack me-2 text-primary"></i>Monto estimado</h5>
+        <div class="card shadow-sm border-0 tramite-sidebar-sticky">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 text-primary fw-bold"><i class="bi bi-cash-stack me-2 text-primary"></i>Costo de Derechos</h5>
             </div>
-            <div class="card-body text-center">
+            <div class="card-body text-center p-4">
+                <div class="small text-muted mb-1 text-uppercase fw-semibold">Tarifa Oficial Calculada</div>
                 <div class="mb-3">
-                    <span id="badge_precio" class="badge fs-3 bg-primary px-4 py-3 rounded-pill d-inline-block" style="min-width: 160px;">
+                    <span id="badge_precio" class="badge bg-primary rounded-pill d-inline-block shadow-sm tramite-cost-badge">
                         $ 0.00
                     </span>
                 </div>
-                <div id="alerta_placeholder" class="alert alert-warning small mb-3 py-2 d-none" role="alert">
-                    <i class="bi bi-exclamation-triangle me-1"></i>
-                    Monto pendiente de validación oficial. El monto final podría variar.
+                <div id="alerta_placeholder" class="alert alert-info small mb-3 py-2 d-none text-start" role="alert">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Tarifa oficial conforme a la Ley de Ingresos Municipal vigente.
                 </div>
                 <div id="info_monto" class="small text-muted">
                     Selecciona periodo y tipo de solicitante para calcular el monto.
                 </div>
             </div>
-            <div class="card-footer bg-white border-0 pt-0 text-center">
+            <div class="card-footer bg-white border-0 pt-0 text-center pb-3">
                 <button type="button" id="btn_recalcular" class="btn btn-sm btn-outline-primary w-100">
                     <i class="bi bi-arrow-clockwise me-1"></i>Recalcular monto
                 </button>
             </div>
         </div>
 
-        <div class="card shadow-sm mt-4">
-            <div class="card-body small">
-                <div class="fw-semibold mb-2"><i class="bi bi-info-circle me-1 text-primary"></i>Información importante</div>
+        <div class="card shadow-sm border-0 mt-4">
+            <div class="card-body small p-3">
+                <div class="fw-semibold mb-2 text-dark"><i class="bi bi-info-circle me-1 text-primary"></i>Información Importante</div>
                 <ul class="mb-0 ps-3 text-muted">
-                    <li>Los documentos deberán estar legibles.</li>
-                    <li>El RFC se validará oficialmente después del pago.</li>
-                    <li>El permiso se emite de inmediato tras la confirmación del pago.</li>
+                    <li>Los documentos digitales deben ser legibles y completos.</li>
+                    <li>El RFC se validará oficialmente durante el cotejo documental.</li>
+                    <li>La orden de pago se habilita de forma segura tras validación del registro.</li>
                 </ul>
             </div>
         </div>

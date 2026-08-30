@@ -10,8 +10,8 @@
             <h1 class="display-5 fw-bold mb-2 mb-md-3">Ventanilla Digital de Movilidad</h1>
             <p class="lead text-muted mb-3 mb-md-4">Gobierno Digital del H. Ayuntamiento de Uriangato, Gto.</p>
             <div class="d-inline-flex flex-wrap justify-content-center gap-2 mb-2">
-                <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill"><i class="bi bi-shield-check me-1"></i> Trámites 100% Seguros</span>
-                <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill"><i class="bi bi-lightning-charge me-1"></i> Emisión Inmediata</span>
+                <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill"><i class="bi bi-shield-check me-1"></i> Plataforma Oficial de Trámites</span>
+                <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill"><i class="bi bi-patch-check me-1"></i> Validez Jurídica y Folio Digital</span>
             </div>
         </div>
 
