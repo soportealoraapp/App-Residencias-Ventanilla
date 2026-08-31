@@ -15,16 +15,16 @@
 
 <div class="admin-wrapper">
     <!-- Mobile Backdrop Overlay -->
-    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
 
     <!-- Sidebar Navigation -->
-    <aside class="sidebar-admin" id="sidebarAdmin">
+    <aside class="sidebar-admin" id="sidebarAdmin" aria-label="Navegación principal" role="navigation">
         <div class="sidebar-brand">
-            <div class="d-flex align-items-center">
-                <img src="<?= base_url('logo-uri.webp') ?>" alt="Logo Uriangato" class="me-2" style="height: 32px;">
-                <span>Panel Admin</span>
+            <div class="d-flex align-items-center sidebar-brand-content">
+                <img src="<?= base_url('logo-uri.webp') ?>" alt="Logo Uriangato" class="me-2 sidebar-logo" style="height: 32px;">
+                <span class="sidebar-text">Panel Admin</span>
             </div>
-            <button type="button" class="btn-close btn-close-white d-lg-none" id="btnCloseSidebar" aria-label="Cerrar"></button>
+            <button type="button" class="btn-close btn-close-white d-md-none" id="btnCloseSidebar" aria-label="Cerrar menú"></button>
         </div>
 
         <?php
@@ -33,58 +33,72 @@
         ?>
         <div class="sidebar-section-title">Operaciones</div>
         <a href="/admin/dashboard" class="sidebar-link <?= uri_string() === 'admin/dashboard' || uri_string() === 'admin' ? 'active' : '' ?>">
-            <i class="bi bi-speedometer2 me-2"></i> Dashboard
+            <i class="bi bi-speedometer2 me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Dashboard</span>
         </a>
         <a href="/admin/solicitudes" class="sidebar-link <?= $isAllSolicitudes ? 'active' : '' ?>">
-            <i class="bi bi-folder2-open me-2"></i> Todas las solicitudes
+            <i class="bi bi-folder2-open me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Todas las solicitudes</span>
         </a>
         <a href="/admin/solicitudes?tramite=UR-TT-T-01" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-01' ? 'active' : '' ?>">
-            <i class="bi bi-award me-2"></i> T-01: Concesiones
+            <i class="bi bi-award me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">T-01: Concesiones</span>
         </a>
         <a href="/admin/solicitudes?tramite=UR-TT-T-02" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-02' ? 'active' : '' ?>">
-            <i class="bi bi-paint-bucket me-2"></i> T-02: Despintado
+            <i class="bi bi-paint-bucket me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">T-02: Despintado</span>
         </a>
         <a href="/admin/solicitudes?tramite=UR-TT-T-03" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-03' ? 'active' : '' ?>">
-            <i class="bi bi-card-heading me-2"></i> T-03: Plaqueo
+            <i class="bi bi-card-heading me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">T-03: Plaqueo</span>
         </a>
         <a href="/admin/solicitudes?tramite=UR-TT-T-04" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-04' ? 'active' : '' ?>">
-            <i class="bi bi-bus-front me-2"></i> T-04: P. Eventual
+            <i class="bi bi-bus-front me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">T-04: P. Eventual</span>
         </a>
         <a href="/admin/solicitudes?tramite=UR-TT-T-05" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-05' ? 'active' : '' ?>">
-            <i class="bi bi-sign-stop me-2"></i> T-05: Cierre Calle
+            <i class="bi bi-sign-stop me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">T-05: Cierre Calle</span>
         </a>
         <?php if (getenv('APP_ENABLE_UR_TT_T_06') === 'true'): ?>
             <a href="/admin/solicitudes?tramite=UR-TT-T-06" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-06' ? 'active' : '' ?>">
-                <i class="bi bi-arrow-left-right me-2"></i> T-06: Cesión
+                <i class="bi bi-arrow-left-right me-2 sidebar-link-icon"></i>
+                <span class="sidebar-text">T-06: Cesión</span>
             </a>
         <?php endif; ?>
         <a href="/admin/solicitudes?tramite=UR-TT-T-07" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-07' ? 'active' : '' ?>">
-            <i class="bi bi-truck me-2"></i> T-07: Carga/Descarga
+            <i class="bi bi-truck me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">T-07: Carga/Descarga</span>
         </a>
 
         <div class="sidebar-section-title mt-3">Catálogos</div>
         <a href="/admin/tarifas" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/tarifas') ? 'active' : '' ?>">
-            <i class="bi bi-cash-coin me-2"></i> Tarifario
+            <i class="bi bi-cash-coin me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Tarifario</span>
         </a>
         <a href="/admin/concesiones" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/concesiones') ? 'active' : '' ?>">
-            <i class="bi bi-card-list me-2"></i> Concesiones
+            <i class="bi bi-card-list me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Concesiones</span>
         </a>
         <a href="/admin/convocatorias/1/evaluacion" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/convocatorias') ? 'active' : '' ?>">
-            <i class="bi bi-award-fill me-2"></i> Convocatorias UR-01
+            <i class="bi bi-award-fill me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Convocatorias UR-01</span>
         </a>
 
         <div class="sidebar-section-title mt-3">Portal</div>
         <a href="/portal/dashboard" class="sidebar-link text-info">
-            <i class="bi bi-box-arrow-up-right me-2"></i> Ver Portal Ciudadano
+            <i class="bi bi-box-arrow-up-right me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Ver Portal Ciudadano</span>
         </a>
 
         <div class="sidebar-section-title mt-3">Sesión</div>
-        <div class="px-3 py-2 text-white-50 small">
-            <div class="fw-semibold text-white text-truncate"><?= esc(session('nombre_completo') ?? session('username') ?? 'Usuario') ?></div>
-            <div class="badge bg-secondary-subtle text-white mt-1"><?= implode(', ', (array)(session('roles') ?? [])) ?></div>
+        <div class="px-3 py-2 text-white-50 small sidebar-user-info">
+            <div class="fw-semibold text-white text-truncate sidebar-text"><?= esc(session('nombre_completo') ?? session('username') ?? 'Usuario') ?></div>
+            <div class="badge bg-secondary-subtle text-white mt-1 sidebar-text"><?= implode(', ', (array)(session('roles') ?? [])) ?></div>
         </div>
         <a href="/auth/logout" class="sidebar-link text-danger mt-2">
-            <i class="bi bi-box-arrow-right me-2"></i> Cerrar sesión
+            <i class="bi bi-box-arrow-right me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Cerrar sesión</span>
         </a>
     </aside>
 
@@ -92,7 +106,7 @@
     <div class="main-admin">
         <header class="topbar-admin">
             <div class="d-flex align-items-center gap-2">
-                <button type="button" class="btn btn-outline-secondary btn-sm d-lg-none" id="btnSidebarToggle" aria-label="Menu">
+                <button type="button" class="btn btn-outline-secondary btn-sm sidebar-toggle-btn" id="btnSidebarToggle" aria-label="Abrir menú" aria-controls="sidebarAdmin" aria-expanded="false">
                     <i class="bi bi-list fs-5"></i>
                 </button>
                 <h1 class="h5 mb-0 text-truncate"><?= $this->renderSection('pageTitle') ?></h1>
@@ -142,20 +156,118 @@ document.addEventListener('DOMContentLoaded', function() {
     const backdrop = document.getElementById('sidebarBackdrop');
     const toggleBtn = document.getElementById('btnSidebarToggle');
     const closeBtn = document.getElementById('btnCloseSidebar');
+    const body = document.body;
 
-    function openSidebar() {
+    var MOBILE_BREAKPOINT = 991.98;
+    var MD_BREAKPOINT = 767.98;
+    var STORAGE_KEY_COLLAPSED = 'admin-sidebar-collapsed';
+
+    function isMobile() {
+        return window.matchMedia('(max-width: ' + MOBILE_BREAKPOINT + 'px)').matches;
+    }
+
+    function isTabletOnly() {
+        return window.matchMedia('(min-width: ' + (MD_BREAKPOINT + 0.02) + 'px) and (max-width: ' + MOBILE_BREAKPOINT + 'px)').matches;
+    }
+
+    function getStoredCollapsed() {
+        try { return localStorage.getItem(STORAGE_KEY_COLLAPSED) === 'true'; }
+        catch (e) { return false; }
+    }
+
+    function setStoredCollapsed(value) {
+        try { localStorage.setItem(STORAGE_KEY_COLLAPSED, String(value)); }
+        catch (e) {}
+    }
+
+    function setAriaExpanded(value) {
+        if (toggleBtn) {
+            toggleBtn.setAttribute('aria-expanded', String(value));
+            toggleBtn.setAttribute('aria-label', value ? 'Cerrar menú' : 'Abrir menú');
+        }
+    }
+
+    function openSidebarMobile() {
         if (sidebar) sidebar.classList.add('show');
-        if (backdrop) backdrop.classList.add('show');
+        if (backdrop) {
+            backdrop.classList.add('show');
+            backdrop.setAttribute('aria-hidden', 'false');
+        }
+        body.classList.add('sidebar-open-no-scroll');
+        setAriaExpanded(true);
     }
 
-    function closeSidebar() {
+    function closeSidebarMobile() {
         if (sidebar) sidebar.classList.remove('show');
-        if (backdrop) backdrop.classList.remove('show');
+        if (backdrop) {
+            backdrop.classList.remove('show');
+            backdrop.setAttribute('aria-hidden', 'true');
+        }
+        body.classList.remove('sidebar-open-no-scroll');
+        setAriaExpanded(false);
     }
 
-    if (toggleBtn) toggleBtn.addEventListener('click', openSidebar);
-    if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
-    if (backdrop) backdrop.addEventListener('click', closeSidebar);
+    function toggleCollapseDesktop() {
+        if (!sidebar) return;
+        var isCollapsed = sidebar.classList.toggle('collapsed');
+        setStoredCollapsed(isCollapsed);
+        setAriaExpanded(!isCollapsed);
+    }
+
+    function handleToggleBtnClick() {
+        if (window.matchMedia('(max-width: ' + MD_BREAKPOINT + 'px)').matches) {
+            var isOpen = sidebar ? sidebar.classList.contains('show') : false;
+            if (isOpen) {
+                closeSidebarMobile();
+            } else {
+                openSidebarMobile();
+            }
+        } else {
+            toggleCollapseDesktop();
+        }
+    }
+
+    if (toggleBtn) toggleBtn.addEventListener('click', handleToggleBtnClick);
+    if (closeBtn) closeBtn.addEventListener('click', closeSidebarMobile);
+    if (backdrop) backdrop.addEventListener('click', closeSidebarMobile);
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && window.matchMedia('(max-width: ' + MD_BREAKPOINT + 'px)').matches) {
+            closeSidebarMobile();
+        }
+    });
+
+    function applyInitialState() {
+        var storedCollapsed = getStoredCollapsed();
+
+        if (window.matchMedia('(max-width: ' + MD_BREAKPOINT + 'px)').matches) {
+            if (sidebar) sidebar.classList.remove('collapsed');
+            closeSidebarMobile();
+        } else {
+            if (sidebar) {
+                if (storedCollapsed && !isTabletOnly()) {
+                    sidebar.classList.add('collapsed');
+                } else {
+                    sidebar.classList.remove('collapsed');
+                }
+            }
+            setAriaExpanded(!storedCollapsed || isTabletOnly());
+        }
+    }
+
+    applyInitialState();
+
+    var resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function() {
+            if (!window.matchMedia('(max-width: ' + MD_BREAKPOINT + 'px)').matches) {
+                closeSidebarMobile();
+            } else {
+                if (sidebar) sidebar.classList.remove('collapsed');
+            }
+        }, 150);
+    });
 });
 </script>
 <?= $this->renderSection('scripts') ?>
