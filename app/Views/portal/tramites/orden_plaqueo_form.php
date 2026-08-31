@@ -217,9 +217,9 @@ $oldNumSerie = old('vehiculo_num_serie', '');
         </div>
     </div>
 
-    <!-- Columna Lateral Sticky: Resumen de Derechos y Requisitos -->
+    <!-- Columna Lateral: Resumen de Derechos y Requisitos -->
     <div class="col-lg-4">
-        <div class="card shadow-sm border-0 tramite-sidebar-sticky">
+        <div class="card shadow-sm border-0 tramite-sidebar-card">
             <div class="card-header bg-white py-3">
                 <h5 class="mb-0 text-primary fw-bold">
                     <i class="bi bi-cash-coin me-2"></i>Costo de Derechos

@@ -173,9 +173,9 @@
         </div>
     </div>
 
-    <!-- Columna Lateral Sticky -->
+    <!-- Columna Lateral -->
     <div class="col-lg-4">
-        <div class="card shadow-sm border-0 tramite-sidebar-sticky">
+        <div class="card shadow-sm border-0 tramite-sidebar-card">
             <div class="card-header bg-white py-3">
                 <h2 class="h5 mb-0 text-primary fw-bold">
                     <i class="bi bi-info-circle me-2"></i>Información del Trámite

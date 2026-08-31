@@ -253,7 +253,7 @@ $oldNumSerie = old('vehiculo_num_serie', '');
     </div>
 
     <div class="col-lg-4">
-        <div class="card shadow-sm border-0 tramite-sidebar-sticky">
+        <div class="card shadow-sm border-0 tramite-sidebar-card">
             <div class="card-header bg-white py-3">
                 <h5 class="mb-0 text-primary fw-bold"><i class="bi bi-cash-stack me-2 text-primary"></i>Costo de Derechos</h5>
             </div>

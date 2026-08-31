@@ -236,28 +236,15 @@ button, input, select, textarea, .btn {
 }
 
 /* ==========================================================================
-   TRAMITES SIDEBAR STICKY & COST BADGE
+   TRAMITES SIDEBAR & COST BADGE (STATIC FLOW - NO OVERLAP ON SCROLL)
    ========================================================================== */
+.tramite-sidebar-card,
 .tramite-sidebar-sticky {
   border-radius: var(--radius-md);
+  position: static !important;
+  top: auto !important;
+  z-index: auto !important;
   transition: box-shadow 0.2s ease;
-}
-
-@media (min-width: 992px) {
-  .tramite-sidebar-sticky {
-    position: sticky !important;
-    top: 85px !important;
-    z-index: 20 !important;
-  }
-}
-
-@media (max-width: 991.98px) {
-  .tramite-sidebar-sticky {
-    position: static !important;
-    top: auto !important;
-    z-index: auto !important;
-    margin-top: 1rem;
-  }
 }
 
 .tramite-cost-badge {
