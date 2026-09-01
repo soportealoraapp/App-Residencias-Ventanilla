@@ -29,7 +29,7 @@ function badge_color_estatus(string $estatus): string {
                         <h6 class="card-title text-white-50 small mb-1">Total Solicitudes</h6>
                         <h2 class="card-text mb-0 fs-3 fw-bold"><?= number_format($estadisticas['total']) ?></h2>
                     </div>
-                    <span class="fs-2 opacity-50 d-none d-sm-inline">📋</span>
+                    <i class="bi bi-clipboard-data fs-2 opacity-50 d-none d-sm-inline" aria-hidden="true"></i>
                 </div>
             </div>
         </div>
@@ -43,7 +43,7 @@ function badge_color_estatus(string $estatus): string {
                         <h2 class="card-text mb-0 fs-3 fw-bold text-dark"><?= number_format($estadisticas['pendientes']) ?></h2>
                         <small class="text-dark-50 d-none d-sm-inline">Rec: <?= $estadisticas['recibido'] ?> | Rev: <?= $estadisticas['en_revision'] ?></small>
                     </div>
-                    <span class="fs-2 opacity-50 d-none d-sm-inline">⏳</span>
+                    <i class="bi bi-hourglass-split fs-2 opacity-50 d-none d-sm-inline" aria-hidden="true"></i>
                 </div>
             </div>
         </div>
@@ -56,7 +56,7 @@ function badge_color_estatus(string $estatus): string {
                         <h6 class="card-title text-dark small mb-1">En Revisión</h6>
                         <h2 class="card-text mb-0 fs-3 fw-bold text-dark"><?= number_format($estadisticas['en_revision']) ?></h2>
                     </div>
-                    <span class="fs-2 opacity-50 d-none d-sm-inline">🔍</span>
+                    <i class="bi bi-search fs-2 opacity-50 d-none d-sm-inline" aria-hidden="true"></i>
                 </div>
             </div>
         </div>
@@ -69,7 +69,7 @@ function badge_color_estatus(string $estatus): string {
                         <h6 class="card-title text-white-50 small mb-1">Vigentes / Pagados</h6>
                         <h2 class="card-text mb-0 fs-3 fw-bold"><?= number_format($estadisticas['pagados_vigentes']) ?></h2>
                     </div>
-                    <span class="fs-2 opacity-50 d-none d-sm-inline">✅</span>
+                    <i class="bi bi-check-circle fs-2 opacity-50 d-none d-sm-inline" aria-hidden="true"></i>
                 </div>
             </div>
         </div>
@@ -82,7 +82,7 @@ function badge_color_estatus(string $estatus): string {
                         <h6 class="card-title text-white-50 small mb-1">Rechazados</h6>
                         <h2 class="card-text mb-0 fs-3 fw-bold"><?= number_format($estadisticas['rechazados']) ?></h2>
                     </div>
-                    <span class="fs-2 opacity-50 d-none d-sm-inline">❌</span>
+                    <i class="bi bi-x-circle fs-2 opacity-50 d-none d-sm-inline" aria-hidden="true"></i>
                 </div>
             </div>
         </div>
