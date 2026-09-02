@@ -52,6 +52,9 @@
                     <?php endif; ?>
                 </div>
             </div>
+        </div>
+    </div>
+
     <div class="col-12 col-md-6 col-lg-4">
         <div class="card tramite-card h-100 shadow-sm border-0">
             <div class="card-header bg-primary bg-opacity-10 border-0 p-3 p-md-4">
