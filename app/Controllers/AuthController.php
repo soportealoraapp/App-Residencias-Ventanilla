@@ -199,9 +199,36 @@ class AuthController extends Controller
                 'reset_token'   => $token,
                 'reset_expira'  => $expira,
             ]);
+
+            $resetUrl = site_url('/auth/reset/' . $token);
+
+            $html = '<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">';
+            $html .= '<div style="background:#0d6efd;padding:20px;text-align:center;border-radius:8px 8px 0 0;">';
+            $html .= '<h1 style="color:#fff;margin:0;font-size:20px;">Ventanilla Digital Uriangato</h1>';
+            $html .= '</div>';
+            $html .= '<div style="background:#f8f9fa;padding:30px;border:1px solid #dee2e6;">';
+            $html .= '<h2 style="color:#333;margin-top:0;">Restablecer tu contraseña</h2>';
+            $html .= '<p style="color:#555;">Hola <strong>' . esc($user->nombre ?? $user->email) . '</strong>,</p>';
+            $html .= '<p style="color:#555;">Recibimos una solicitud para restablecer la contraseña de tu cuenta en la Ventanilla Digital de Uriangato.</p>';
+            $html .= '<p style="color:#555;">Haz clic en el siguiente botón para crear una nueva contraseña:</p>';
+            $html .= '<div style="text-align:center;margin:30px 0;">';
+            $html .= '<a href="' . $resetUrl . '" style="background:#0d6efd;color:#fff;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block;">Restablecer contraseña</a>';
+            $html .= '</div>';
+            $html .= '<p style="color:#999;font-size:12px;">Si no solicitaste este cambio, puedes ignorar este mensaje. El enlace expirará en 24 horas.</p>';
+            $html .= '<p style="color:#999;font-size:12px;">Si el botón no funciona, copia y pega este enlace en tu navegador:</p>';
+            $html .= '<p style="color:#999;font-size:11px;word-break:break-all;">' . $resetUrl . '</p>';
+            $html .= '</div>';
+            $html .= '<div style="text-align:center;padding:15px;color:#999;font-size:11px;">Ventanilla Digital de Uriangato, Guanajuato</div>';
+            $html .= '</div>';
+
+            $emailService = \Config\Services::email();
+            $emailService->setTo($user->email);
+            $emailService->setSubject('Restablecer tu contraseña - Ventanilla Digital Uriangato');
+            $emailService->setMessage($html);
+            $emailService->send();
         }
 
-        return redirect()->back()->with('message', 'Se envió link de recuperación (simulado)');
+        return redirect()->back()->with('message', 'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.');
     }
 
     public function reset(?string $token = null)
