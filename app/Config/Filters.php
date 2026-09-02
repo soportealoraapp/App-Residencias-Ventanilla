@@ -23,6 +23,7 @@ class Filters extends BaseConfig
         'forcehttps'    => ForceHTTPS::class,
         'auth'          => \App\Filters\AuthFilter::class,
         'role'          => \App\Filters\RoleFilter::class,
+        'adminRedirect' => \App\Filters\AdminRedirectFilter::class,
     ];
 
     public array $globals = [

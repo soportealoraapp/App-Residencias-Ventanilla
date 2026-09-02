@@ -21,10 +21,11 @@ class PortalController extends Controller
     public function dashboard()
     {
         $session = Services::session();
-        $roles = $session->get('roles') ?? [];
-        $rolesAdmin = array_intersect(['admin', 'operador'], $roles);
-        if (!empty($rolesAdmin)) {
-            return redirect()->to('/admin/dashboard');
+        $roles = (array) $session->get('roles');
+        foreach ($roles as $rol) {
+            if (str_contains($rol, 'admin') || str_contains($rol, 'operador')) {
+                return redirect()->to('/admin/dashboard');
+            }
         }
 
         $userId = (int)$session->get('user_id');

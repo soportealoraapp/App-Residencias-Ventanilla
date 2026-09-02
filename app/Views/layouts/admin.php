@@ -89,12 +89,6 @@
             <span class="sidebar-text">Convocatorias UR-01</span>
         </a>
 
-        <div class="sidebar-section-title mt-3">Portal</div>
-        <a href="/portal/dashboard" class="sidebar-link text-info">
-            <i class="bi bi-box-arrow-up-right me-2 sidebar-link-icon"></i>
-            <span class="sidebar-text">Ver Portal Ciudadano</span>
-        </a>
-
         <div class="sidebar-section-title mt-3">Sesión</div>
         <div class="px-3 py-2 text-white-50 small sidebar-user-info">
             <div class="fw-semibold text-white text-truncate sidebar-text"><?= esc(session('nombre_completo') ?? session('username') ?? 'Usuario') ?></div>

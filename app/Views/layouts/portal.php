@@ -50,16 +50,6 @@
                             <li><span class="dropdown-item-text small text-muted">Rol: <?= implode(', ', session('roles') ?? []) ?></span></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="/portal/mi-perfil"><i class="bi bi-person-gear me-2"></i>Mi Perfil</a></li>
-                            <?php 
-                                $esAdmin = false;
-                                foreach ((array)session('roles') as $r) {
-                                    if (str_contains($r, 'admin') || str_contains($r, 'operador')) { $esAdmin = true; break; }
-                                }
-                                if ($esAdmin):
-                            ?>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-primary fw-semibold" href="/admin/dashboard"><i class="bi bi-shield-check me-2"></i>Panel Administrador</a></li>
-                            <?php endif; ?>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-danger" href="/auth/logout"><i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión</a></li>
                         </ul>
