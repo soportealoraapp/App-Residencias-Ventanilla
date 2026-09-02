@@ -48,6 +48,8 @@
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                             <li><h6 class="dropdown-header"><i class="bi bi-person-badge me-1"></i> <?= esc(session('username')) ?></h6></li>
                             <li><span class="dropdown-item-text small text-muted">Rol: <?= implode(', ', session('roles') ?? []) ?></span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/portal/mi-perfil"><i class="bi bi-person-gear me-2"></i>Mi Perfil</a></li>
                             <?php 
                                 $esAdmin = false;
                                 foreach ((array)session('roles') as $r) {
@@ -129,9 +131,9 @@
         <i class="bi bi-journal-text"></i>
         <span>Solicitudes</span>
     </a>
-    <a href="/auth/logout" class="mobile-bottom-item text-danger">
-        <i class="bi bi-box-arrow-right"></i>
-        <span>Salir</span>
+    <a href="/portal/mi-perfil" class="mobile-bottom-item <?= uri_string() === 'portal/mi-perfil' ? 'active' : '' ?>">
+        <i class="bi bi-person-gear"></i>
+        <span>Perfil</span>
     </a>
 </nav>
 <?php endif; ?>

@@ -6,6 +6,7 @@ use CodeIgniter\Controller;
 use App\Models\SolicitudModel;
 use App\Models\SolicitudDatoModel;
 use App\Models\DocumentoModel;
+use App\Models\UserModel;
 use App\Libraries\FeatureFlags;
 use Config\Services;
 
@@ -129,5 +130,75 @@ class PortalController extends Controller
 
         return Services::response()->download($rutaCompleta, null, true)
             ->setFileName($doc->nombre_original ?? 'documento');
+    }
+
+    public function miPerfil()
+    {
+        $session = Services::session();
+        $userId = (int) $session->get('user_id');
+        $userModel = new UserModel();
+        $usuario = $userModel->find($userId);
+
+        if ($usuario === null) {
+            return redirect()->to('/portal/dashboard')->with('error', 'Usuario no encontrado.');
+        }
+
+        return view('portal/mi_perfil', ['usuario' => $usuario]);
+    }
+
+    public function guardarPerfil()
+    {
+        $session = Services::session();
+        $userId = (int) $session->get('user_id');
+
+        $rules = [
+            'nombre'    => 'required|min_length[2]',
+            'apellido'  => 'required|min_length[2]',
+            'email'     => 'required|valid_email',
+            'telefono'  => 'required|min_length[7]',
+            'estado'    => 'required|min_length[2]',
+            'ciudad'    => 'required|min_length[2]',
+            'domicilio' => 'required|min_length[5]',
+            'rfc'       => 'permit_empty|exact_length[13]|regex_match[/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/]',
+        ];
+
+        if (! $this->validate($rules)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        $userModel = new UserModel();
+        $actual = $userModel->find($userId);
+
+        if ($actual === null) {
+            return redirect()->to('/portal/dashboard')->with('error', 'Usuario no encontrado.');
+        }
+
+        $email = $this->request->getPost('email');
+        if ($email !== $actual->email) {
+            $existe = $userModel->where('email', $email)->where('id !=', $userId)->first();
+            if ($existe !== null) {
+                return redirect()->back()->withInput()->with('errors', ['email' => 'Este correo ya está registrado por otro usuario.']);
+            }
+        }
+
+        $nombre  = trim((string) $this->request->getPost('nombre'));
+        $apellido = trim((string) $this->request->getPost('apellido'));
+
+        $data = [
+            'nombre_completo' => $nombre . ' ' . $apellido,
+            'apellido'        => $apellido,
+            'email'           => $email,
+            'rfc'             => $this->request->getPost('rfc') !== '' ? strtoupper((string) $this->request->getPost('rfc')) : null,
+            'telefono'        => $this->request->getPost('telefono'),
+            'estado'          => $this->request->getPost('estado'),
+            'ciudad'          => $this->request->getPost('ciudad'),
+            'domicilio'       => $this->request->getPost('domicilio'),
+        ];
+
+        $userModel->update($userId, $data);
+
+        $session->set('nombre_completo', $data['nombre_completo']);
+
+        return redirect()->to('/portal/mi-perfil')->with('message', 'Perfil actualizado correctamente.');
     }
 }

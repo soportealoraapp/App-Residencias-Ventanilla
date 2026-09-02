@@ -63,6 +63,9 @@ $routes->group('portal', ['filter' => 'auth'], static function ($routes) {
     $routes->get('solicitud/(:any)', 'Portal\PortalController::verSolicitud/$1', ['as' => 'portal.ver_solicitud']);
     $routes->get('solicitud/(:any)/descargar/(:num)', 'Portal\PortalController::descargarDocumento/$1/$2', ['as' => 'portal.solicitud.descargar']);
 
+    $routes->get('mi-perfil', 'Portal\PortalController::miPerfil', ['as' => 'portal.mi_perfil']);
+    $routes->post('mi-perfil', 'Portal\PortalController::guardarPerfil');
+
     $routes->group('tramites', static function ($routes) {
         $routes->post('solicitudes', 'Portal\TramitesController::crear', ['filter' => 'role:administrador,operador_ventanilla,ciudadano']);
         $routes->get('solicitudes/(:segment)', 'Portal\TramitesController::consultar/$1', ['filter' => 'role:administrador,operador_ventanilla,ciudadano']);
