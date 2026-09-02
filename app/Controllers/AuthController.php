@@ -143,11 +143,36 @@ class AuthController extends Controller
                 'rules' => 'required',
                 'label' => 'Términos y condiciones',
             ],
+            'ine_frente' => [
+                'rules' => 'uploaded|mime_in[ine_frente,image/jpeg,image/png]|max_size[ine_frente,5120]',
+                'label' => 'INE Frente',
+            ],
+            'ine_reverso' => [
+                'rules' => 'uploaded|mime_in[ine_reverso,image/jpeg,image/png]|max_size[ine_reverso,5120]',
+                'label' => 'INE Reverso',
+            ],
         ];
 
         if (! $this->validate($rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
+
+        $ineDir = WRITEPATH . 'uploads/ine/';
+        if (! is_dir($ineDir)) {
+            mkdir($ineDir, 0755, true);
+        }
+
+        $frente = $this->request->getFile('ine_frente');
+        $reverso = $this->request->getFile('ine_reverso');
+
+        $frenteExt = $frente->getExtension() === 'jpeg' ? 'jpg' : $frente->getExtension();
+        $reversoExt = $reverso->getExtension() === 'jpeg' ? 'jpg' : $reverso->getExtension();
+
+        $frenteNombre = bin2hex(random_bytes(16)) . '.' . $frenteExt;
+        $reversoNombre = bin2hex(random_bytes(16)) . '.' . $reversoExt;
+
+        $frente->move($ineDir, $frenteNombre);
+        $reverso->move($ineDir, $reversoNombre);
 
         $nombre  = trim((string) $this->request->getPost('nombre'));
         $apellido = trim((string) $this->request->getPost('apellido'));
@@ -164,6 +189,8 @@ class AuthController extends Controller
             'ciudad'          => $this->request->getPost('ciudad'),
             'domicilio'       => $this->request->getPost('domicilio'),
             'rfc'             => $this->request->getPost('rfc') !== '' ? strtoupper((string) $this->request->getPost('rfc')) : null,
+            'ine_frente'      => 'ine/' . $frenteNombre,
+            'ine_reverso'     => 'ine/' . $reversoNombre,
         ];
 
         $this->userModel->insert($data);

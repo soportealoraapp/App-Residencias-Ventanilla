@@ -23,6 +23,8 @@ class UserModel extends Model
         'estado',
         'ciudad',
         'domicilio',
+        'ine_frente',
+        'ine_reverso',
         'activo',
         'reset_token',
         'reset_expira',

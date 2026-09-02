@@ -26,13 +26,35 @@
         </div>
     <?php endif ?>
 
-    <?= form_open('/auth/attempt-register') ?>
+    <?= form_open_multipart('/auth/attempt-register') ?>
 
         <div class="mb-3">
             <label for="curp" class="form-label small fw-semibold">CURP <span class="text-danger">*</span></label>
             <div class="input-group">
                 <span class="input-group-text bg-light text-muted"><i class="bi bi-person-vcard"></i></span>
                 <input type="text" class="form-control text-uppercase" id="curp" name="curp" value="<?= old('curp') ?>" placeholder="Ingresa tu CURP" maxlength="18" required>
+            </div>
+        </div>
+
+        <div class="card border-warning mb-3">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-card-image text-warning me-2 fs-5"></i>
+                    <label class="form-label small fw-bold mb-0 text-warning">Identificación Oficial (INE) <span class="text-danger">*</span></label>
+                </div>
+                <p class="text-muted small mb-3">Sube una foto clara de tu credencial INE por ambos lados. Acepta JPG o PNG, máximo 5 MB por imagen.</p>
+                <div class="row g-2">
+                    <div class="col-sm-6">
+                        <label for="ine_frente" class="form-label small fw-semibold">Frente <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" id="ine_frente" name="ine_frente" accept="image/jpeg,image/png" required>
+                        <div class="form-text">Foto frontal con nombre visible</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <label for="ine_reverso" class="form-label small fw-semibold">Reverso <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" id="ine_reverso" name="ine_reverso" accept="image/jpeg,image/png" required>
+                        <div class="form-text">Foto trasera con código visible</div>
+                    </div>
+                </div>
             </div>
         </div>
 
