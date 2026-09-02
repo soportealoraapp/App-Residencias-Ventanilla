@@ -91,9 +91,33 @@ class AuthController extends Controller
     public function attemptRegister()
     {
         $rules = [
-            'nombre_completo' => [
-                'rules' => 'required|min_length[3]',
-                'label' => 'Nombre completo',
+            'curp' => [
+                'rules' => 'required|exact_length[18]|regex_match[/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]{2}\d$/]',
+                'label' => 'CURP',
+            ],
+            'nombre' => [
+                'rules' => 'required|min_length[2]',
+                'label' => 'Nombre(s)',
+            ],
+            'apellido' => [
+                'rules' => 'required|min_length[2]',
+                'label' => 'Apellido(s)',
+            ],
+            'telefono' => [
+                'rules' => 'required|min_length[7]',
+                'label' => 'Teléfono',
+            ],
+            'estado' => [
+                'rules' => 'required|min_length[2]',
+                'label' => 'Estado',
+            ],
+            'ciudad' => [
+                'rules' => 'required|min_length[2]',
+                'label' => 'Ciudad / Municipio',
+            ],
+            'domicilio' => [
+                'rules' => 'required|min_length[5]',
+                'label' => 'Dirección',
             ],
             'email' => [
                 'rules' => 'required|valid_email|is_unique[users.email]',
@@ -104,7 +128,7 @@ class AuthController extends Controller
                 'label' => 'Nombre de usuario',
             ],
             'password' => [
-                'rules' => 'required|min_length[8]',
+                'rules' => 'required|min_length[6]',
                 'label' => 'Contraseña',
             ],
             'password_confirm' => [
@@ -115,18 +139,31 @@ class AuthController extends Controller
                 'rules' => 'permit_empty|exact_length[13]|regex_match[/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/]',
                 'label' => 'RFC',
             ],
+            'acepto_terminos' => [
+                'rules' => 'required',
+                'label' => 'Términos y condiciones',
+            ],
         ];
 
         if (! $this->validate($rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
+        $nombre  = trim((string) $this->request->getPost('nombre'));
+        $apellido = trim((string) $this->request->getPost('apellido'));
+
         $data = [
-            'nombre_completo' => $this->request->getPost('nombre_completo'),
+            'nombre_completo' => $nombre . ' ' . $apellido,
+            'curp'            => strtoupper($this->request->getPost('curp')),
+            'apellido'        => $apellido,
             'email'           => $this->request->getPost('email'),
             'username'        => $this->request->getPost('username'),
             'password_hash'   => password_hash((string) $this->request->getPost('password'), PASSWORD_DEFAULT),
-            'rfc'             => $this->request->getPost('rfc') !== '' ? $this->request->getPost('rfc') : null,
+            'telefono'        => $this->request->getPost('telefono'),
+            'estado'          => $this->request->getPost('estado'),
+            'ciudad'          => $this->request->getPost('ciudad'),
+            'domicilio'       => $this->request->getPost('domicilio'),
+            'rfc'             => $this->request->getPost('rfc') !== '' ? strtoupper((string) $this->request->getPost('rfc')) : null,
         ];
 
         $this->userModel->insert($data);
