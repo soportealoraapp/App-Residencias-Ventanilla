@@ -21,6 +21,8 @@ $routes->get('auth/forgot', 'AuthController::forgot');
 $routes->post('auth/attempt-forgot', 'AuthController::attemptForgot');
 $routes->get('auth/reset/(:any)', 'AuthController::reset/$1');
 $routes->post('auth/reset/(:any)', 'AuthController::reset/$1');
+$routes->get('auth/terminos', 'AuthController::terminos');
+$routes->get('auth/privacidad', 'AuthController::privacidad');
 
 $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->group('', ['filter' => 'role:administrador,operador_ventanilla'], function($routes) {

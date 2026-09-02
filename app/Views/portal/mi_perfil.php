@@ -66,11 +66,11 @@
             <div class="row g-2 mb-3">
                 <div class="col-sm-6">
                     <label for="estado" class="form-label small fw-semibold">Estado <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="estado" name="estado" value="<?= esc($usuario->estado ?? '') ?>" required>
+                    <input type="text" class="form-control" id="estado" name="estado" value="<?= esc($usuario->estado ?? 'Guanajuato') ?>" required>
                 </div>
                 <div class="col-sm-6">
                     <label for="ciudad" class="form-label small fw-semibold">Ciudad / Municipio <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="ciudad" name="ciudad" value="<?= esc($usuario->ciudad ?? '') ?>" required>
+                    <input type="text" class="form-control" id="ciudad" name="ciudad" value="<?= esc($usuario->ciudad ?? 'Uriangato') ?>" required>
                 </div>
             </div>
 

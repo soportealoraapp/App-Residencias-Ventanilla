@@ -239,4 +239,14 @@ class AuthController extends Controller
 
         return view('auth/reset', ['token' => $token, 'user' => $user]);
     }
+
+    public function terminos()
+    {
+        return view('auth/terminos');
+    }
+
+    public function privacidad()
+    {
+        return view('auth/privacidad');
+    }
 }

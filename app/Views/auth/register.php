@@ -62,7 +62,7 @@
             </div>
             <div class="col-sm-6">
                 <label for="ciudad" class="form-label small fw-semibold">Ciudad / Municipio <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="ciudad" name="ciudad" value="<?= old('ciudad') ?>" placeholder="Ej. Uriangato" required>
+                <input type="text" class="form-control" id="ciudad" name="ciudad" value="<?= old('ciudad', 'Uriangato') ?>" placeholder="Ej. Uriangato" required>
             </div>
         </div>
 
@@ -108,7 +108,7 @@
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="acepto_terminos" name="acepto_terminos" required>
                 <label class="form-check-label small" for="acepto_terminos">
-                    He leído y acepto todos los <a href="#" class="text-success fw-semibold text-decoration-none">Términos y condiciones</a>, y el <a href="#" class="text-success fw-semibold text-decoration-none">Aviso de privacidad</a>.
+                    He leído y acepto todos los <a href="/auth/terminos" target="_blank" class="text-success fw-semibold text-decoration-none">Términos y condiciones</a>, y el <a href="/auth/privacidad" target="_blank" class="text-success fw-semibold text-decoration-none">Aviso de privacidad</a>.
                 </label>
             </div>
         </div>
