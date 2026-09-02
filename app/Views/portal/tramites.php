@@ -43,12 +43,15 @@
                 </div>
             </div>
             <div class="card-footer bg-white border-0 pt-0 pb-3 px-3 px-md-4">
-                <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible bajo Convocatoria</span>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible bajo Convocatoria</span>
+                    <?php if (!empty($formatosMap['UR-TT-T-01'])): ?>
+                        <a href="<?= site_url('/portal/formato/UR-TT-T-01') ?>" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-file-earmark-arrow-down me-1"></i>Formato
+                        </a>
+                    <?php endif; ?>
+                </div>
             </div>
-        </div>
-    </div>
-
-    <!-- T-02: Constancia de Despintado -->
     <div class="col-12 col-md-6 col-lg-4">
         <div class="card tramite-card h-100 shadow-sm border-0">
             <div class="card-header bg-primary bg-opacity-10 border-0 p-3 p-md-4">
@@ -79,7 +82,14 @@
                 </div>
             </div>
             <div class="card-footer bg-white border-0 pt-0 pb-3 px-3 px-md-4">
-                <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
+                    <?php if (!empty($formatosMap['UR-TT-T-02'])): ?>
+                        <a href="<?= site_url('/portal/formato/UR-TT-T-02') ?>" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-file-earmark-arrow-down me-1"></i>Formato
+                        </a>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </div>
@@ -115,7 +125,14 @@
                 </div>
             </div>
             <div class="card-footer bg-white border-0 pt-0 pb-3 px-3 px-md-4">
-                <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
+                    <?php if (!empty($formatosMap['UR-TT-T-03'])): ?>
+                        <a href="<?= site_url('/portal/formato/UR-TT-T-03') ?>" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-file-earmark-arrow-down me-1"></i>Formato
+                        </a>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </div>
@@ -148,7 +165,14 @@
                 </a>
             </div>
             <div class="card-footer bg-white border-0 pt-0 pb-3 px-3 px-md-4">
-                <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
+                    <?php if (!empty($formatosMap['UR-TT-T-04'])): ?>
+                        <a href="<?= site_url('/portal/formato/UR-TT-T-04') ?>" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-file-earmark-arrow-down me-1"></i>Formato
+                        </a>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </div>
@@ -179,7 +203,14 @@
                 </a>
             </div>
             <div class="card-footer bg-white border-0 pt-0 pb-3 px-3 px-md-4">
-                <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
+                    <?php if (!empty($formatosMap['UR-TT-T-05'])): ?>
+                        <a href="<?= site_url('/portal/formato/UR-TT-T-05') ?>" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-file-earmark-arrow-down me-1"></i>Formato
+                        </a>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </div>
@@ -215,7 +246,14 @@
                 </div>
             </div>
             <div class="card-footer bg-white border-0 pt-0 pb-3 px-3 px-md-4">
-                <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
+                    <?php if (!empty($formatosMap['UR-TT-T-06'])): ?>
+                        <a href="<?= site_url('/portal/formato/UR-TT-T-06') ?>" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-file-earmark-arrow-down me-1"></i>Formato
+                        </a>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </div>
@@ -252,7 +290,14 @@
                 </div>
             </div>
             <div class="card-footer bg-white border-0 pt-0 pb-3 px-3 px-md-4">
-                <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
+                    <?php if (!empty($formatosMap['UR-TT-T-07'])): ?>
+                        <a href="<?= site_url('/portal/formato/UR-TT-T-07') ?>" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-file-earmark-arrow-down me-1"></i>Formato
+                        </a>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </div>

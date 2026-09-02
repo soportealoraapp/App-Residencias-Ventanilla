@@ -172,6 +172,16 @@ $files = [
 
     <!-- Columna Lateral -->
     <div class="col-lg-4">
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-body p-3 text-center">
+                <div class="fw-semibold text-dark mb-2"><i class="bi bi-file-earmark-arrow-down text-primary me-1"></i>¿Qué necesitas para este trámite?</div>
+                <p class="small text-muted mb-3">Descarga el formato oficial para conocer los documentos y requisitos antes de iniciar.</p>
+                <a href="<?= site_url('/portal/formato/UR-TT-T-04') ?>" class="btn btn-outline-primary w-100">
+                    <i class="bi bi-download me-1"></i>Descargar formato
+                </a>
+            </div>
+        </div>
+
         <div class="card shadow-sm border-0 tramite-sidebar-card">
             <div class="card-header bg-white py-3">
                 <h2 class="h5 mb-0 text-primary fw-bold">

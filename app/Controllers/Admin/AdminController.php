@@ -9,6 +9,7 @@ use App\Models\DocumentoModel;
 use App\Models\HistorialEstatusModel;
 use App\Models\AuditoriaModel;
 use App\Models\UserModel;
+use App\Models\FormatoTramiteModel;
 use App\Libraries\EstadoSolicitudService;
 use App\Libraries\FeatureFlags;
 use Config\Services;
@@ -413,5 +414,112 @@ class AdminController extends Controller
 
         return redirect()->to('/admin/convocatorias/' . $convocatoriaId . '/evaluacion')
             ->with('message', '¡Participante seleccionado exitosamente como GANADOR de la Convocatoria!');
+    }
+
+    public function formatos()
+    {
+        $formatoModel = new FormatoTramiteModel();
+        $formatos = $formatoModel->todos();
+
+        $mapa = [];
+        foreach ($formatos as $f) {
+            $mapa[$f->tramite] = $f;
+        }
+
+        $tramitesInfo = [
+            'UR-TT-T-01' => 'Concesión de Transporte',
+            'UR-TT-T-02' => 'Constancia de Despintado',
+            'UR-TT-T-03' => 'Orden de Plaqueo',
+            'UR-TT-T-04' => 'Permiso Eventual de Transporte',
+            'UR-TT-T-05' => 'Permiso para Cierre de Calle',
+            'UR-TT-T-06' => 'Cesión de Concesión',
+            'UR-TT-T-07' => 'Permiso de Carga y Descarga',
+        ];
+
+        return view('admin/formatos', [
+            'tramitesInfo' => $tramitesInfo,
+            'mapa'         => $mapa,
+        ]);
+    }
+
+    public function subirFormato()
+    {
+        $session = Services::session();
+        $userId = (int) $session->get('user_id');
+
+        $tramite = $this->request->getPost('tramite');
+        $tramitesValidos = ['UR-TT-T-01', 'UR-TT-T-02', 'UR-TT-T-03', 'UR-TT-T-04', 'UR-TT-T-05', 'UR-TT-T-06', 'UR-TT-T-07'];
+
+        if (! in_array($tramite, $tramitesValidos, true)) {
+            return redirect()->back()->with('error', 'Trámite no válido.');
+        }
+
+        $file = $this->request->getFile('formato');
+        if ($file === null || ! $file->isValid()) {
+            return redirect()->back()->with('error', 'Debes seleccionar un archivo.');
+        }
+
+        if (! in_array($file->getClientMimeType(), ['application/pdf', 'image/jpeg', 'image/png'], true)) {
+            return redirect()->back()->with('error', 'El archivo debe ser PDF, JPG o PNG.');
+        }
+
+        if ($file->getSize() > 10485760) {
+            return redirect()->back()->with('error', 'El archivo no debe exceder 10 MB.');
+        }
+
+        $directorio = WRITEPATH . 'uploads/formatos/';
+        if (! is_dir($directorio)) {
+            mkdir($directorio, 0755, true);
+        }
+
+        $nombreOriginal = $file->getName();
+        $extension = $file->getClientExtension() ?: 'pdf';
+        $nombreInterno = $tramite . '_' . bin2hex(random_bytes(8)) . '.' . $extension;
+
+        $file->move($directorio, $nombreInterno);
+
+        $formatoModel = new FormatoTramiteModel();
+        $existente = $formatoModel->where('tramite', $tramite)->first();
+
+        $data = [
+            'tramite'        => $tramite,
+            'nombre'         => $this->request->getPost('nombre') ?: 'Formato de ' . $tramite,
+            'descripcion'    => $this->request->getPost('descripcion') ?? null,
+            'nombre_archivo' => $nombreOriginal,
+            'ruta_interna'   => $nombreInterno,
+            'mime_type'      => $file->getClientMimeType(),
+            'tamano_bytes'   => $file->getSize(),
+            'usuario_id'     => $userId,
+            'activo'         => 1,
+        ];
+
+        if ($existente) {
+            $rutaVieja = $directorio . $existente->ruta_interna;
+            if (file_exists($rutaVieja)) {
+                unlink($rutaVieja);
+            }
+            $formatoModel->update($existente->id, $data);
+        } else {
+            $formatoModel->insert($data);
+        }
+
+        return redirect()->to('/admin/formatos')->with('message', 'Formato de ' . $tramite . ' subido correctamente.');
+    }
+
+    public function eliminarFormato()
+    {
+        $tramite = $this->request->getPost('tramite');
+        $formatoModel = new FormatoTramiteModel();
+        $formato = $formatoModel->where('tramite', $tramite)->first();
+
+        if ($formato) {
+            $ruta = WRITEPATH . 'uploads/formatos/' . $formato->ruta_interna;
+            if (file_exists($ruta)) {
+                unlink($ruta);
+            }
+            $formatoModel->delete($formato->id);
+        }
+
+        return redirect()->to('/admin/formatos')->with('message', 'Formato eliminado.');
     }
 }

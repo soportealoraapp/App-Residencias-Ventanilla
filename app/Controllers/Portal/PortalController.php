@@ -6,6 +6,7 @@ use CodeIgniter\Controller;
 use App\Models\SolicitudModel;
 use App\Models\SolicitudDatoModel;
 use App\Models\DocumentoModel;
+use App\Models\FormatoTramiteModel;
 use App\Models\UserModel;
 use App\Libraries\FeatureFlags;
 use Config\Services;
@@ -52,8 +53,17 @@ class PortalController extends Controller
     public function tramites()
     {
         $habilitaT06 = FeatureFlags::habilitarUrTtT06();
+
+        $formatoModel = new FormatoTramiteModel();
+        $formatosMap = [];
+        $todos = $formatoModel->where('activo', 1)->findAll();
+        foreach ($todos as $f) {
+            $formatosMap[$f->tramite] = $f;
+        }
+
         return view('portal/tramites', [
             'habilitaT06' => $habilitaT06,
+            'formatosMap' => $formatosMap,
         ]);
     }
 
@@ -200,5 +210,29 @@ class PortalController extends Controller
         $session->set('nombre_completo', $data['nombre_completo']);
 
         return redirect()->to('/portal/mi-perfil')->with('message', 'Perfil actualizado correctamente.');
+    }
+
+    public function descargarFormato(string $tramite)
+    {
+        $tramitesValidos = ['UR-TT-T-01', 'UR-TT-T-02', 'UR-TT-T-03', 'UR-TT-T-04', 'UR-TT-T-05', 'UR-TT-T-06', 'UR-TT-T-07'];
+        if (! in_array($tramite, $tramitesValidos, true)) {
+            return redirect()->back()->with('error', 'Trámite no válido.');
+        }
+
+        $formatoModel = new FormatoTramiteModel();
+        $formato = $formatoModel->where('tramite', $tramite)->where('activo', 1)->first();
+
+        if ($formato === null) {
+            return redirect()->back()->with('error', 'No hay formato disponible para este trámite.');
+        }
+
+        $rutaCompleta = WRITEPATH . 'uploads/formatos/' . $formato->ruta_interna;
+
+        if (! file_exists($rutaCompleta)) {
+            return redirect()->back()->with('error', 'El archivo de formato no existe en el servidor.');
+        }
+
+        return Services::response()->download($rutaCompleta, null, true)
+            ->setFileName($formato->nombre_archivo ?? 'formato_' . $tramite);
     }
 }

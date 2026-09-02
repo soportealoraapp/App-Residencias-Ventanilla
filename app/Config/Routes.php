@@ -48,6 +48,10 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->post('concesiones/eliminar/(:num)', 'Admin\\CatalogoConcesionesController::eliminar/$1');
         $routes->get('convocatorias/(:num)/evaluacion', 'Admin\\AdminController::evaluacionConvocatoria/$1');
         $routes->post('convocatorias/(:num)/seleccionar', 'Admin\\AdminController::seleccionarGanadorConvocatoria/$1');
+
+        $routes->get('formatos', 'Admin\\AdminController::formatos');
+        $routes->post('formatos/subir', 'Admin\\AdminController::subirFormato');
+        $routes->post('formatos/eliminar', 'Admin\\AdminController::eliminarFormato');
     });
 });
 
@@ -67,6 +71,8 @@ $routes->group('portal', ['filter' => 'auth'], static function ($routes) {
 
     $routes->get('mi-perfil', 'Portal\PortalController::miPerfil', ['as' => 'portal.mi_perfil']);
     $routes->post('mi-perfil', 'Portal\PortalController::guardarPerfil');
+
+    $routes->get('formato/(:segment)', 'Portal\PortalController::descargarFormato/$1');
 
     $routes->group('tramites', static function ($routes) {
         $routes->post('solicitudes', 'Portal\TramitesController::crear', ['filter' => 'role:administrador,operador_ventanilla,ciudadano']);

@@ -80,6 +80,10 @@
             <i class="bi bi-card-list me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Concesiones</span>
         </a>
+        <a href="/admin/formatos" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/formatos') ? 'active' : '' ?>">
+            <i class="bi bi-file-earmark-richtext me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Formatos de trámite</span>
+        </a>
         <a href="/admin/convocatorias/1/evaluacion" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/convocatorias') ? 'active' : '' ?>">
             <i class="bi bi-award-fill me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Convocatorias UR-01</span>
