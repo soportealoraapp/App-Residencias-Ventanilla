@@ -131,15 +131,17 @@ class PortalController extends Controller
         }
 
         $rutaInterna = $doc->ruta_interna ?? '';
-        $directorio = WRITEPATH . 'uploads' . DIRECTORY_SEPARATOR . 'documentos' . DIRECTORY_SEPARATOR;
-        $rutaCompleta = $directorio . $rutaInterna;
-
-        if ($rutaInterna === '' || !file_exists($rutaCompleta)) {
-            return redirect()->back()->with('error', 'El archivo no existe en el servidor.');
+        if ($rutaInterna === '') {
+            return redirect()->back()->with('error', 'El archivo no existe.');
         }
 
-        return Services::response()->download($rutaCompleta, null, true)
-            ->setFileName($doc->nombre_original ?? 'documento');
+        $storage = new \App\Libraries\SupabaseStorage();
+        $url = $storage->urlFirmada('documentos', $rutaInterna);
+        if ($url === null) {
+            return redirect()->back()->with('error', 'Error al obtener el documento.');
+        }
+
+        return redirect()->to($url);
     }
 
     public function miPerfil()
@@ -226,13 +228,12 @@ class PortalController extends Controller
             return redirect()->back()->with('error', 'No hay formato disponible para este trámite.');
         }
 
-        $rutaCompleta = WRITEPATH . 'uploads/formatos/' . $formato->ruta_interna;
-
-        if (! file_exists($rutaCompleta)) {
-            return redirect()->back()->with('error', 'El archivo de formato no existe en el servidor.');
+        $storage = new \App\Libraries\SupabaseStorage();
+        $url = $storage->urlFirmada('formatos', $formato->ruta_interna);
+        if ($url === null) {
+            return redirect()->back()->with('error', 'Error al obtener el formato.');
         }
 
-        return Services::response()->download($rutaCompleta, null, true)
-            ->setFileName($formato->nombre_archivo ?? 'formato_' . $tramite);
+        return redirect()->to($url);
     }
 }

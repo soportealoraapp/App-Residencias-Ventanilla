@@ -343,12 +343,13 @@ class AdminController extends Controller
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
 
-        $rutaCompleta = WRITEPATH . 'uploads/documentos/' . $doc->ruta_interna;
-        if (!file_exists($rutaCompleta)) {
+        $storage = new \App\Libraries\SupabaseStorage();
+        $url = $storage->urlFirmada('documentos', $doc->ruta_interna);
+        if ($url === null) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
 
-        return Services::response()->download($rutaCompleta, $doc->nombre_original, true);
+        return redirect()->to($url);
     }
 
     public function evaluacionConvocatoria(int $convocatoriaId)
@@ -467,16 +468,16 @@ class AdminController extends Controller
             return redirect()->back()->with('error', 'El archivo no debe exceder 10 MB.');
         }
 
-        $directorio = WRITEPATH . 'uploads/formatos/';
-        if (! is_dir($directorio)) {
-            mkdir($directorio, 0755, true);
-        }
-
         $nombreOriginal = $file->getName();
         $extension = $file->getClientExtension() ?: 'pdf';
         $nombreInterno = $tramite . '_' . bin2hex(random_bytes(8)) . '.' . $extension;
 
-        $file->move($directorio, $nombreInterno);
+        $contenido = file_get_contents($file->getTempName());
+        $storage = new \App\Libraries\SupabaseStorage();
+        $ok = $storage->subir('formatos', $nombreInterno, $contenido, $file->getClientMimeType());
+        if (! $ok) {
+            return redirect()->back()->with('error', 'Error al subir el archivo a almacenamiento.');
+        }
 
         $formatoModel = new FormatoTramiteModel();
         $existente = $formatoModel->where('tramite', $tramite)->first();
@@ -494,10 +495,7 @@ class AdminController extends Controller
         ];
 
         if ($existente) {
-            $rutaVieja = $directorio . $existente->ruta_interna;
-            if (file_exists($rutaVieja)) {
-                unlink($rutaVieja);
-            }
+            $storage->eliminar('formatos', [$existente->ruta_interna]);
             $formatoModel->update($existente->id, $data);
         } else {
             $formatoModel->insert($data);
@@ -513,10 +511,8 @@ class AdminController extends Controller
         $formato = $formatoModel->where('tramite', $tramite)->first();
 
         if ($formato) {
-            $ruta = WRITEPATH . 'uploads/formatos/' . $formato->ruta_interna;
-            if (file_exists($ruta)) {
-                unlink($ruta);
-            }
+            $storage = new \App\Libraries\SupabaseStorage();
+            $storage->eliminar('formatos', [$formato->ruta_interna]);
             $formatoModel->delete($formato->id);
         }
 

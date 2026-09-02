@@ -157,10 +157,7 @@ class AuthController extends Controller
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
-        $ineDir = WRITEPATH . 'uploads/ine/';
-        if (! is_dir($ineDir)) {
-            mkdir($ineDir, 0755, true);
-        }
+        $storage = new \App\Libraries\SupabaseStorage();
 
         $frente = $this->request->getFile('ine_frente');
         $reverso = $this->request->getFile('ine_reverso');
@@ -171,8 +168,14 @@ class AuthController extends Controller
         $frenteNombre = bin2hex(random_bytes(16)) . '.' . $frenteExt;
         $reversoNombre = bin2hex(random_bytes(16)) . '.' . $reversoExt;
 
-        $frente->move($ineDir, $frenteNombre);
-        $reverso->move($ineDir, $reversoNombre);
+        $frenteContenido = file_get_contents($frente->getTempName());
+        $reversoContenido = file_get_contents($reverso->getTempName());
+
+        $frenteRuta = 'temp/' . $frenteNombre;
+        $reversoRuta = 'temp/' . $reversoNombre;
+
+        $storage->subir('ine', $frenteRuta, $frenteContenido, $frente->getMimeType());
+        $storage->subir('ine', $reversoRuta, $reversoContenido, $reverso->getMimeType());
 
         $nombre  = trim((string) $this->request->getPost('nombre'));
         $apellido = trim((string) $this->request->getPost('apellido'));
@@ -189,8 +192,8 @@ class AuthController extends Controller
             'ciudad'          => $this->request->getPost('ciudad'),
             'domicilio'       => $this->request->getPost('domicilio'),
             'rfc'             => $this->request->getPost('rfc') !== '' ? strtoupper((string) $this->request->getPost('rfc')) : null,
-            'ine_frente'      => 'ine/' . $frenteNombre,
-            'ine_reverso'     => 'ine/' . $reversoNombre,
+            'ine_frente'      => $frenteRuta,
+            'ine_reverso'     => $reversoRuta,
         ];
 
         $this->userModel->insert($data);
@@ -198,7 +201,29 @@ class AuthController extends Controller
 
         $this->userModel->asignarRol($userId, 'ciudadano');
 
+        $frenteDestino = $userId . '/' . $frenteNombre;
+        $reversoDestino = $userId . '/' . $reversoNombre;
+        $this->moverINE($storage, $frenteRuta, $frenteDestino);
+        $this->moverINE($storage, $reversoRuta, $reversoDestino);
+        $this->userModel->update($userId, [
+            'ine_frente'  => $frenteDestino,
+            'ine_reverso' => $reversoDestino,
+        ]);
+
         return redirect()->to('/auth/login')->with('message', 'Registro exitoso');
+    }
+
+    protected function moverINE(\App\Libraries\SupabaseStorage $storage, string $origen, string $destino): void
+    {
+        $contenido = $storage->descargar('ine', $origen);
+        if ($contenido !== null) {
+            $mime = mime_content_type($destino) ?: 'application/octet-stream';
+            $ext = pathinfo($destino, PATHINFO_EXTENSION);
+            $mimeMap = ['jpg' => 'image/jpeg', 'png' => 'image/png'];
+            $mime = $mimeMap[$ext] ?? 'image/jpeg';
+            $storage->subir('ine', $destino, $contenido, $mime);
+            $storage->eliminar('ine', [$origen]);
+        }
     }
 
     public function logout()

@@ -7,7 +7,7 @@ use CodeIgniter\HTTP\Files\UploadedFile;
 
 class DocumentoUploader
 {
-    protected string $directorio;
+    protected SupabaseStorage $storage;
 
     protected array $mimePermitidos = [
         'application/pdf',
@@ -19,10 +19,7 @@ class DocumentoUploader
 
     public function __construct()
     {
-        $this->directorio = WRITEPATH . 'uploads' . DIRECTORY_SEPARATOR . 'documentos' . DIRECTORY_SEPARATOR;
-        if (!is_dir($this->directorio)) {
-            mkdir($this->directorio, 0777, true);
-        }
+        $this->storage = new SupabaseStorage();
     }
 
     public function subir(UploadedFile $file, string $tipoDocumento, int $solicitudId, int $usuarioId): ?object
@@ -50,20 +47,20 @@ class DocumentoUploader
         }
 
         $nombreInterno = $this->generarUuidCompleto() . '.' . $extension;
-        $rutaCompleta = $this->directorio . $nombreInterno;
+        $rutaSupabase = 'solicitud_' . $solicitudId . '/' . $nombreInterno;
 
-        if (ENVIRONMENT === 'testing') {
-            copy($file->getTempName(), $rutaCompleta);
-        } else {
-            $file->move($this->directorio, $nombreInterno);
-        }
-
-        if (!file_exists($rutaCompleta)) {
+        $contenido = file_get_contents($file->getTempName());
+        if ($contenido === false) {
             return null;
         }
 
-        $hash = hash_file('sha256', $rutaCompleta);
+        $hash = hash('sha256', $contenido);
         if ($hash === false) {
+            return null;
+        }
+
+        $ok = $this->storage->subir('documentos', $rutaSupabase, $contenido, $mimeType);
+        if (! $ok) {
             return null;
         }
 
@@ -74,7 +71,7 @@ class DocumentoUploader
             'usuario_id'     => $usuarioId,
             'tipo_documento' => $tipoDocumento,
             'nombre_original' => $file->getClientName(),
-            'ruta_interna'   => $nombreInterno,
+            'ruta_interna'   => $rutaSupabase,
             'mime_type'      => $mimeType,
             'tamano_bytes'   => $file->getSize(),
             'hash_sha256'    => $hash,

@@ -337,14 +337,12 @@ class TramiteCargaDescargaController extends Controller
             return redirect()->back()->with('error', 'Ruta de documento inválida.');
         }
 
-        $directorio = WRITEPATH . 'uploads' . DIRECTORY_SEPARATOR . 'documentos' . DIRECTORY_SEPARATOR;
-        $rutaCompleta = $directorio . $rutaInterna;
-
-        if (!file_exists($rutaCompleta)) {
-            return redirect()->back()->with('error', 'Archivo no encontrado en servidor.');
+        $storage = new \App\Libraries\SupabaseStorage();
+        $url = $storage->urlFirmada('documentos', $rutaInterna);
+        if ($url === null) {
+            return redirect()->back()->with('error', 'Error al obtener el documento.');
         }
 
-        return $this->response->download($rutaCompleta, null, true)
-            ->setFileName($documento->nombre_original ?? 'documento');
+        return redirect()->to($url);
     }
 }
