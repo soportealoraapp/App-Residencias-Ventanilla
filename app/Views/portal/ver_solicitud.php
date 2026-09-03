@@ -1,32 +1,4 @@
 <?php declare(strict_types=1);
-$mapEstatusClass = [
-    'Recibido' => 'bg-secondary',
-    'En revisión' => 'bg-primary',
-    'En validación' => 'bg-primary',
-    'En revisión documental' => 'bg-primary',
-    'Documentos completos' => 'bg-info text-dark',
-    'En estudio técnico' => 'bg-primary',
-    'Dictamen favorable' => 'bg-success',
-    'Pendiente de inspección' => 'bg-warning text-dark',
-    'Pendiente de revista mecánica' => 'bg-warning text-dark',
-    'Seguro pendiente de validación' => 'bg-warning text-dark',
-    'Autorizado para pago' => 'bg-info text-dark',
-    'Prevención' => 'bg-warning text-dark',
-    'Dictaminado aprobado' => 'bg-success',
-    'Pago pendiente' => 'bg-warning text-dark',
-    'Pagado' => 'bg-success',
-    'Permiso emitido' => 'bg-success',
-    'Vigente' => 'bg-success',
-    'Vencido' => 'bg-danger',
-    'Rechazado' => 'bg-danger',
-    'Concluido' => 'bg-dark',
-    'Cita agendada' => 'bg-info text-dark',
-    'Verificado' => 'bg-success',
-    'Aprobado' => 'bg-success',
-    'Seleccionado' => 'bg-success',
-    'No seleccionado' => 'bg-secondary',
-];
-$estatusClass = $mapEstatusClass[$solicitud->estatus] ?? 'bg-secondary';
 $labelsDatos = [
     'tipo_solicitante' => 'Tipo de solicitante',
     'razon_social_o_nombre' => 'Nombre / Razón social',
@@ -89,7 +61,7 @@ $tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa', 'fisica' =>
                     <div class="small text-muted mb-1"><?= esc(tramite_nombre($solicitud->tramite)) ?></div>
                     <h2 class="h4 mb-0"><i class="bi bi-receipt text-primary me-2"></i>Folio: <code><?= esc($solicitud->folio) ?></code></h2>
                 </div>
-                <span class="badge estatus-badge <?= $estatusClass ?> fs-6"><?= esc($solicitud->estatus) ?></span>
+                <span class="badge estatus-badge <?= estatus_badge($solicitud->estatus) ?> fs-6"><?= esc($solicitud->estatus) ?></span>
             </div>
             <div class="card-body">
                 <div class="row mb-4 g-3">
@@ -273,14 +245,12 @@ $tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa', 'fisica' =>
                 <div class="small text-muted">Sin registros.</div>
                 <?php else: ?>
                 <ol class="timeline list-unstyled mb-0">
-                <?php foreach ($historial as $h):
-                    $stClass = $mapEstatusClass[$h->estatus_nuevo] ?? 'bg-secondary';
-                ?>
+                <?php foreach ($historial as $h): ?>
                     <li class="timeline-item">
                         <div class="timeline-badge"></div>
                         <div class="small text-muted mb-1"><?= formatear_fecha($h->fecha) ?></div>
                         <div class="mb-1">
-                            <span class="badge estatus-badge <?= $stClass ?>"><?= esc($h->estatus_nuevo) ?></span>
+                            <span class="badge estatus-badge <?= estatus_badge($h->estatus_nuevo) ?>"><?= esc($h->estatus_nuevo) ?></span>
                         </div>
                         <?php if (!empty($h->comentario)): ?>
                         <div class="small text-muted mt-1 bg-light p-2 rounded"><?= esc($h->comentario) ?></div>

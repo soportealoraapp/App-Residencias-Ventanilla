@@ -8,30 +8,6 @@ helper('url');
 $solicitudDatoModel = new \App\Models\SolicitudDatoModel();
 $userModel = new \App\Models\UserModel();
 
-function badge_color_estatus(string $estatus): string {
-    return match($estatus) {
-        'Recibido' => 'bg-secondary',
-        'En revisión' => 'bg-primary',
-        'En validación' => 'bg-primary',
-        'En revisión documental' => 'bg-primary',
-        'Documentos completos' => 'bg-info text-dark',
-        'En estudio técnico' => 'bg-primary',
-        'Dictamen favorable' => 'bg-success',
-        'Pendiente de inspección' => 'bg-warning text-dark',
-        'Pendiente de revista mecánica' => 'bg-warning text-dark',
-        'Seguro pendiente de validación' => 'bg-warning text-dark',
-        'Autorizado para pago' => 'bg-info text-dark',
-        'Prevención' => 'bg-warning text-dark',
-        'Pago pendiente' => 'bg-info text-dark',
-        'Pagado' => 'bg-success',
-        'Vigente' => 'bg-success',
-        'Vencido' => 'bg-danger',
-        'Rechazado' => 'bg-danger',
-        'Concluido' => 'bg-dark',
-        default => 'bg-secondary',
-    };
-}
-
 $tramitesDisponibles = [
     'UR-TT-T-01' => 'T-01: Concesión de Transporte',
     'UR-TT-T-02' => 'T-02: Constancia de Despintado',
@@ -126,7 +102,7 @@ $estatusLista = \App\Libraries\EstadoSolicitudService::ESTATUS_MAESTRO;
                                 <div class="small text-muted"><span class="badge bg-light text-dark border">RFC: <?= esc($rfc) ?></span></div>
                             <?php endif; ?>
                         </div>
-                        <span class="badge estatus-badge <?= badge_color_estatus($s->estatus) ?>">
+                        <span class="badge estatus-badge <?= estatus_badge($s->estatus) ?>">
                             <?= esc($s->estatus) ?>
                         </span>
                     </div>
@@ -190,7 +166,7 @@ $estatusLista = \App\Libraries\EstadoSolicitudService::ESTATUS_MAESTRO;
                             <td><?= esc($nombre) ?></td>
                             <td><?= !empty($rfc) ? esc($rfc) : '<span class="text-muted">—</span>' ?></td>
                             <td>
-                                <span class="badge estatus-badge <?= badge_color_estatus($s->estatus) ?>">
+                                <span class="badge estatus-badge <?= estatus_badge($s->estatus) ?>">
                                     <?= esc($s->estatus) ?>
                                 </span>
                             </td>

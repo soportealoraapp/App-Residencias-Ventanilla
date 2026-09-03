@@ -63,3 +63,44 @@ if (!function_exists('active')) {
         return ($path === $ruta || str_starts_with($path, $ruta . '/')) ? 'active' : '';
     }
 }
+
+if (!function_exists('estatus_badge')) {
+    function estatus_badge(string $estatus): string
+    {
+        $map = [
+            // Procesos iniciales / en tránsito
+            'Recibido'                       => 'bg-info text-dark',
+            'Cita agendada'                  => 'bg-info text-dark',
+            'Documentos completos'           => 'bg-info text-dark',
+            'Autorizado para pago'           => 'bg-info text-dark',
+            'Evaluación comparativa'         => 'bg-info text-dark',
+            // En revisión / estudio
+            'En revisión'                    => 'bg-primary',
+            'En validación'                  => 'bg-primary',
+            'En revisión documental'         => 'bg-primary',
+            'En estudio técnico'             => 'bg-primary',
+            // Pendientes de acción del usuario
+            'Pendiente de inspección'        => 'bg-warning text-dark',
+            'Pendiente de revista mecánica'  => 'bg-warning text-dark',
+            'Seguro pendiente de validación' => 'bg-warning text-dark',
+            'Prevención'                     => 'bg-warning text-dark',
+            'Pago pendiente'                 => 'bg-warning text-dark',
+            // Aprobados / finalizados positivos
+            'Dictamen favorable'             => 'bg-success',
+            'Dictaminado aprobado'           => 'bg-success',
+            'Pagado'                         => 'bg-success',
+            'Permiso emitido'                => 'bg-success',
+            'Vigente'                        => 'bg-success',
+            'Verificado'                     => 'bg-success',
+            'Aprobado'                       => 'bg-success',
+            'Seleccionado'                   => 'bg-success',
+            // Rechazados / finalizados
+            'Vencido'                        => 'bg-danger',
+            'Rechazado'                      => 'bg-danger',
+            'Concluido'                      => 'bg-dark',
+            'No seleccionado'                => 'bg-secondary',
+        ];
+
+        return $map[$estatus] ?? 'bg-secondary';
+    }
+}

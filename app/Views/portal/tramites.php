@@ -4,7 +4,13 @@
 <?= $this->section('content') ?>
 
 <div class="row mb-3 mb-md-4">
-    <div class="col">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb small">
+                <li class="breadcrumb-item"><a href="<?= site_url('/portal/dashboard') ?>">Inicio</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Trámites</li>
+            </ol>
+        </nav>
         <h1 class="h3 mb-1"><i class="bi bi-folder2-open text-primary me-2"></i>Trámites Disponibles</h1>
         <p class="text-muted small mb-0">Selecciona el trámite de movilidad que deseas gestionar en línea.</p>
     </div>

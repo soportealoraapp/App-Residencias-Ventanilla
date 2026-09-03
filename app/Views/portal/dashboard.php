@@ -279,7 +279,7 @@
             <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
                 <h5 class="mb-0 fs-6 fw-bold text-dark"><i class="bi bi-clock-history me-2 text-primary"></i>Últimas solicitudes registradas</h5>
                 <a href="<?= site_url('/portal/mis-solicitudes') ?>" class="btn btn-outline-primary btn-sm fw-semibold">
-                    <i class="bi bi-list me-1"></i>Ver todas mis solicitudes
+                    <i class="bi bi-list me-1"></i>Ver todas las solicitudes
                 </a>
             </div>
             <div class="card-body p-0">
@@ -295,30 +295,13 @@
                 <!-- Mobile Card List (Visible en móviles) -->
                 <div class="d-block d-md-none divide-y">
                     <?php foreach ($ultimasSolicitudes as $s): ?>
-                        <?php
-                            $estatusClass = 'bg-secondary';
-                            $mapClass = [
-                                'Recibido'               => 'bg-info text-dark',
-                                'Cita agendada'          => 'bg-info text-dark',
-                                'Evaluación comparativa' => 'bg-info text-dark',
-                                'Pago pendiente'         => 'bg-warning text-dark',
-                                'Pagado'                 => 'bg-primary',
-                                'Verificado'             => 'bg-success',
-                                'Seleccionado'           => 'bg-success',
-                                'Permiso emitido'        => 'bg-success',
-                                'Vigente'                => 'bg-success',
-                                'Rechazado'              => 'bg-danger',
-                                'No seleccionado'        => 'bg-secondary',
-                            ];
-                            if (isset($mapClass[$s->estatus])) $estatusClass = $mapClass[$s->estatus];
-                        ?>
                         <div class="p-3 border-bottom">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <div>
                                     <span class="fw-bold font-monospace text-primary"><?= esc($s->folio) ?></span>
                                     <div class="small fw-semibold"><?= esc(tramite_nombre($s->tramite)) ?></div>
                                 </div>
-                                <span class="badge estatus-badge <?= $estatusClass ?>"><?= esc($s->estatus) ?></span>
+                                <span class="badge estatus-badge <?= estatus_badge($s->estatus) ?>"><?= esc($s->estatus) ?></span>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mt-2 small text-muted">
                                 <div><i class="bi bi-calendar3 me-1"></i><?= formatear_fecha($s->fecha_solicitud) ?></div>
@@ -343,23 +326,6 @@
                         </thead>
                         <tbody>
                             <?php foreach ($ultimasSolicitudes as $s): ?>
-                                <?php
-                                    $estatusClass = 'bg-secondary';
-                                    $mapClass = [
-                                        'Recibido'               => 'bg-info text-dark',
-                                        'Cita agendada'          => 'bg-info text-dark',
-                                        'Evaluación comparativa' => 'bg-info text-dark',
-                                        'Pago pendiente'         => 'bg-warning text-dark',
-                                        'Pagado'                 => 'bg-primary',
-                                        'Verificado'             => 'bg-success',
-                                        'Seleccionado'           => 'bg-success',
-                                        'Permiso emitido'        => 'bg-success',
-                                        'Vigente'                => 'bg-success',
-                                        'Rechazado'              => 'bg-danger',
-                                        'No seleccionado'        => 'bg-secondary',
-                                    ];
-                                    if (isset($mapClass[$s->estatus])) $estatusClass = $mapClass[$s->estatus];
-                                ?>
                                 <tr>
                                     <td>
                                         <a href="<?= site_url('/portal/solicitud/' . $s->folio) ?>" class="fw-bold font-monospace text-decoration-none">
@@ -377,7 +343,7 @@
                                         <div class="fw-bold text-dark"><?= formatear_dinero((float)$s->monto) ?></div>
                                     </td>
                                     <td>
-                                        <span class="badge estatus-badge <?= $estatusClass ?> px-3 py-2"><?= esc($s->estatus) ?></span>
+                                        <span class="badge estatus-badge <?= estatus_badge($s->estatus) ?> px-3 py-2"><?= esc($s->estatus) ?></span>
                                     </td>
                                     <td class="text-end">
                                         <a href="<?= site_url('/portal/solicitud/' . $s->folio) ?>" class="btn btn-sm btn-outline-primary fw-semibold">

@@ -5,8 +5,14 @@
 
 <div class="row mb-3 mb-md-4 align-items-center">
     <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb small">
+                <li class="breadcrumb-item"><a href="<?= site_url('/portal/dashboard') ?>">Inicio</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Mi Perfil</li>
+            </ol>
+        </nav>
         <h1 class="h3 mb-1"><i class="bi bi-person-gear text-primary me-2"></i>Mi Perfil</h1>
-        <p class="text-muted small mb-0">Edita tu información personal.</p>
+        <p class="text-muted small mb-0">Edita tu información personal y documento de identificación.</p>
     </div>
 </div>
 
@@ -65,29 +71,42 @@
 
             <div class="card border-warning mb-3">
                 <div class="card-body p-3">
-                    <p class="text-muted small mb-3">Sube una foto clara de tu credencial INE por ambos lados. Acepta JPG o PNG, máximo 5 MB por imagen. Si ya tienes imágenes cargadas, puedes reemplazarlas seleccionando archivos nuevos.</p>
-                    
                     <?php 
                     $storage = new \App\Libraries\SupabaseStorage();
                     $ineFrenteUrl = !empty($usuario->ine_frente) ? $storage->urlPublica('ine', $usuario->ine_frente) : null;
                     $ineReversoUrl = !empty($usuario->ine_reverso) ? $storage->urlPublica('ine', $usuario->ine_reverso) : null;
+                    $tieneINE = $ineFrenteUrl || $ineReversoUrl;
                     ?>
                     
-                    <?php if ($ineFrenteUrl || $ineReversoUrl): ?>
+                    <?php if ($tieneINE): ?>
+                    <div class="alert alert-success py-2 small mb-3">
+                        <i class="bi bi-check-circle-fill me-1"></i>
+                        Tienes INE cargada. Puedes reemplazarla seleccionando archivos nuevos.
+                    </div>
+                    <?php else: ?>
+                    <div class="alert alert-warning py-2 small mb-3">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        No has cargado tu INE. Agrégala para completar tu perfil.
+                    </div>
+                    <?php endif; ?>
+                    
+                    <p class="text-muted small mb-3">Sube una foto clara de tu credencial por ambos lados. Formatos aceptados: JPG o PNG. Tamaño máximo: 5 MB por imagen.</p>
+                    
+                    <?php if ($tieneINE): ?>
                     <div class="row g-2 mb-3">
                         <?php if ($ineFrenteUrl): ?>
                         <div class="col-sm-6">
-                            <label class="form-label small fw-semibold">INE Frente actual</label>
-                            <div class="border rounded p-2 text-center">
-                                <img src="<?= esc($ineFrenteUrl) ?>" alt="INE Frente" class="img-fluid" style="max-height: 200px;">
+                            <label class="form-label small fw-semibold text-muted">INE Frente actual</label>
+                            <div class="border rounded p-2 text-center bg-light">
+                                <img src="<?= esc($ineFrenteUrl) ?>" alt="INE Frente" class="img-fluid" style="max-height: 180px; object-fit: contain;">
                             </div>
                         </div>
                         <?php endif; ?>
                         <?php if ($ineReversoUrl): ?>
                         <div class="col-sm-6">
-                            <label class="form-label small fw-semibold">INE Reverso actual</label>
-                            <div class="border rounded p-2 text-center">
-                                <img src="<?= esc($ineReversoUrl) ?>" alt="INE Reverso" class="img-fluid" style="max-height: 200px;">
+                            <label class="form-label small fw-semibold text-muted">INE Reverso actual</label>
+                            <div class="border rounded p-2 text-center bg-light">
+                                <img src="<?= esc($ineReversoUrl) ?>" alt="INE Reverso" class="img-fluid" style="max-height: 180px; object-fit: contain;">
                             </div>
                         </div>
                         <?php endif; ?>
@@ -96,14 +115,14 @@
 
                     <div class="row g-2">
                         <div class="col-sm-6">
-                            <label for="ine_frente" class="form-label small fw-semibold">Frente (opcional)</label>
+                            <label for="ine_frente" class="form-label small fw-semibold">Frente <?= $tieneINE ? '(reemplazar)' : '' ?></label>
                             <input type="file" class="form-control" id="ine_frente" name="ine_frente" accept="image/jpeg,image/png">
-                            <div class="form-text">Deja vacío para mantener el actual</div>
+                            <div class="form-text"><?= $tieneINE ? 'Deja vacío para mantener el actual' : 'Foto frontal con nombre visible' ?></div>
                         </div>
                         <div class="col-sm-6">
-                            <label for="ine_reverso" class="form-label small fw-semibold">Reverso (opcional)</label>
+                            <label for="ine_reverso" class="form-label small fw-semibold">Reverso <?= $tieneINE ? '(reemplazar)' : '' ?></label>
                             <input type="file" class="form-control" id="ine_reverso" name="ine_reverso" accept="image/jpeg,image/png">
-                            <div class="form-text">Deja vacío para mantener el actual</div>
+                            <div class="form-text"><?= $tieneINE ? 'Deja vacío para mantener el actual' : 'Foto trasera con código visible' ?></div>
                         </div>
                     </div>
                 </div>

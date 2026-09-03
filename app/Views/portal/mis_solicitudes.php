@@ -5,6 +5,12 @@
 
 <div class="row mb-3 mb-md-4 align-items-center">
     <div class="col-12 col-sm-8 mb-2 mb-sm-0">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb small">
+                <li class="breadcrumb-item"><a href="<?= site_url('/portal/dashboard') ?>">Inicio</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Mis Solicitudes</li>
+            </ol>
+        </nav>
         <h1 class="h3 mb-1"><i class="bi bi-list-check text-primary me-2"></i>Mis Solicitudes</h1>
         <p class="text-muted small mb-0">Consulta el estatus, historial y comprobantes de tus trámites.</p>
     </div>
@@ -27,26 +33,13 @@
         <!-- Mobile Card List (Visible on < 768px) -->
         <div class="d-block d-md-none">
             <?php foreach ($solicitudes as $s): ?>
-                <?php
-                    $estatusClass = 'bg-secondary';
-                    $mapClass = [
-                        'Recibido' => 'bg-info text-dark',
-                        'Pago pendiente' => 'bg-warning text-dark',
-                        'Pagado' => 'bg-primary',
-                        'Permiso emitido' => 'bg-success',
-                        'Vigente' => 'bg-success',
-                        'Rechazado' => 'bg-danger',
-                        'Vencido' => 'bg-secondary',
-                    ];
-                    if (isset($mapClass[$s->estatus])) $estatusClass = $mapClass[$s->estatus];
-                ?>
                 <div class="p-3 border-bottom">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
                             <span class="fw-bold font-monospace text-primary"><?= esc($s->folio) ?></span>
                             <div class="small fw-semibold"><?= esc(tramite_nombre($s->tramite)) ?></div>
                         </div>
-                        <span class="badge estatus-badge <?= $estatusClass ?>"><?= esc($s->estatus) ?></span>
+                        <span class="badge estatus-badge <?= estatus_badge($s->estatus) ?>"><?= esc($s->estatus) ?></span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center mt-2 small text-muted">
                         <div><i class="bi bi-calendar3 me-1"></i><?= formatear_fecha($s->fecha_solicitud) ?></div>
@@ -89,24 +82,11 @@
                 </thead>
                 <tbody>
                 <?php foreach ($solicitudes as $s): ?>
-                    <?php
-                        $estatusClass = 'bg-secondary';
-                        $mapClass = [
-                            'Recibido' => 'bg-info text-dark',
-                            'Pago pendiente' => 'bg-warning text-dark',
-                            'Pagado' => 'bg-primary',
-                            'Permiso emitido' => 'bg-success',
-                            'Vigente' => 'bg-success',
-                            'Rechazado' => 'bg-danger',
-                            'Vencido' => 'bg-secondary',
-                        ];
-                        if (isset($mapClass[$s->estatus])) $estatusClass = $mapClass[$s->estatus];
-                    ?>
                     <tr>
                         <td><code class="fw-bold text-primary"><?= esc($s->folio) ?></code></td>
                         <td><?= esc(tramite_nombre($s->tramite)) ?></td>
                         <td>
-                            <span class="badge estatus-badge <?= $estatusClass ?>"><?= esc($s->estatus) ?></span>
+                            <span class="badge estatus-badge <?= estatus_badge($s->estatus) ?>"><?= esc($s->estatus) ?></span>
                         </td>
                         <td class="small text-nowrap"><?= formatear_fecha($s->fecha_solicitud) ?></td>
                         <td class="fw-semibold"><?= formatear_dinero((float)$s->monto) ?></td>

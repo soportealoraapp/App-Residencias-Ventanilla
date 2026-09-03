@@ -4,29 +4,6 @@
 <?= $this->section('content') ?>
 
 <?php
-function badge_color_estatus(string $estatus): string {
-    return match($estatus) {
-        'Recibido' => 'bg-secondary',
-        'En revisión' => 'bg-primary',
-        'En revisión documental' => 'bg-primary',
-        'Documentos completos' => 'bg-info text-dark',
-        'En estudio técnico' => 'bg-primary',
-        'Dictamen favorable' => 'bg-success',
-        'Pendiente de inspección' => 'bg-warning text-dark',
-        'Pendiente de revista mecánica' => 'bg-warning text-dark',
-        'Seguro pendiente de validación' => 'bg-warning text-dark',
-        'Autorizado para pago' => 'bg-info text-dark',
-        'Prevención' => 'bg-warning text-dark',
-        'Pago pendiente' => 'bg-info text-dark',
-        'Pagado' => 'bg-success',
-        'Vigente' => 'bg-success',
-        'Vencido' => 'bg-danger',
-        'Rechazado' => 'bg-danger',
-        'Concluido' => 'bg-dark',
-        default => 'bg-secondary',
-    };
-}
-
 $claveEtiquetas = [
     'rfc' => 'RFC',
     'RFC' => 'RFC',
@@ -97,7 +74,7 @@ $claveEtiquetas = [
                     <dd class="col-sm-8 fw-bold fs-5"><?= formatear_dinero((float)$solicitud->monto) ?></dd>
                     <dt class="col-sm-4">Estatus</dt>
                     <dd class="col-sm-8">
-                        <span class="badge fs-6 estatus-badge <?= badge_color_estatus($solicitud->estatus) ?>">
+                        <span class="badge fs-6 estatus-badge <?= estatus_badge($solicitud->estatus) ?>">
                             <?= esc($solicitud->estatus) ?>
                         </span>
                     </dd>
@@ -130,7 +107,7 @@ $claveEtiquetas = [
                                 <?php endforeach; ?>
                             </select>
                             <div class="form-text">
-                                Estatus actual: <span class="badge estatus-badge <?= badge_color_estatus($solicitud->estatus) ?>"><?= esc($solicitud->estatus) ?></span>
+                                Estatus actual: <span class="badge estatus-badge <?= estatus_badge($solicitud->estatus) ?>"><?= esc($solicitud->estatus) ?></span>
                             </div>
                         </div>
                         <div class="mb-3" id="grupoComentario" style="display:none;">
@@ -391,7 +368,7 @@ $claveEtiquetas = [
                                     </span>
                                     <span class="text-muted small">→</span>
                                 <?php endif; ?>
-                                <span class="badge estatus-badge fs-6 <?= badge_color_estatus($h->estatus_nuevo) ?>">
+                                <span class="badge estatus-badge fs-6 <?= estatus_badge($h->estatus_nuevo) ?>">
                                     <?= esc($h->estatus_nuevo) ?>
                                 </span>
                                 <span class="small text-muted">
