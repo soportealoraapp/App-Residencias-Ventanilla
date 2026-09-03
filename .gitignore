@@ -1,5 +1,11 @@
 # Dependencias
 /vendor/
+/node_modules/
+
+# Dependencias Node.js
+node_modules/
+package-lock.json
+.package-lock.json
 
 # Entorno local
 .env
