@@ -18,13 +18,11 @@ class CreateUsersTable extends Migration
             'username' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 100,
-                'unique'     => true,
                 'null'       => true,
             ],
             'email' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 255,
-                'unique'     => true,
                 'null'       => true,
             ],
             'password_hash' => [
@@ -76,6 +74,11 @@ class CreateUsersTable extends Migration
         ]);
 
         $this->forge->addKey('id', true);
+        // Claves nombradas explicitas en vez de 'unique'=>true: SQLite crea
+        // indices reservados sqlite_autoindex_* con el inline que rompe los
+        // ALTER TABLE (dropColumn/addColumn) de CI4 al reconstruir la tabla.
+        $this->forge->addUniqueKey('username', 'uq_users_username');
+        $this->forge->addUniqueKey('email', 'uq_users_email');
 
         $this->forge->createTable('users', true);
     }

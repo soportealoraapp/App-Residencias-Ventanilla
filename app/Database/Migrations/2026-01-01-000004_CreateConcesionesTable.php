@@ -26,7 +26,6 @@ class CreateConcesionesTable extends Migration
             'numero_titulo' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 50,
-                'unique'     => true,
                 'null'       => false,
             ],
             'titular_actual' => [
@@ -69,6 +68,10 @@ class CreateConcesionesTable extends Migration
         ]);
 
         $this->forge->addKey('id', true);
+        // Clave nombrada explicita en vez de 'unique'=>true: SQLite crea un
+        // indice reservado sqlite_autoindex_* con el inline que rompe los
+        // ALTER TABLE (dropColumn/addColumn) de CI4 al reconstruir la tabla.
+        $this->forge->addUniqueKey('numero_titulo', 'uq_concesiones_numero_titulo');
 
         $this->forge->createTable('concesiones', true);
     }

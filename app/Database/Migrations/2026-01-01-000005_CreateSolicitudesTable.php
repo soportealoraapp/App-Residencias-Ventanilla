@@ -18,7 +18,6 @@ class CreateSolicitudesTable extends Migration
             'folio' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 20,
-                'unique'     => true,
                 'null'       => false,
             ],
             'tramite' => [
