@@ -173,6 +173,8 @@ class PortalController extends Controller
             'ciudad'    => 'required|min_length[2]',
             'domicilio' => 'required|min_length[5]',
             'rfc'       => 'permit_empty|exact_length[13]|regex_match[/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/]',
+            'ine_frente' => 'permit_empty|uploaded|mime_in[ine_frente,image/jpeg,image/png]|max_size[ine_frente,5120]',
+            'ine_reverso' => 'permit_empty|uploaded|mime_in[ine_reverso,image/jpeg,image/png]|max_size[ine_reverso,5120]',
         ];
 
         if (! $this->validate($rules)) {
@@ -207,6 +209,41 @@ class PortalController extends Controller
             'ciudad'          => $this->request->getPost('ciudad'),
             'domicilio'       => $this->request->getPost('domicilio'),
         ];
+
+        // Procesar INE si se subieron archivos nuevos
+        $frenteFile = $this->request->getFile('ine_frente');
+        $reversoFile = $this->request->getFile('ine_reverso');
+
+        if ($frenteFile->isValid() || $reversoFile->isValid()) {
+            $storage = new \App\Libraries\SupabaseStorage();
+
+            // Eliminar archivos anteriores si existen
+            if (!empty($actual->ine_frente)) {
+                $storage->eliminar('ine', [$actual->ine_frente]);
+            }
+            if (!empty($actual->ine_reverso)) {
+                $storage->eliminar('ine', [$actual->ine_reverso]);
+            }
+
+            // Subir nuevos archivos
+            if ($frenteFile->isValid()) {
+                $frenteExt = $frenteFile->getExtension() === 'jpeg' ? 'jpg' : $frenteFile->getExtension();
+                $frenteNombre = bin2hex(random_bytes(16)) . '.' . $frenteExt;
+                $frenteRuta = $userId . '/' . $frenteNombre;
+                $frenteContenido = file_get_contents($frenteFile->getTempName());
+                $storage->subir('ine', $frenteRuta, $frenteContenido, $frenteFile->getMimeType());
+                $data['ine_frente'] = $frenteRuta;
+            }
+
+            if ($reversoFile->isValid()) {
+                $reversoExt = $reversoFile->getExtension() === 'jpeg' ? 'jpg' : $reversoFile->getExtension();
+                $reversoNombre = bin2hex(random_bytes(16)) . '.' . $reversoExt;
+                $reversoRuta = $userId . '/' . $reversoNombre;
+                $reversoContenido = file_get_contents($reversoFile->getTempName());
+                $storage->subir('ine', $reversoRuta, $reversoContenido, $reversoFile->getMimeType());
+                $data['ine_reverso'] = $reversoRuta;
+            }
+        }
 
         $userModel->update($userId, $data);
 
