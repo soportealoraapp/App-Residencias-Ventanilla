@@ -2,24 +2,17 @@
 
 namespace App\Libraries;
 
-use CodeIgniter\HTTP\CURLRequest;
-
 class SupabaseStorage
 {
     protected string $baseUrl;
     protected string $anonKey;
     protected string $serviceKey;
-    protected CURLRequest $client;
 
     public function __construct()
     {
-        $this->baseUrl     = ($_ENV['SUPABASE_URL'] ?? '') . '/storage/v1';
-        $this->anonKey     = $_ENV['SUPABASE_ANON_KEY'] ?? '';
-        $this->serviceKey  = $_ENV['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
-        $this->client      = \Config\Services::curlrequest([
-            'baseURI' => '',
-            'timeout' => 30,
-        ]);
+        $this->baseUrl    = ($_ENV['SUPABASE_URL'] ?? '') . '/storage/v1';
+        $this->anonKey    = $_ENV['SUPABASE_ANON_KEY'] ?? '';
+        $this->serviceKey = $_ENV['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
     }
 
     public function subir(string $bucket, string $path, string $contenido, string $mimeType, bool $upsert = true): bool
@@ -27,26 +20,17 @@ class SupabaseStorage
         $url = $this->baseUrl . '/object/' . $bucket . '/' . $path;
 
         $headers = [
-            'apikey'       => $this->anonKey,
-            'Authorization' => 'Bearer ' . $this->serviceKey,
-            'Content-Type'  => $mimeType,
+            'apikey: ' . $this->anonKey,
+            'Authorization: Bearer ' . $this->serviceKey,
+            'Content-Type: ' . $mimeType,
         ];
 
         if ($upsert) {
-            $headers['x-upsert'] = 'true';
+            $headers[] = 'x-upsert: true';
         }
 
-        try {
-            $response = $this->client->post($url, [
-                'body'    => $contenido,
-                'headers' => $headers,
-            ]);
-
-            return $response->getStatusCode() >= 200 && $response->getStatusCode() < 300;
-        } catch (\Throwable $e) {
-            log_message('error', 'SupabaseStorage::subir failed: ' . $e->getMessage());
-            return false;
-        }
+        $result = $this->request('POST', $url, $contenido, $headers);
+        return $result !== false && $result['status'] >= 200 && $result['status'] < 300;
     }
 
     public function subirArchivo(string $bucket, string $path, $file, string $mimeType, bool $upsert = true): bool
@@ -63,50 +47,34 @@ class SupabaseStorage
     {
         $url = $this->baseUrl . '/object/' . $bucket;
 
-        try {
-            $response = $this->client->delete($url, [
-                'json'    => ['prefixes' => $paths],
-                'headers' => [
-                    'apikey'       => $this->anonKey,
-                    'Authorization' => 'Bearer ' . $this->serviceKey,
-                    'Content-Type'  => 'application/json',
-                ],
-            ]);
+        $result = $this->request('DELETE', $url, json_encode(['prefixes' => $paths]), [
+            'apikey: ' . $this->anonKey,
+            'Authorization: Bearer ' . $this->serviceKey,
+            'Content-Type: application/json',
+        ]);
 
-            return $response->getStatusCode() >= 200 && $response->getStatusCode() < 300;
-        } catch (\Throwable $e) {
-            log_message('error', 'SupabaseStorage::eliminar failed: ' . $e->getMessage());
-            return false;
-        }
+        return $result !== false && $result['status'] >= 200 && $result['status'] < 300;
     }
 
     public function urlFirmada(string $bucket, string $path, int $expiraSegundos = 3600): ?string
     {
         $url = $this->baseUrl . '/object/sign/' . $bucket . '/' . $path;
 
-        try {
-            $response = $this->client->post($url, [
-                'json'    => ['expiresIn' => $expiraSegundos],
-                'headers' => [
-                    'apikey'       => $this->anonKey,
-                    'Authorization' => 'Bearer ' . $this->serviceKey,
-                    'Content-Type'  => 'application/json',
-                ],
-            ]);
+        $result = $this->request('POST', $url, json_encode(['expiresIn' => $expiraSegundos]), [
+            'apikey: ' . $this->anonKey,
+            'Authorization: Bearer ' . $this->serviceKey,
+            'Content-Type: application/json',
+        ]);
 
-            if ($response->getStatusCode() >= 200 && $response->getStatusCode() < 300) {
-                $body = json_decode($response->getBody(), true);
-                $signedPath = $body['signedURL'] ?? null;
-                if ($signedPath !== null) {
-                    return $this->extraerUrlCompleta($signedPath);
-                }
+        if ($result !== false && $result['status'] >= 200 && $result['status'] < 300) {
+            $body = json_decode($result['body'], true);
+            $signedPath = $body['signedURL'] ?? null;
+            if ($signedPath !== null) {
+                return $this->extraerUrlCompleta($signedPath);
             }
-
-            return null;
-        } catch (\Throwable $e) {
-            log_message('error', 'SupabaseStorage::urlFirmada failed: ' . $e->getMessage());
-            return null;
         }
+
+        return null;
     }
 
     public function urlPublica(string $bucket, string $path): string
@@ -119,72 +87,52 @@ class SupabaseStorage
     {
         $url = $this->baseUrl . '/object/' . $bucket . '/' . $path;
 
-        try {
-            $response = $this->client->get($url, [
-                'headers' => [
-                    'apikey'       => $this->anonKey,
-                    'Authorization' => 'Bearer ' . $this->serviceKey,
-                ],
-                'response' => ['save_to' => null],
-            ]);
+        $result = $this->request('GET', $url, null, [
+            'apikey: ' . $this->anonKey,
+            'Authorization: Bearer ' . $this->serviceKey,
+        ]);
 
-            if ($response->getStatusCode() >= 200 && $response->getStatusCode() < 300) {
-                return $response->getBody();
-            }
-
-            return null;
-        } catch (\Throwable $e) {
-            log_message('error', 'SupabaseStorage::descargar failed: ' . $e->getMessage());
-            return null;
+        if ($result !== false && $result['status'] >= 200 && $result['status'] < 300) {
+            return $result['body'];
         }
+
+        return null;
     }
 
     public function listar(string $bucket, string $prefix = '', int $limite = 100, int $offset = 0): array
     {
         $url = $this->baseUrl . '/object/list/' . $bucket;
 
-        try {
-            $response = $this->client->post($url, [
-                'json' => [
-                    'prefix'  => $prefix,
-                    'limit'   => $limite,
-                    'offset'  => $offset,
-                    'sortBy'  => ['column' => 'name', 'order' => 'asc'],
-                ],
-                'headers' => [
-                    'apikey'       => $this->anonKey,
-                    'Authorization' => 'Bearer ' . $this->serviceKey,
-                    'Content-Type'  => 'application/json',
-                ],
-            ]);
+        $body = json_encode([
+            'prefix' => $prefix,
+            'limit'  => $limite,
+            'offset' => $offset,
+            'sortBy' => ['column' => 'name', 'order' => 'asc'],
+        ]);
 
-            if ($response->getStatusCode() >= 200 && $response->getStatusCode() < 300) {
-                return json_decode($response->getBody(), true) ?? [];
-            }
+        $result = $this->request('POST', $url, $body, [
+            'apikey: ' . $this->anonKey,
+            'Authorization: Bearer ' . $this->serviceKey,
+            'Content-Type: application/json',
+        ]);
 
-            return [];
-        } catch (\Throwable $e) {
-            log_message('error', 'SupabaseStorage::listar failed: ' . $e->getMessage());
-            return [];
+        if ($result !== false && $result['status'] >= 200 && $result['status'] < 300) {
+            return json_decode($result['body'], true) ?? [];
         }
+
+        return [];
     }
 
     public function existe(string $bucket, string $path): bool
     {
         $url = $this->baseUrl . '/object/info/' . $bucket . '/' . $path;
 
-        try {
-            $response = $this->client->head($url, [
-                'headers' => [
-                    'apikey'       => $this->anonKey,
-                    'Authorization' => 'Bearer ' . $this->serviceKey,
-                ],
-            ]);
+        $result = $this->request('HEAD', $url, null, [
+            'apikey: ' . $this->anonKey,
+            'Authorization: Bearer ' . $this->serviceKey,
+        ]);
 
-            return $response->getStatusCode() >= 200 && $response->getStatusCode() < 300;
-        } catch (\Throwable $e) {
-            return false;
-        }
+        return $result !== false && $result['status'] >= 200 && $result['status'] < 300;
     }
 
     public function crearBucket(string $nombre, bool $publico = false, ?int $tamanoMaximo = null, ?array $mimeTypes = null): bool
@@ -192,8 +140,8 @@ class SupabaseStorage
         $url = $this->baseUrl . '/bucket';
 
         $body = [
-            'name'    => $nombre,
-            'public'  => $publico,
+            'name'   => $nombre,
+            'public' => $publico,
         ];
 
         if ($tamanoMaximo !== null) {
@@ -204,43 +152,65 @@ class SupabaseStorage
             $body['allowed_mime_types'] = $mimeTypes;
         }
 
-        try {
-            $response = $this->client->post($url, [
-                'json'    => $body,
-                'headers' => [
-                    'apikey'       => $this->anonKey,
-                    'Authorization' => 'Bearer ' . $this->serviceKey,
-                    'Content-Type'  => 'application/json',
-                ],
-            ]);
+        $result = $this->request('POST', $url, json_encode($body), [
+            'apikey: ' . $this->anonKey,
+            'Authorization: Bearer ' . $this->serviceKey,
+            'Content-Type: application/json',
+        ]);
 
-            return $response->getStatusCode() >= 200 && $response->getStatusCode() < 300;
-        } catch (\Throwable $e) {
-            log_message('error', 'SupabaseStorage::crearBucket failed: ' . $e->getMessage());
-            return false;
-        }
+        return $result !== false && $result['status'] >= 200 && $result['status'] < 300;
     }
 
     public function listarBuckets(): array
     {
         $url = $this->baseUrl . '/bucket';
 
-        try {
-            $response = $this->client->get($url, [
-                'headers' => [
-                    'apikey'       => $this->anonKey,
-                    'Authorization' => 'Bearer ' . $this->serviceKey,
-                ],
-            ]);
+        $result = $this->request('GET', $url, null, [
+            'apikey: ' . $this->anonKey,
+            'Authorization: Bearer ' . $this->serviceKey,
+        ]);
 
-            if ($response->getStatusCode() >= 200 && $response->getStatusCode() < 300) {
-                return json_decode($response->getBody(), true) ?? [];
-            }
-
-            return [];
-        } catch (\Throwable $e) {
-            return [];
+        if ($result !== false && $result['status'] >= 200 && $result['status'] < 300) {
+            return json_decode($result['body'], true) ?? [];
         }
+
+        return [];
+    }
+
+    protected function request(string $method, string $url, ?string $body, array $headers): array|false
+    {
+        $ch = curl_init($url);
+
+        $options = [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HEADER         => false,
+            CURLOPT_TIMEOUT        => 30,
+            CURLOPT_HTTPHEADER     => $headers,
+            CURLOPT_CUSTOMREQUEST  => $method,
+        ];
+
+        if ($method === 'HEAD') {
+            $options[CURLOPT_NOBODY] = true;
+            unset($options[CURLOPT_RETURNTRANSFER]);
+        }
+
+        if ($body !== null && $method !== 'GET' && $method !== 'HEAD') {
+            $options[CURLOPT_POSTFIELDS] = $body;
+        }
+
+        curl_setopt_array($ch, $options);
+
+        $responseBody = curl_exec($ch);
+        $statusCode   = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error        = curl_error($ch);
+        curl_close($ch);
+
+        if ($responseBody === false) {
+            log_message('error', 'SupabaseStorage cURL error: ' . $error);
+            return false;
+        }
+
+        return ['status' => $statusCode, 'body' => $responseBody];
     }
 
     protected function extraerUrlCompleta(string $signedPath): string
