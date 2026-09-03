@@ -8,6 +8,7 @@ use App\Models\SolicitudDatoModel;
 use App\Models\DocumentoModel;
 use App\Models\FormatoTramiteModel;
 use App\Models\UserModel;
+use App\Models\AuditoriaModel;
 use App\Libraries\FeatureFlags;
 use Config\Services;
 
@@ -245,11 +246,23 @@ class PortalController extends Controller
             }
         }
 
-        $userModel->update($userId, $data);
+        $actualizado = $userModel->update($userId, $data);
+
+        if ($actualizado) {
+            $this->registrarAuditoriaPerfil($userId, array_keys($data));
+        }
 
         $session->set('nombre_completo', $data['nombre_completo']);
 
         return redirect()->to('/portal/mi-perfil')->with('message', 'Perfil actualizado correctamente.');
+    }
+
+    private function registrarAuditoriaPerfil(int $userId, array $campos): void
+    {
+        (new AuditoriaModel())->registrar('users', $userId, 'perfil_actualizado', $userId, [
+            'campos' => array_values(array_diff($campos, ['ine_frente', 'ine_reverso'])),
+            'documentos_ine_actualizados' => in_array('ine_frente', $campos, true) || in_array('ine_reverso', $campos, true),
+        ]);
     }
 
     public function descargarFormato(string $tramite)

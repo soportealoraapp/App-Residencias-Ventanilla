@@ -102,6 +102,26 @@ class AdminController extends Controller
         return $this->listaSolicitudes();
     }
 
+    public function auditoria()
+    {
+        $filtros = [
+            'entidad' => trim((string) $this->request->getGet('entidad')),
+            'accion' => trim((string) $this->request->getGet('accion')),
+            'usuario_id' => trim((string) $this->request->getGet('usuario_id')),
+            'fecha_desde' => trim((string) $this->request->getGet('fecha_desde')),
+            'fecha_hasta' => trim((string) $this->request->getGet('fecha_hasta')),
+        ];
+
+        $auditoriaModel = new AuditoriaModel();
+        $registros = $auditoriaModel->buscar($filtros);
+
+        return view('admin/auditoria', [
+            'registros' => $registros,
+            'pager' => $auditoriaModel->pager,
+            'filtros' => $filtros,
+        ]);
+    }
+
     public function listaSolicitudes()
     {
         $solicitudModel = new SolicitudModel();
@@ -497,8 +517,21 @@ class AdminController extends Controller
         if ($existente) {
             $storage->eliminar('formatos', [$existente->ruta_interna]);
             $formatoModel->update($existente->id, $data);
+            $formatoId = (int) $existente->id;
+            $accion = 'reemplazar';
         } else {
             $formatoModel->insert($data);
+            $formatoId = (int) $formatoModel->getInsertID();
+            $accion = 'crear';
+        }
+
+        if ($formatoId > 0) {
+            (new AuditoriaModel())->registrar('formatos_tramite', $formatoId, $accion, $userId, [
+                'tramite' => $tramite,
+                'nombre_archivo' => $nombreOriginal,
+                'mime_type' => $file->getClientMimeType(),
+                'tamano_bytes' => $file->getSize(),
+            ]);
         }
 
         return redirect()->to('/admin/formatos')->with('message', 'Formato de ' . $tramite . ' subido correctamente.');
@@ -514,6 +547,10 @@ class AdminController extends Controller
             $storage = new \App\Libraries\SupabaseStorage();
             $storage->eliminar('formatos', [$formato->ruta_interna]);
             $formatoModel->delete($formato->id);
+            (new AuditoriaModel())->registrar('formatos_tramite', (int) $formato->id, 'eliminar', (int) session('user_id'), [
+                'tramite' => $tramite,
+                'nombre_archivo' => $formato->nombre_archivo,
+            ]);
         }
 
         return redirect()->to('/admin/formatos')->with('message', 'Formato eliminado.');

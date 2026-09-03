@@ -52,4 +52,28 @@ class AuditoriaModel extends Model
             ->orderBy('fecha', 'DESC')
             ->findAll();
     }
+
+    public function buscar(array $filtros = []): array
+    {
+        if (! empty($filtros['entidad'])) {
+            $this->where('auditoria.entidad', $filtros['entidad']);
+        }
+        if (! empty($filtros['accion'])) {
+            $this->where('auditoria.accion', $filtros['accion']);
+        }
+        if (! empty($filtros['usuario_id']) && ctype_digit((string) $filtros['usuario_id'])) {
+            $this->where('auditoria.usuario_id', (int) $filtros['usuario_id']);
+        }
+        if (! empty($filtros['fecha_desde'])) {
+            $this->where('auditoria.fecha >=', $filtros['fecha_desde'] . ' 00:00:00');
+        }
+        if (! empty($filtros['fecha_hasta'])) {
+            $this->where('auditoria.fecha <=', $filtros['fecha_hasta'] . ' 23:59:59');
+        }
+
+        return $this->select('auditoria.*, users.username, users.nombre_completo')
+            ->join('users', 'users.id = auditoria.usuario_id', 'left')
+            ->orderBy('auditoria.fecha', 'DESC')
+            ->paginate(25);
+    }
 }

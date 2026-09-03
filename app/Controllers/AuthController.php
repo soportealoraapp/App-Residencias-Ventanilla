@@ -7,6 +7,7 @@ use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use App\Models\UserModel;
 use App\Models\RoleModel;
+use App\Models\AuditoriaModel;
 use Config\Services;
 use Psr\Log\LoggerInterface;
 
@@ -14,12 +15,14 @@ class AuthController extends Controller
 {
     protected UserModel $userModel;
     protected RoleModel $roleModel;
+    protected AuditoriaModel $auditoriaModel;
 
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)
     {
         parent::initController($request, $response, $logger);
         $this->userModel = new UserModel();
         $this->roleModel = new RoleModel();
+        $this->auditoriaModel = new AuditoriaModel();
     }
 
     public function login()
@@ -55,6 +58,9 @@ class AuthController extends Controller
             ->first();
 
         if ($user === null || ! password_verify($password, $user->password_hash)) {
+            $this->auditoriaModel->registrar('users', null, 'login_fallido', null, [
+                'metodo' => 'username_o_email',
+            ]);
             return redirect()->back()->withInput()->with('errors', ['credenciales' => 'Usuario o contraseña incorrectos.']);
         }
 
@@ -66,6 +72,10 @@ class AuthController extends Controller
             'username'       => $user->username,
             'nombre_completo' => $user->nombre_completo,
             'roles'          => $roles,
+        ]);
+
+        $this->auditoriaModel->registrar('users', (int) $user->id, 'login_exitoso', (int) $user->id, [
+            'roles' => $roles,
         ]);
 
         $esAdmin = false;
@@ -199,7 +209,20 @@ class AuthController extends Controller
         $this->userModel->insert($data);
         $userId = (int) $this->userModel->getInsertID();
 
-        $this->userModel->asignarRol($userId, 'ciudadano');
+        if ($userId <= 0) {
+            return redirect()->back()->withInput()->with('errors', ['registro' => 'No fue posible crear el usuario.']);
+        }
+
+        $this->auditoriaModel->registrar('users', $userId, 'registro_ciudadano', null, [
+            'username' => $data['username'],
+            'rol_inicial' => 'ciudadano',
+        ]);
+
+        if ($this->userModel->asignarRol($userId, 'ciudadano')) {
+            $this->auditoriaModel->registrar('users', $userId, 'asignar_rol', null, [
+                'rol' => 'ciudadano',
+            ]);
+        }
 
         $frenteDestino = $userId . '/' . $frenteNombre;
         $reversoDestino = $userId . '/' . $reversoNombre;
@@ -228,6 +251,10 @@ class AuthController extends Controller
 
     public function logout()
     {
+        $userId = (int) Services::session()->get('user_id');
+        if ($userId > 0) {
+            $this->auditoriaModel->registrar('users', $userId, 'logout', $userId, null);
+        }
         Services::session()->destroy();
         return redirect()->to('/auth/login');
     }
@@ -250,6 +277,10 @@ class AuthController extends Controller
             $this->userModel->update($user->id, [
                 'reset_token'   => $token,
                 'reset_expira'  => $expira,
+            ]);
+
+            $this->auditoriaModel->registrar('users', (int) $user->id, 'recuperacion_solicitada', null, [
+                'canal' => 'correo',
             ]);
 
             $resetUrl = site_url('/auth/reset/' . $token);
@@ -307,11 +338,17 @@ class AuthController extends Controller
                 return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
             }
 
-            $this->userModel->update($user->id, [
+            $actualizado = $this->userModel->update($user->id, [
                 'password_hash' => password_hash((string) $this->request->getPost('password'), PASSWORD_DEFAULT),
                 'reset_token'   => null,
                 'reset_expira'  => null,
             ]);
+
+            if ($actualizado) {
+                $this->auditoriaModel->registrar('users', (int) $user->id, 'contrasena_restablecida', null, [
+                    'origen' => 'recuperacion',
+                ]);
+            }
 
             return redirect()->to('/auth/login')->with('message', 'Contraseña actualizada correctamente.');
         }

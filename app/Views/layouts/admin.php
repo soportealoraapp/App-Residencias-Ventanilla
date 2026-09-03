@@ -84,6 +84,10 @@
             <i class="bi bi-file-earmark-richtext me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Formatos de trámite</span>
         </a>
+        <a href="/admin/auditoria" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/auditoria') ? 'active' : '' ?>">
+            <i class="bi bi-shield-check me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Auditoría</span>
+        </a>
         <a href="/admin/convocatorias/1/evaluacion" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/convocatorias') ? 'active' : '' ?>">
             <i class="bi bi-award-fill me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Convocatorias UR-01</span>
