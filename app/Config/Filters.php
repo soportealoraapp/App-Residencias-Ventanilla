@@ -51,6 +51,14 @@ class Filters extends BaseConfig
     public array $methods = [];
 
     public array $filters = [
-        'adminRedirect' => ['before' => ['portal/*']],
+        'adminRedirect' => [
+            'before' => [
+                'portal',
+                'portal/dashboard',
+                'portal/mis-solicitudes',
+                'portal/solicitud/*',
+                'portal/mi-perfil',
+            ],
+        ],
     ];
 }

@@ -9,7 +9,7 @@ class SolicitudModel extends Model
     protected $table            = 'solicitudes';
     protected $primaryKey       = 'id';
     protected $useAutoIncrement = true;
-    protected $returnType       = 'object';
+    protected $returnType       = \App\Entities\Solicitud::class;
     protected $useSoftDeletes   = false;
     protected $allowedFields    = [
         'folio',

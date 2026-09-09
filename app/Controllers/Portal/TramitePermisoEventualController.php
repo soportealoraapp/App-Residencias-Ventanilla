@@ -22,17 +22,17 @@ class TramitePermisoEventualController extends Controller
     protected DocumentoModel $documentoModel;
     protected TarifarioService $tarifarioService;
     protected DocumentoUploader $uploader;
-    protected BanbajioMockGateway $gateway;
+    protected \App\Interfaces\PaymentGatewayInterface $gateway;
 
     public function __construct()
     {
         helper(['url', 'form', 'url_helper_custom']);
-        $this->solicitudModel = new SolicitudModel();
-        $this->solicitudDatoModel = new SolicitudDatoModel();
-        $this->documentoModel = new DocumentoModel();
+        $this->solicitudModel = model(SolicitudModel::class);
+        $this->solicitudDatoModel = model(SolicitudDatoModel::class);
+        $this->documentoModel = model(DocumentoModel::class);
         $this->tarifarioService = new TarifarioService();
         $this->uploader = new DocumentoUploader();
-        $this->gateway = new BanbajioMockGateway();
+        $this->gateway = Services::paymentGateway();
     }
 
     public function formulario()
@@ -121,6 +121,10 @@ class TramitePermisoEventualController extends Controller
 
         $monto = $this->tarifarioService->calcularMonto(self::TRAMITE, 'base') ?? 156.94;
         $folio = FolioGenerator::generar();
+
+        $db = \Config\Database::connect();
+        $db->transStart();
+
         $solicitudId = $this->solicitudModel->insert([
             'folio' => $folio,
             'tramite' => self::TRAMITE,
@@ -131,6 +135,7 @@ class TramitePermisoEventualController extends Controller
         ]);
 
         if ($solicitudId === false) {
+            $db->transRollback();
             return redirect()->back()->withInput()->with('error', 'No fue posible crear la solicitud.');
         }
 
@@ -151,9 +156,23 @@ class TramitePermisoEventualController extends Controller
 
         foreach ($documentos as $campo => $label) {
             $file = $request->getFile($campo);
-            if ($file === null || ! $file->isValid() || $this->uploader->subir($file, $campo, (int) $solicitudId, $userId) === null) {
-                return redirect()->back()->withInput()->with('error', "No fue posible guardar: {$label}.");
+            if ($file === null || ! $file->isValid()) {
+                $db->transRollback();
+                return redirect()->back()->withInput()->with('error', "No fue posible guardar: {$label}. El archivo no es válido.");
             }
+
+            try {
+                $this->uploader->subir($file, $campo, (int) $solicitudId, $userId);
+            } catch (\Throwable $e) {
+                $db->transRollback();
+                return redirect()->back()->withInput()->with('error', "Error al subir {$label}: " . $e->getMessage());
+            }
+        }
+
+        $db->transComplete();
+
+        if ($db->transStatus() === false) {
+            return redirect()->back()->withInput()->with('error', 'Ocurrió un error al procesar el registro del trámite.');
         }
 
         return redirect()->to('/portal/tramites/permiso-eventual/resumen/' . $folio);

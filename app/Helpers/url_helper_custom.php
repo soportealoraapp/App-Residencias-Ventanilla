@@ -15,12 +15,15 @@ if (!function_exists('formatear_dinero')) {
 }
 
 if (!function_exists('formatear_fecha')) {
-    function formatear_fecha(?string $fecha, string $formato = 'd/m/Y H:i'): string
+    function formatear_fecha(string|\DateTimeInterface|null $fecha, string $formato = 'd/m/Y H:i'): string
     {
         if (empty($fecha)) {
             return '-';
         }
-        $dt = new \DateTime($fecha);
+        if ($fecha instanceof \DateTimeInterface) {
+            return $fecha->format($formato);
+        }
+        $dt = new \DateTime((string) $fecha);
         return $dt->format($formato);
     }
 }

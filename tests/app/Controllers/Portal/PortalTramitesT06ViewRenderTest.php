@@ -17,9 +17,18 @@ class PortalTramitesT06ViewRenderTest extends CIUnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Services::resetSingle('renderer');
         putenv('APP_ENABLE_UR_TT_T_06=true');
         $_ENV['APP_ENABLE_UR_TT_T_06'] = 'true';
         helper(['url', 'form', 'url_helper_custom']);
+    }
+
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+        Services::resetSingle('renderer');
+        putenv('APP_ENABLE_UR_TT_T_06=true');
+        $_ENV['APP_ENABLE_UR_TT_T_06'] = 'true';
     }
 
     public function testVistaPortalTramitesMuestraT06ConLinkActivoCuandoHabilitaT06(): void

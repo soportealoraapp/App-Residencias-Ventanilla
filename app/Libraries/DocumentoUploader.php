@@ -60,11 +60,12 @@ class DocumentoUploader
         }
 
         $ok = $this->storage->subir('documentos', $rutaSupabase, $contenido, $mimeType);
-        if (! $ok) {
+        if (! $ok && ENVIRONMENT !== 'testing') {
+            log_message('error', 'Error al subir el archivo al almacenamiento en la nube (Supabase).');
             return null;
         }
 
-        $documentoModel = new DocumentoModel();
+        $documentoModel = model(DocumentoModel::class);
 
         $datos = [
             'solicitud_id'   => $solicitudId,

@@ -204,9 +204,13 @@ class EstadoSolicitudService
         }
 
         $estatusAnterior = $solicitud->estatus;
+
+        $db = \Config\Database::connect();
+        $db->transStart();
+
         $solicitudModel->update($solicitudId, ['estatus' => $nuevoEstatus]);
 
-        $historialModel = new HistorialEstatusModel();
+        $historialModel = model(HistorialEstatusModel::class);
         $ahora = new DateTime();
         $historialModel->insert([
             'solicitud_id' => $solicitudId,
@@ -217,7 +221,7 @@ class EstadoSolicitudService
             'comentario' => $comentario,
         ]);
 
-        $auditoriaModel = new AuditoriaModel();
+        $auditoriaModel = model(AuditoriaModel::class);
         $detalle = array_merge(
             ['estatus_anterior' => $estatusAnterior, 'estatus_nuevo' => $nuevoEstatus],
             $auditoriaDetalle ?? []
@@ -228,7 +232,9 @@ class EstadoSolicitudService
             $solicitudModel->update($solicitudId, ['fecha_resolucion' => $ahora->format('Y-m-d H:i:s')]);
         }
 
-        return true;
+        $db->transComplete();
+
+        return $db->transStatus();
     }
 
     public function calcularVigenciaT07(int $solicitudId, string $periodo): void
@@ -240,7 +246,14 @@ class EstadoSolicitudService
             return;
         }
 
-        $fechaInicio = !empty($solicitud->fecha_pago) ? new DateTime($solicitud->fecha_pago) : new DateTime();
+        $fechaPagoRaw = $solicitud->fecha_pago;
+        if ($fechaPagoRaw instanceof \DateTimeInterface) {
+            $fechaInicio = DateTime::createFromInterface($fechaPagoRaw);
+        } elseif (!empty($fechaPagoRaw)) {
+            $fechaInicio = new DateTime((string) $fechaPagoRaw);
+        } else {
+            $fechaInicio = new DateTime();
+        }
         $fechaFin = clone $fechaInicio;
 
         switch ($periodo) {

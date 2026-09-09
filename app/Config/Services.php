@@ -29,4 +29,13 @@ class Services extends BaseService
      *     return new \CodeIgniter\Example();
      * }
      */
+
+    public static function paymentGateway(bool $getShared = true): \App\Interfaces\PaymentGatewayInterface
+    {
+        if ($getShared) {
+            return static::getSharedInstance('paymentGateway');
+        }
+
+        return new \App\Libraries\BanbajioMockGateway();
+    }
 }

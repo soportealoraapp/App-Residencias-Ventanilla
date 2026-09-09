@@ -10,7 +10,7 @@ $routes->setDefaultMethod('index');
 $routes->setTranslateURIDashes(false);
 $routes->set404Override();
 $routes->setPrioritize(true);
-$routes->setAutoRoute(true);
+$routes->setAutoRoute(false);
 
 $routes->get('auth/login', 'AuthController::login', ['as' => 'login']);
 $routes->post('auth/attempt-login', 'AuthController::attemptLogin');
