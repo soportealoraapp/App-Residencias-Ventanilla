@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace App\Controllers\Portal;
+namespace App\Controllers\Ciudadano;
 
 use CodeIgniter\Controller;
 use App\Models\SolicitudModel;
@@ -166,6 +166,7 @@ class PortalController extends Controller
         $userId = (int) $session->get('user_id');
 
         $rules = [
+            'curp'      => 'required|exact_length[18]|alpha_numeric',
             'nombre'    => 'required|min_length[2]',
             'apellido'  => 'required|min_length[2]',
             'email'     => 'required|valid_email',
@@ -197,10 +198,19 @@ class PortalController extends Controller
             }
         }
 
+        $curp = strtoupper(trim((string) $this->request->getPost('curp')));
+        if ($curp !== $actual->curp) {
+            $existeCurp = $userModel->where('curp', $curp)->where('id !=', $userId)->first();
+            if ($existeCurp !== null) {
+                return redirect()->back()->withInput()->with('errors', ['curp' => 'Esta CURP ya está registrada por otro usuario.']);
+            }
+        }
+
         $nombre  = trim((string) $this->request->getPost('nombre'));
         $apellido = trim((string) $this->request->getPost('apellido'));
 
         $data = [
+            'curp'            => $curp,
             'nombre_completo' => $nombre . ' ' . $apellido,
             'apellido'        => $apellido,
             'email'           => $email,

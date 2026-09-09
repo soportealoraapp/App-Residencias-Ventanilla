@@ -3,7 +3,7 @@
 namespace Tests\Controllers\Portal;
 
 use App\Controllers\Admin\AdminController;
-use App\Controllers\Portal\TramiteDespintadoController;
+use App\Controllers\Ciudadano\TramiteDespintadoController;
 use App\Models\DocumentoModel;
 use App\Models\HistorialEstatusModel;
 use App\Models\SolicitudDatoModel;

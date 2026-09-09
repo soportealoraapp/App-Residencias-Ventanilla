@@ -24,12 +24,11 @@
             <h6 class="text-uppercase text-muted fw-bold small mb-3"><i class="bi bi-person-vcard me-1"></i> Datos personales</h6>
 
             <div class="mb-3">
-                <label for="curp" class="form-label small fw-semibold">CURP</label>
+                <label for="curp" class="form-label small fw-semibold">CURP <span class="text-danger">*</span></label>
                 <div class="input-group">
                     <span class="input-group-text bg-light text-muted"><i class="bi bi-person-vcard"></i></span>
-                    <input type="text" class="form-control bg-light" id="curp" name="curp" value="<?= esc($usuario->curp ?? '') ?>" readonly>
+                    <input type="text" class="form-control text-uppercase" id="curp" name="curp" value="<?= esc($usuario->curp ?? '') ?>" maxlength="18" required>
                 </div>
-                <div class="form-text">La CURP no se puede editar.</div>
             </div>
 
             <div class="row g-2 mb-3">

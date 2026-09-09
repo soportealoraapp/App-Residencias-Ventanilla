@@ -19,6 +19,7 @@ class AuditoriaModel extends Model
         'usuario_id',
         'fecha',
         'detalle',
+        'registro_borrados',
         'created_at',
     ];
     protected $useTimestamps    = false;
@@ -27,19 +28,20 @@ class AuditoriaModel extends Model
     protected $updatedField     = '';
     protected $deletedField     = '';
 
-    public function registrar(string $entidad, $entidadId, string $accion, ?int $usuarioId, ?array $detalle): void
+    public function registrar(string $entidad, $entidadId, string $accion, ?int $usuarioId, ?array $detalle = null, $registroBorrado = null): void
     {
         $ahora = new DateTime();
         $fecha = $ahora->format('Y-m-d H:i:s');
 
         $data = [
-            'entidad'    => $entidad,
-            'entidad_id' => $entidadId,
-            'accion'     => $accion,
-            'usuario_id' => $usuarioId,
-            'fecha'      => $fecha,
-            'detalle'    => $detalle !== null ? json_encode($detalle) : null,
-            'created_at' => $fecha,
+            'entidad'           => $entidad,
+            'entidad_id'        => $entidadId,
+            'accion'            => $accion,
+            'usuario_id'        => $usuarioId,
+            'fecha'             => $fecha,
+            'detalle'           => $detalle !== null ? json_encode($detalle) : null,
+            'registro_borrados' => $registroBorrado !== null ? (is_string($registroBorrado) ? $registroBorrado : json_encode($registroBorrado)) : null,
+            'created_at'        => $fecha,
         ];
 
         $this->insert($data);

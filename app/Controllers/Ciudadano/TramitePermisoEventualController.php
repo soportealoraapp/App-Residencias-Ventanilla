@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace App\Controllers\Portal;
+namespace App\Controllers\Ciudadano;
 
 use App\Libraries\DocumentoUploader;
 use App\Libraries\BanbajioMockGateway;

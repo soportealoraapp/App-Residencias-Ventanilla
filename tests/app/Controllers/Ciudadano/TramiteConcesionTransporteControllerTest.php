@@ -3,7 +3,7 @@
 namespace Tests\Controllers\Portal;
 
 use App\Controllers\Admin\AdminController;
-use App\Controllers\Portal\TramiteConcesionTransporteController;
+use App\Controllers\Ciudadano\TramiteConcesionTransporteController;
 use App\Models\ConvocatoriaModel;
 use App\Models\DocumentoModel;
 use App\Models\HistorialEstatusModel;

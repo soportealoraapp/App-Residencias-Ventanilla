@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace App\Controllers\Portal;
+namespace App\Controllers\Ciudadano;
 
 use CodeIgniter\Controller;
 use CodeIgniter\HTTP\RequestInterface;

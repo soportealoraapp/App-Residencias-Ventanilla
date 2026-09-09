@@ -2,7 +2,7 @@
 
 namespace Tests\Controllers\Portal;
 
-use App\Controllers\Portal\TramiteOrdenPlaqueoController;
+use App\Controllers\Ciudadano\TramiteOrdenPlaqueoController;
 use App\Models\DocumentoModel;
 use App\Models\HistorialEstatusModel;
 use App\Models\SolicitudDatoModel;
