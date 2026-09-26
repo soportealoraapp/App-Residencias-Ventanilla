@@ -24,6 +24,9 @@ $routes->post('auth/reset/(:any)', 'AuthController::reset/$1');
 $routes->get('auth/terminos', 'AuthController::terminos');
 $routes->get('auth/privacidad', 'AuthController::privacidad');
 
+// API Móvil - Infracciones y Checklist
+$routes->get('api/checklist-infracciones', 'Api\InfraccionesApiController::checklist');
+
 $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->group('', ['filter' => 'role:administrador,operador_ventanilla'], function($routes) {
         $routes->get('dashboard', 'Admin\\AdminController::dashboard', ['as' => 'admin.dashboard']);
