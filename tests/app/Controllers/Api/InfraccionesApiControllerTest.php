@@ -31,20 +31,20 @@ class InfraccionesApiControllerTest extends DatabaseTestCase
         $this->assertArrayHasKey('total_items', $json);
         $this->assertArrayHasKey('categorias', $json);
         $this->assertEquals(117.31, $json['valor_uma_vigente']);
-        $this->assertEquals(67, $json['total_items']);
+        $this->assertEquals(80, $json['total_items']);
 
         // Check category structure
         $this->assertArrayHasKey('DOCUMENTACIÓN', $json['categorias']);
         $this->assertArrayHasKey('SEÑALAMIENTOS', $json['categorias']);
         $this->assertArrayHasKey('ESTACIONAMIENTOS', $json['categorias']);
 
-        // Check first item of DOCUMENTACIÓN: "Licencia vencida" → Art. 87 Frac. III
+        // Check first item of DOCUMENTACIÓN: "Falta de tarjeta de circulación" → Art. 87 Frac. IV
         // Real catalog: monto_min_uma=2.0, monto_max_uma=5.0 @ UMA=$117.31
         $docItems = $json['categorias']['DOCUMENTACIÓN'];
         $this->assertNotEmpty($docItems);
         $firstItem = $docItems[0];
-        $this->assertEquals('Licencia vencida', $firstItem['etiqueta_casilla']);
-        $this->assertEquals('Art. 87 Frac. III', $firstItem['fundamento_legal']);
+        $this->assertEquals('Falta de tarjeta de circulación', $firstItem['etiqueta_casilla']);
+        $this->assertEquals('Art. 87 Frac. IV', $firstItem['fundamento_legal']);
         $this->assertEquals(2.0, (float)$firstItem['monto_min_uma']);
         $this->assertEquals(5.0, (float)$firstItem['monto_max_uma']);
         $this->assertEquals(234.62, (float)$firstItem['monto_min_pesos']); // 2 × 117.31
