@@ -6,6 +6,7 @@
 node_modules/
 package-lock.json
 .package-lock.json
+!mobile/agentes-transito/package-lock.json
 
 # Entorno local
 .env
