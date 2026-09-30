@@ -11,6 +11,10 @@
     { "src": "/assets/(.*)", "dest": "/public/assets/$1" },
     { "src": "/(css|js|img)/(.*)", "dest": "/public/$1/$2" },
     { "src": "/(favicon\\.ico|robots\\.txt|logo-uri\\.webp)", "dest": "/public/$1" },
+    { "src": "/agentes/_expo/(.*)", "dest": "/public/agentes/_expo/$1" },
+    { "src": "/agentes/assets/(.*)", "dest": "/public/agentes/assets/$1" },
+    { "src": "/agentes/favicon\\.ico", "dest": "/public/agentes/favicon.ico" },
+    { "src": "/agentes(/.*)?", "dest": "/public/agentes/index.html" },
     { "src": "/(.*)", "dest": "/api/index.php" }
   ],
   "headers": [
