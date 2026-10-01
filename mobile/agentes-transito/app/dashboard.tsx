@@ -52,8 +52,10 @@ export default function DashboardScreen() {
       const res = await sincronizar();
       if (res.exito) {
         Alert.alert(
-          "Sincronización Exitosa",
-          `Se sincronizaron ${res.totalSincronizadas} boletas con el servidor central de Uriangato.`
+          "Sincronización al Día",
+          res.totalSincronizadas > 0
+            ? `Se sincronizaron ${res.totalSincronizadas} boleta(s) exitosamente con el servidor central de Uriangato.`
+            : "No hay boletas pendientes de sincronizar. Todo el registro local está al día."
         );
       } else {
         Alert.alert(

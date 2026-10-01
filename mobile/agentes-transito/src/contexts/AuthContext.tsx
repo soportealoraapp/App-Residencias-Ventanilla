@@ -16,6 +16,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   signIn: (placa: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AUTH_STORAGE_KEY = "@agente_sesion_activa_v1";
@@ -88,6 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: !!user,
       signIn,
       signOut,
+      logout: signOut,
     }),
     [user, isLoading]
   );

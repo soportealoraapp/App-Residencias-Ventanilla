@@ -11,6 +11,9 @@ export interface SyncResultado {
   fallidos: number;
   totalPendientes: number;
   mensaje: string;
+  exito: boolean;
+  totalSincronizadas: number;
+  errores?: string[];
 }
 
 export async function sincronizarInfraccionesLocales(): Promise<SyncResultado> {
@@ -23,6 +26,9 @@ export async function sincronizarInfraccionesLocales(): Promise<SyncResultado> {
       fallidos: 0,
       totalPendientes: 0,
       mensaje: "No hay boletas pendientes de sincronizar.",
+      exito: true,
+      totalSincronizadas: 0,
+      errores: [],
     };
   }
 
@@ -63,5 +69,8 @@ export async function sincronizarInfraccionesLocales(): Promise<SyncResultado> {
       fallidos === 0
         ? `Se sincronizaron ${exitosos} boleta${exitosos === 1 ? "" : "s"} exitosamente con Supabase.`
         : `Se sincronizaron ${exitosos} boletas (${fallidos} fallaron por conexión).`,
+    exito: fallidos === 0,
+    totalSincronizadas: exitosos,
+    errores: fallidos > 0 ? [`${fallidos} boletas no se pudieron sincronizar por conexión a internet.`] : [],
   };
 }
