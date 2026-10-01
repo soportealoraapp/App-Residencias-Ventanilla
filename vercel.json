@@ -13,6 +13,7 @@
     { "src": "/(favicon\\.ico|robots\\.txt|logo-uri\\.webp)", "dest": "/public/$1" },
     { "src": "/agentes/_expo/(.*)", "dest": "/public/agentes/_expo/$1" },
     { "src": "/agentes/assets/(.*)", "dest": "/public/agentes/assets/$1" },
+    { "src": "/agentes/fonts/(.*)", "dest": "/public/agentes/fonts/$1" },
     { "src": "/agentes/favicon\\.ico", "dest": "/public/agentes/favicon.ico" },
     { "src": "/agentes(/.*)?", "dest": "/public/agentes/index.html" },
     { "src": "/(.*)", "dest": "/api/index.php" }
