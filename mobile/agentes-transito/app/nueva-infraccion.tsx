@@ -79,6 +79,7 @@ export default function NuevaInfraccionScreen() {
   );
   const [modalCatalogoVisible, setModalCatalogoVisible] = useState(false);
   const [busquedaCatalogo, setBusquedaCatalogo] = useState("");
+  const [categoriaFiltro, setCategoriaFiltro] = useState<string>("todas");
 
   // Hechos / Observaciones
   const [hechos, setHechos] = useState("");
@@ -93,6 +94,8 @@ export default function NuevaInfraccionScreen() {
   const [fotoDocumento, setFotoDocumento] = useState<string | null>(null);
   const [capturandoTipoFoto, setCapturandoTipoFoto] = useState<TipoFoto | null>(null);
   const [modalCamaraVisible, setModalCamaraVisible] = useState(false);
+  const [fotoPreviewGrande, setFotoPreviewGrande] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
 
   // Precargar fecha, hora y GPS al abrir
   useEffect(() => {
@@ -165,7 +168,7 @@ export default function NuevaInfraccionScreen() {
     }
   };
 
-  // Simulación y captura de foto de alta resolución
+  // Simulación y captura de foto
   const simularCapturaFoto = (tipo: TipoFoto) => {
     const urlsMuestra: Record<TipoFoto, string> = {
       placa: "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=600&q=80",
@@ -181,38 +184,47 @@ export default function NuevaInfraccionScreen() {
     setCapturandoTipoFoto(null);
   };
 
+  // Llenar las 3 fotos demo con 1 click
+  const handleCargarFotosDemo = () => {
+    setFotoPlaca("https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=600&q=80");
+    setFotoContexto("https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=600&q=80");
+    setFotoDocumento("https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=600&q=80");
+    Alert.alert("Fotos Cargadas", "Se agregaron las 3 evidencias fotográficas de demostración.");
+  };
+
+  const totalFotosListas = (fotoPlaca ? 1 : 0) + (fotoContexto ? 1 : 0) + (fotoDocumento ? 1 : 0);
+
   const handleGuardarBoleta = async () => {
-    // 1. Validaciones
     if (!lugar.trim()) {
-      Alert.alert("Dato Requerido", "Debe registrar la ubicación o calle de la infracción.");
+      Alert.alert("Falta Ubicación", "Debe registrar la ubicación o calle de la infracción.");
       return;
     }
 
     if (!sinPlacas && !placas.trim()) {
-      Alert.alert("Dato Requerido", "Ingrese la placa del vehículo o marque la casilla 'Sin Placas'.");
+      Alert.alert("Falta Placa", "Ingrese la placa del vehículo o marque la casilla 'Vehículo Sin Placas'.");
       return;
     }
 
     if (!marca.trim()) {
-      Alert.alert("Dato Requerido", "Ingrese la marca del vehículo intervenido.");
+      Alert.alert("Falta Marca", "Ingrese la marca del vehículo intervenido.");
       return;
     }
 
     if (!conductorAusente && !nombreInfractor.trim()) {
-      Alert.alert("Dato Requerido", "Ingrese el nombre del conductor o marque 'Conductor Ausente'.");
+      Alert.alert("Falta Conductor", "Ingrese el nombre del conductor o active la casilla 'Conductor Ausente en el Sitio'.");
       return;
     }
 
-    // 2. Validación obligatoria de fotos
     if (!fotoPlaca || !fotoContexto || !fotoDocumento) {
       Alert.alert(
-        "Evidencias Obligatorias Incompletas",
-        "El reglamento exige las 3 evidencias fotográficas para validar la boleta:\n• Foto 1: Placa\n• Foto 2: Contexto\n• Foto 3: Garantía / Documento"
+        "Evidencias Incompletas",
+        "El reglamento exige las 3 fotos de evidencia:\n1. Placa\n2. Contexto de la falta\n3. Garantía o Documento\n\nPuede presionar 'Cargar 3 fotos de prueba' si está evaluando la app."
       );
       return;
     }
 
-    // 3. Creación del objeto oficial de Infracción
+    setGuardando(true);
+
     const nuevaBoleta: Infraccion = {
       id: `inf-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       folio,
@@ -244,7 +256,7 @@ export default function NuevaInfraccionScreen() {
       falta: faltaSeleccionada,
       hechos:
         hechos.trim() ||
-        `Infracción al Reglamento de Movilidad de Uriangato por concepto de: ${faltaSeleccionada.descripcion}.`,
+        `Infracción al Reglamento de Movilidad de Uriangato: ${faltaSeleccionada.descripcion}.`,
       garantiasRetenidas: garantias,
       detalleGarantia: {
         inventarioGrua: inventarioGrua.trim() || undefined,
@@ -261,9 +273,10 @@ export default function NuevaInfraccionScreen() {
 
     try {
       await guardarInfraccion(nuevaBoleta);
+      setGuardando(false);
       Alert.alert(
-        "Boleta Generada Exitosamente",
-        `La boleta ${folio} ha sido registrada y guardada de forma segura en la memoria del dispositivo. Se sincronizará automáticamente con Supabase.`,
+        "Boleta Guardada Exitosamente",
+        `La boleta ${folio} ha sido almacenada de forma segura en la memoria del dispositivo. Se sincronizará automáticamente con el panel de administración al tener conexión.`,
         [
           {
             text: "Aceptar",
@@ -272,16 +285,26 @@ export default function NuevaInfraccionScreen() {
         ]
       );
     } catch {
+      setGuardando(false);
       Alert.alert("Error", "No se pudo guardar la boleta en la base local del dispositivo.");
     }
   };
 
-  const catalogoFiltrado = catalogo.filter(
-    (item) =>
+  // Categorías únicas del catálogo
+  const categoriasCatalogo = ["todas", ...Array.from(new Set(catalogo.map((c) => c.categoria)))];
+
+  const catalogoFiltrado = catalogo.filter((item) => {
+    const coincideTexto =
       item.descripcion.toLowerCase().includes(busquedaCatalogo.toLowerCase()) ||
       item.fundamentoLegal.toLowerCase().includes(busquedaCatalogo.toLowerCase()) ||
-      item.categoria.toLowerCase().includes(busquedaCatalogo.toLowerCase())
-  );
+      item.categoria.toLowerCase().includes(busquedaCatalogo.toLowerCase());
+    const coincideCategoria =
+      categoriaFiltro === "todas" || item.categoria === categoriaFiltro;
+    return coincideTexto && coincideCategoria;
+  });
+
+  const minMontoPesos = Number(faltaSeleccionada.montoMinUma) * valorUma;
+  const maxMontoPesos = Number(faltaSeleccionada.montoMaxUma) * valorUma;
 
   return (
     <KeyboardAvoidingView
@@ -289,18 +312,21 @@ export default function NuevaInfraccionScreen() {
       style={[styles.keyboardContainer, { backgroundColor: colors.background }]}
     >
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Barra Superior */}
+        {/* Barra Superior con Navegación y Tema */}
         <View style={[styles.topHeader, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
           <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: colors.surfaceElevated }]}
+            style={[styles.backButton, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
             onPress={() => router.back()}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityLabel="Volver al panel"
           >
-            <Ionicons name="arrow-back" size={22} color={colors.text} />
+            <Ionicons name="arrow-back" size={20} color={colors.text} />
           </TouchableOpacity>
           <View style={styles.headerTitleWrap}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>NUEVA BOLETA DE INFRACCIÓN</Text>
-            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Municipio de Uriangato, Gto.</Text>
+            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+              Dirección de Tránsito y Movilidad · Uriangato
+            </Text>
           </View>
           <ThemeToggle compact={true} />
         </View>
@@ -310,177 +336,148 @@ export default function NuevaInfraccionScreen() {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Banner Folio Asignado */}
-          <View style={[styles.folioBanner, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View>
-              <Text style={[styles.folioLabel, { color: colors.textMuted }]}>FOLIO OFICIAL ASIGNADO</Text>
-              <Text style={[styles.folioNumber, { color: colors.primary }]}>{folio}</Text>
+          {/* Banner Principal de Folio y Estado Offline */}
+          <View style={[styles.folioBannerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.folioBannerLeft}>
+              <View style={styles.folioBadgeTag}>
+                <Ionicons name="shield" size={14} color={colors.primary} />
+                <Text style={[styles.folioBadgeTagText, { color: colors.primary }]}>FOLIO OFICIAL</Text>
+              </View>
+              <Text style={[styles.folioNumberText, { color: colors.text }]}>{folio}</Text>
+              <View style={styles.offlinePill}>
+                <View style={styles.greenPulseDot} />
+                <Text style={[styles.offlinePillText, { color: colors.success }]}>
+                  Almacenamiento Local Offline Activo
+                </Text>
+              </View>
             </View>
-            <View style={[styles.badgeAgente, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-              <Text style={[styles.agentePlacaText, { color: colors.text }]}>{user?.placa || "AGT-204"}</Text>
-              <Text style={[styles.agenteCargoText, { color: colors.primary }]}>OFICIAL VIAL</Text>
+
+            <View style={[styles.agentBox, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+              <Ionicons name="person-circle-outline" size={22} color={colors.primary} />
+              <Text style={[styles.agentPlacaLabel, { color: colors.text }]}>{user?.placa || "AGT-204"}</Text>
+              <Text style={[styles.agentSectorLabel, { color: colors.textMuted }]}>AGENTE VIAL</Text>
             </View>
           </View>
 
-          {/* =========================================
-              SECCIÓN 1: GENERALES Y GPS
-          ========================================== */}
-          <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="time-outline" size={18} color={colors.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>1. GENERALES Y UBICACIÓN GPS</Text>
+          {/* ========================================================
+              CARD 1: UBICACIÓN Y MOMENTO (CON GPS)
+          ========================================================= */}
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIconBadge, { backgroundColor: colors.primaryBg }]}>
+                <Ionicons name="location" size={20} color={colors.primary} />
+              </View>
+              <View style={styles.cardHeaderTitles}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>1. Momento y Ubicación de los Hechos</Text>
+                <Text style={[styles.cardSubtitle, { color: colors.textSecondary }]}>
+                  Coordenadas satelitales y fecha del evento
+                </Text>
+              </View>
             </View>
 
-            <View style={styles.row}>
-              <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>FECHA</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
-                  value={fecha}
-                  editable={false}
-                />
+            <View style={styles.twoColRow}>
+              <View style={[styles.fieldCol, { marginRight: 8 }]}>
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>FECHA</Text>
+                <View style={[styles.readOnlyInputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+                  <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+                  <Text style={[styles.readOnlyInputText, { color: colors.text }]}>{fecha || "Cargando..."}</Text>
+                </View>
               </View>
 
-              <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>HORA</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
-                  value={hora}
-                  editable={false}
-                />
+              <View style={[styles.fieldCol, { marginLeft: 8 }]}>
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>HORA</Text>
+                <View style={[styles.readOnlyInputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+                  <Ionicons name="time-outline" size={18} color={colors.primary} />
+                  <Text style={[styles.readOnlyInputText, { color: colors.text }]}>{hora || "Cargando..."}</Text>
+                </View>
               </View>
             </View>
 
             <View style={styles.inputGroup}>
-              <View style={styles.labelRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>LUGAR DE LA INFRACCIÓN / VIALIDAD *</Text>
+              <View style={styles.fieldLabelRow}>
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+                  LUGAR DE LA INFRACCIÓN / VIALIDAD *
+                </Text>
                 <TouchableOpacity
-                  style={styles.gpsReloadBtn}
+                  style={[styles.gpsActionBtn, { backgroundColor: colors.primaryBg, borderColor: colors.border }]}
                   onPress={obtenerUbicacionGps}
                   disabled={buscandoGps}
+                  activeOpacity={0.7}
                 >
                   {buscandoGps ? (
                     <ActivityIndicator size="small" color={colors.primary} />
                   ) : (
                     <>
-                      <Ionicons name="navigate" size={14} color={colors.primary} />
-                      <Text style={[styles.gpsReloadText, { color: colors.primary }]}>Actualizar GPS</Text>
+                      <Ionicons name="locate" size={14} color={colors.primary} />
+                      <Text style={[styles.gpsActionBtnText, { color: colors.primary }]}>Re-escanear GPS</Text>
                     </>
                   )}
                 </TouchableOpacity>
               </View>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
-                placeholder="Ej. Calle Morelos esq. Zaragoza, Zona Centro"
-                placeholderTextColor={colors.textMuted}
-                value={lugar}
-                onChangeText={setLugar}
-              />
+
+              <View style={[styles.textInputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+                <Ionicons name="map-outline" size={20} color={colors.textMuted} style={styles.textInputIcon} />
+                <TextInput
+                  style={[styles.textInput, { color: colors.text }]}
+                  placeholder="Ej. Av. Hidalgo esq. Morelos, Centro"
+                  placeholderTextColor={colors.textMuted}
+                  value={lugar}
+                  onChangeText={setLugar}
+                />
+              </View>
+
               {coordenadas && (
-                <View style={styles.gpsIndicatorRow}>
-                  <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-                  <Text style={[styles.gpsCoordsText, { color: colors.textMuted }]}>
-                    GPS: {coordenadas.latitud.toFixed(5)}, {coordenadas.longitud.toFixed(5)}
+                <View style={[styles.coordsChip, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                  <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                  <Text style={[styles.coordsChipText, { color: colors.textSecondary }]}>
+                    GPS Fijo: Lat {coordenadas.latitud.toFixed(5)}, Lon {coordenadas.longitud.toFixed(5)}
                   </Text>
                 </View>
               )}
             </View>
           </View>
 
-          {/* =========================================
-              SECCIÓN 2: INFRACTOR
-          ========================================== */}
-          <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="person-outline" size={18} color={colors.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>2. DATOS DEL CONDUCTOR</Text>
-            </View>
-
-            <View style={[styles.switchRow, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-              <View style={{ flex: 1, paddingRight: 10 }}>
-                <Text style={[styles.switchTitle, { color: colors.text }]}>Conductor Ausente en el Sitio</Text>
-                <Text style={[styles.switchDesc, { color: colors.textSecondary }]}>
-                  Vehículo estacionado o abandonado sin conductor a bordo
+          {/* ========================================================
+              CARD 2: VEHÍCULO INTERVENIDO
+          ========================================================= */}
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIconBadge, { backgroundColor: colors.accentBg }]}>
+                <Ionicons name="car-sport" size={20} color={colors.accent} />
+              </View>
+              <View style={styles.cardHeaderTitles}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>2. Identificación del Vehículo</Text>
+                <Text style={[styles.cardSubtitle, { color: colors.textSecondary }]}>
+                  Placas, marca, modelo y clasificación vial
                 </Text>
               </View>
-              <Switch
-                value={conductorAusente}
-                onValueChange={setConductorAusente}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor="#ffffff"
-              />
             </View>
 
-            {!conductorAusente && (
-              <>
-                <View style={styles.inputGroup}>
-                  <Text style={[styles.label, { color: colors.textSecondary }]}>NOMBRE COMPLETO DEL CONDUCTOR *</Text>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
-                    placeholder="Nombre y Apellidos"
-                    placeholderTextColor={colors.textMuted}
-                    value={nombreInfractor}
-                    onChangeText={setNombreInfractor}
-                  />
+            {/* Recuadro Estilo Placa Vehicular */}
+            <View style={styles.plateContainer}>
+              <View style={[styles.plateBox, { backgroundColor: isDark ? "#1c1917" : "#ffffff", borderColor: sinPlacas ? colors.border : colors.primary }]}>
+                <View style={styles.plateHeader}>
+                  <Text style={[styles.plateHeaderText, { color: colors.primary }]}>GUANAJUATO · MÉXICO</Text>
                 </View>
-
-                <View style={styles.row}>
-                  <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                    <Text style={[styles.label, { color: colors.textSecondary }]}>NÚMERO DE LICENCIA</Text>
-                    <TextInput
-                      style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
-                      placeholder="GTO-LIC-00000"
-                      placeholderTextColor={colors.textMuted}
-                      value={licenciaInfractor}
-                      onChangeText={setLicenciaInfractor}
-                      autoCapitalize="characters"
-                    />
-                  </View>
-                  <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                    <Text style={[styles.label, { color: colors.textSecondary }]}>DOMICILIO</Text>
-                    <TextInput
-                      style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
-                      placeholder="Calle, Número, Colonia"
-                      placeholderTextColor={colors.textMuted}
-                      value={domicilioInfractor}
-                      onChangeText={setDomicilioInfractor}
-                    />
-                  </View>
-                </View>
-              </>
-            )}
-          </View>
-
-          {/* =========================================
-              SECCIÓN 3: VEHÍCULO
-          ========================================== */}
-          <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="car-sport-outline" size={18} color={colors.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>3. DATOS DEL VEHÍCULO</Text>
-            </View>
-
-            <View style={styles.row}>
-              <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>PLACAS DE CIRCULACIÓN *</Text>
                 <TextInput
                   style={[
-                    styles.input,
-                    { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text },
-                    sinPlacas && { opacity: 0.5 },
+                    styles.plateInput,
+                    { color: sinPlacas ? colors.textMuted : colors.text },
+                    sinPlacas && { opacity: 0.4 },
                   ]}
                   placeholder="GTC-000-A"
                   placeholderTextColor={colors.textMuted}
-                  value={placas}
+                  value={sinPlacas ? "SIN PLACAS" : placas}
                   onChangeText={(v) => setPlacas(v.toUpperCase())}
                   autoCapitalize="characters"
                   editable={!sinPlacas}
+                  maxLength={10}
                 />
               </View>
 
               <TouchableOpacity
                 style={[
-                  styles.sinPlacasCheck,
+                  styles.sinPlacasToggleCard,
                   { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
                   sinPlacas && { borderColor: colors.warning, backgroundColor: colors.warningBg },
                 ]}
@@ -488,142 +485,271 @@ export default function NuevaInfraccionScreen() {
                   setSinPlacas(!sinPlacas);
                   if (!sinPlacas) setPlacas("");
                 }}
+                activeOpacity={0.8}
               >
                 <Ionicons
                   name={sinPlacas ? "checkbox" : "square-outline"}
                   size={20}
                   color={sinPlacas ? colors.warning : colors.textMuted}
                 />
-                <Text style={[styles.sinPlacasText, { color: sinPlacas ? colors.warning : colors.textSecondary }]}>
-                  Sin Placas
+                <Text style={[styles.sinPlacasToggleText, { color: sinPlacas ? colors.warning : colors.textSecondary }]}>
+                  Vehículo no porta placas o ilegibles
                 </Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.row}>
-              <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>MARCA *</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
-                  placeholder="Nissan, VW, Italika..."
-                  placeholderTextColor={colors.textMuted}
-                  value={marca}
-                  onChangeText={setMarca}
-                />
-              </View>
-              <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>LÍNEA / MODELO</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
-                  placeholder="Versa 2022"
-                  placeholderTextColor={colors.textMuted}
-                  value={lineaModelo}
-                  onChangeText={setLineaModelo}
-                />
+            {/* Selector Visual de Tipo de Vehículo */}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>TIPO DE VEHÍCULO</Text>
+              <View style={styles.vehicleTypeGrid}>
+                {[
+                  { id: "particular", label: "Particular", icon: "car" },
+                  { id: "transporte_publico", label: "Transporte Púb.", icon: "bus" },
+                  { id: "motocicleta", label: "Motocicleta", icon: "bicycle" },
+                  { id: "carga", label: "Carga Pesada", icon: "cube" },
+                ].map((item) => {
+                  const seleccionado = tipoVehiculo === item.id;
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[
+                        styles.vehicleTypeCard,
+                        { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
+                        seleccionado && { backgroundColor: colors.primaryBg, borderColor: colors.primary },
+                      ]}
+                      onPress={() => setTipoVehiculo(item.id as TipoVehiculo)}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons
+                        name={item.icon as any}
+                        size={22}
+                        color={seleccionado ? colors.primary : colors.textMuted}
+                      />
+                      <Text
+                        style={[
+                          styles.vehicleTypeCardText,
+                          { color: seleccionado ? colors.primary : colors.textSecondary },
+                          seleccionado && { fontWeight: "800" },
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
 
-            <View style={styles.row}>
-              <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>COLOR</Text>
+            {/* Marca y Modelo */}
+            <View style={styles.twoColRow}>
+              <View style={[styles.fieldCol, { marginRight: 8 }]}>
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>MARCA *</Text>
+                <View style={[styles.textInputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+                  <TextInput
+                    style={[styles.textInput, { color: colors.text }]}
+                    placeholder="Ej. Nissan, VW..."
+                    placeholderTextColor={colors.textMuted}
+                    value={marca}
+                    onChangeText={setMarca}
+                  />
+                </View>
+              </View>
+
+              <View style={[styles.fieldCol, { marginLeft: 8 }]}>
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>LÍNEA / MODELO</Text>
+                <View style={[styles.textInputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+                  <TextInput
+                    style={[styles.textInput, { color: colors.text }]}
+                    placeholder="Ej. Versa 2022"
+                    placeholderTextColor={colors.textMuted}
+                    value={lineaModelo}
+                    onChangeText={setLineaModelo}
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Color del Vehículo */}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>COLOR PREDOMINANTE</Text>
+              <View style={[styles.textInputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+                <Ionicons name="color-palette-outline" size={18} color={colors.textMuted} style={styles.textInputIcon} />
                 <TextInput
-                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
-                  placeholder="Blanco, Negro, Azul..."
+                  style={[styles.textInput, { color: colors.text }]}
+                  placeholder="Ej. Blanco, Rojo Tinto, Gris Oxford..."
                   placeholderTextColor={colors.textMuted}
                   value={color}
                   onChangeText={setColor}
                 />
               </View>
-              <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>TIPO DE VEHÍCULO</Text>
-                <View style={styles.tipoVehiculoRow}>
-                  {(["particular", "motocicleta", "transporte_publico", "carga"] as TipoVehiculo[]).map(
-                    (tipo) => (
-                      <TouchableOpacity
-                        key={tipo}
-                        style={[
-                          styles.tipoBtn,
-                          { backgroundColor: colors.inputBg, borderColor: colors.inputBorder },
-                          tipoVehiculo === tipo && { backgroundColor: colors.primary, borderColor: colors.primary },
-                        ]}
-                        onPress={() => setTipoVehiculo(tipo)}
-                      >
-                        <Text
-                          style={[
-                            styles.tipoBtnText,
-                            { color: tipoVehiculo === tipo ? "#ffffff" : colors.textSecondary },
-                          ]}
-                        >
-                          {tipo === "particular"
-                            ? "Auto"
-                            : tipo === "motocicleta"
-                            ? "Moto"
-                            : tipo === "transporte_publico"
-                            ? "T. Púb"
-                            : "Carga"}
-                        </Text>
-                      </TouchableOpacity>
-                    )
-                  )}
-                </View>
-              </View>
             </View>
           </View>
 
-          {/* =========================================
-              SECCIÓN 4: FALTA Y FUNDAMENTO LEGAL
-          ========================================== */}
-          <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="book-outline" size={18} color={colors.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>4. INFRACCIÓN Y REGLAMENTO</Text>
+          {/* ========================================================
+              CARD 3: DATOS DEL CONDUCTOR
+          ========================================================= */}
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIconBadge, { backgroundColor: colors.warningBg }]}>
+                <Ionicons name="person" size={20} color={colors.warning} />
+              </View>
+              <View style={styles.cardHeaderTitles}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>3. Conductor / Infractor</Text>
+                <Text style={[styles.cardSubtitle, { color: colors.textSecondary }]}>
+                  Identificación de la persona responsable
+                </Text>
+              </View>
             </View>
 
-            <TouchableOpacity
-              style={[styles.catalogoSelector, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
-              onPress={() => setModalCatalogoVisible(true)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.catalogoSelectorHeader}>
-                <View style={styles.badgeCategory}>
-                  <Text style={styles.badgeCategoryText}>
+            {/* Switch Conductor Ausente */}
+            <View style={[styles.switchToggleCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <Text style={[styles.switchTitle, { color: colors.text }]}>¿Conductor Ausente en el Sitio?</Text>
+                <Text style={[styles.switchDesc, { color: colors.textSecondary }]}>
+                  Marque si el vehículo está estacionado en lugar prohibido o abandonado
+                </Text>
+              </View>
+              <Switch
+                value={conductorAusente}
+                onValueChange={setConductorAusente}
+                trackColor={{ false: colors.border, true: colors.warning }}
+                thumbColor="#ffffff"
+              />
+            </View>
+
+            {conductorAusente ? (
+              <View style={[styles.infoBanner, { backgroundColor: colors.warningBg, borderColor: colors.warning }]}>
+                <Ionicons name="information-circle" size={20} color={colors.warning} />
+                <Text style={[styles.infoBannerText, { color: colors.warning }]}>
+                  La boleta se emitirá como 'Conductor Ausente' y se dejará colocada en el parabrisas del vehículo.
+                </Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+                    NOMBRE COMPLETO DEL CONDUCTOR *
+                  </Text>
+                  <View style={[styles.textInputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+                    <Ionicons name="person-outline" size={18} color={colors.textMuted} style={styles.textInputIcon} />
+                    <TextInput
+                      style={[styles.textInput, { color: colors.text }]}
+                      placeholder="Nombre y Apellidos"
+                      placeholderTextColor={colors.textMuted}
+                      value={nombreInfractor}
+                      onChangeText={setNombreInfractor}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.twoColRow}>
+                  <View style={[styles.fieldCol, { marginRight: 8 }]}>
+                    <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>NO. DE LICENCIA</Text>
+                    <View style={[styles.textInputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+                      <Ionicons name="card-outline" size={18} color={colors.textMuted} style={styles.textInputIcon} />
+                      <TextInput
+                        style={[styles.textInput, { color: colors.text }]}
+                        placeholder="GTO-LIC-00000"
+                        placeholderTextColor={colors.textMuted}
+                        value={licenciaInfractor}
+                        onChangeText={setLicenciaInfractor}
+                        autoCapitalize="characters"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={[styles.fieldCol, { marginLeft: 8 }]}>
+                    <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>DOMICILIO / CIUDAD</Text>
+                    <View style={[styles.textInputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+                      <Ionicons name="home-outline" size={18} color={colors.textMuted} style={styles.textInputIcon} />
+                      <TextInput
+                        style={[styles.textInput, { color: colors.text }]}
+                        placeholder="Calle, Col, Uriangato"
+                        placeholderTextColor={colors.textMuted}
+                        value={domicilioInfractor}
+                        onChangeText={setDomicilioInfractor}
+                      />
+                    </View>
+                  </View>
+                </View>
+              </>
+            )}
+          </View>
+
+          {/* ========================================================
+              CARD 4: MOTIVO DE INFRACCIÓN (CATÁLOGO OFICIAL)
+          ========================================================= */}
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIconBadge, { backgroundColor: colors.dangerBg }]}>
+                <Ionicons name="alert-circle" size={20} color={colors.danger} />
+              </View>
+              <View style={styles.cardHeaderTitles}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>4. Motivo y Fundamento Legal</Text>
+                <Text style={[styles.cardSubtitle, { color: colors.textSecondary }]}>
+                  Reglamento de Movilidad y Tabulador de UMAS
+                </Text>
+              </View>
+            </View>
+
+            {/* Tarjeta de la Infracción Seleccionada */}
+            <View style={[styles.selectedOffenseCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+              <View style={styles.selectedOffenseHeader}>
+                <View style={[styles.categoryBadge, { backgroundColor: colors.primaryBg, borderColor: colors.border }]}>
+                  <Text style={[styles.categoryBadgeText, { color: colors.primary }]}>
                     {faltaSeleccionada.categoria}
                   </Text>
                 </View>
-                <View style={styles.changeLink}>
-                  <Text style={[styles.changeLinkText, { color: colors.primary }]}>Cambiar Falta</Text>
-                  <Ionicons name="swap-vertical" size={16} color={colors.primary} />
+                <View style={[styles.articlePill, { backgroundColor: colors.dangerBg }]}>
+                  <Text style={[styles.articlePillText, { color: colors.danger }]}>
+                    {faltaSeleccionada.fundamentoLegal}
+                  </Text>
                 </View>
               </View>
 
-              <Text style={[styles.legalArticle, { color: colors.danger }]}>
-                {faltaSeleccionada.fundamentoLegal}
+              <Text style={[styles.selectedOffenseDesc, { color: colors.text }]}>
+                {faltaSeleccionada.descripcion}
               </Text>
-              <Text style={[styles.legalDesc, { color: colors.text }]}>{faltaSeleccionada.descripcion}</Text>
 
-              <View style={[styles.umaTarifaBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <View style={styles.umaItem}>
-                  <Text style={[styles.umaLabel, { color: colors.textMuted }]}>SANCIÓN UMAS</Text>
-                  <Text style={[styles.umaValue, { color: colors.primary }]}>
-                    {faltaSeleccionada.montoMinUma} a {faltaSeleccionada.montoMaxUma} UMAS
+              {/* Cálculo financiero en UMA y Pesos */}
+              <View style={[styles.calculationBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View style={styles.calcCol}>
+                  <Text style={[styles.calcColLabel, { color: colors.textMuted }]}>SANCIÓN TABULADOR</Text>
+                  <Text style={[styles.calcColValue, { color: colors.primary }]}>
+                    {faltaSeleccionada.montoMinUma} a {faltaSeleccionada.montoMaxUma} UMA
                   </Text>
                 </View>
-                <View style={styles.umaDivider} />
-                <View style={styles.umaItem}>
-                  <Text style={[styles.umaLabel, { color: colors.textMuted }]}>ESTIMADO EN PESOS</Text>
-                  <Text style={[styles.umaValue, { color: colors.success }]}>
-                    ${(Number(faltaSeleccionada.montoMinUma) * valorUma).toFixed(2)} - $
-                    {(Number(faltaSeleccionada.montoMaxUma) * valorUma).toFixed(2)} MXN
+                <View style={styles.calcDivider} />
+                <View style={styles.calcCol}>
+                  <Text style={[styles.calcColLabel, { color: colors.textMuted }]}>IMPORTE EN PESOS (MXN)</Text>
+                  <Text style={[styles.calcColValue, { color: colors.success }]}>
+                    ${minMontoPesos.toLocaleString("es-MX", { maximumFractionDigits: 0 })} – $
+                    {maxMontoPesos.toLocaleString("es-MX", { maximumFractionDigits: 0 })} MXN
                   </Text>
                 </View>
               </View>
-            </TouchableOpacity>
 
-            <View style={[styles.inputGroup, { marginTop: 14 }]}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>HECHOS CIRCUNSTANCIADOS (OBSERVACIONES DEL AGENTE)</Text>
+              <TouchableOpacity
+                style={[styles.changeOffenseBtn, { backgroundColor: colors.primary }]}
+                onPress={() => setModalCatalogoVisible(true)}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="search" size={16} color="#ffffff" />
+                <Text style={styles.changeOffenseBtnText}>CAMBIAR O BUSCAR OTRA FALTA EN EL CATÁLOGO</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Hechos circunstanciados */}
+            <View style={[styles.inputGroup, { marginTop: 16 }]}>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+                HECHOS CIRCUNSTANCIADOS (OBSERVACIONES DEL AGENTE)
+              </Text>
               <TextInput
-                style={[styles.input, styles.textArea, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
-                placeholder="Describa brevemente cómo se suscitaron los hechos..."
+                style={[
+                  styles.textAreaInput,
+                  { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text },
+                ]}
+                placeholder="Describa brevemente las circunstancias de tiempo, modo y lugar..."
                 placeholderTextColor={colors.textMuted}
                 multiline
                 numberOfLines={3}
@@ -633,21 +759,28 @@ export default function NuevaInfraccionScreen() {
             </View>
           </View>
 
-          {/* =========================================
-              SECCIÓN 5: GARANTÍAS RETENIDAS
-          ========================================== */}
-          <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="lock-closed-outline" size={18} color={colors.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>5. GARANTÍA RETENIDA</Text>
+          {/* ========================================================
+              CARD 5: GARANTÍA RETENIDA
+          ========================================================= */}
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIconBadge, { backgroundColor: colors.successBg }]}>
+                <Ionicons name="shield-checkmark" size={20} color={colors.success} />
+              </View>
+              <View style={styles.cardHeaderTitles}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>5. Garantía Retenida</Text>
+                <Text style={[styles.cardSubtitle, { color: colors.textSecondary }]}>
+                  Documento o bien retenido para asegurar el pago de la infracción
+                </Text>
+              </View>
             </View>
 
             <View style={styles.garantiasGrid}>
               {[
                 { id: "licencia", label: "Licencia de Conducir", icon: "card-outline" },
                 { id: "placa", label: "Placa Delantera/Trasera", icon: "pricetag-outline" },
-                { id: "tarjeta_circulacion", label: "Tarjeta de Circulación", icon: "document-outline" },
-                { id: "vehiculo", label: "Vehículo (Grúa)", icon: "car-outline" },
+                { id: "tarjeta_circulacion", label: "Tarjeta de Circulación", icon: "document-text-outline" },
+                { id: "vehiculo", label: "Vehículo Remitido (Grúa)", icon: "car-outline" },
               ].map((item) => {
                 const checked = garantias.includes(item.id as GarantiaRetenida);
                 return (
@@ -659,16 +792,18 @@ export default function NuevaInfraccionScreen() {
                       checked && { backgroundColor: colors.primaryBg, borderColor: colors.primary },
                     ]}
                     onPress={() => toggleGarantia(item.id as GarantiaRetenida)}
+                    activeOpacity={0.8}
                   >
                     <Ionicons
                       name={checked ? "checkmark-circle" : (item.icon as any)}
-                      size={20}
+                      size={24}
                       color={checked ? colors.primary : colors.textMuted}
                     />
                     <Text
                       style={[
-                        styles.garantiaLabel,
+                        styles.garantiaCardText,
                         { color: checked ? colors.primary : colors.textSecondary },
+                        checked && { fontWeight: "800" },
                       ]}
                     >
                       {item.label}
@@ -679,129 +814,279 @@ export default function NuevaInfraccionScreen() {
             </View>
 
             {garantias.includes("vehiculo") && (
-              <View style={[styles.inputGroup, { marginTop: 12 }]}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>FOLIO DE INVENTARIO / EMPRESA DE GRÚA</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
-                  placeholder="Ej. Grúas Uriangato - Inventario #094"
-                  placeholderTextColor={colors.textMuted}
-                  value={inventarioGrua}
-                  onChangeText={setInventarioGrua}
-                />
+              <View style={[styles.inputGroup, { marginTop: 14 }]}>
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+                  NÚMERO DE INVENTARIO / EMPRESA DE GRÚA
+                </Text>
+                <View style={[styles.textInputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+                  <Ionicons name="document-attach-outline" size={18} color={colors.textMuted} style={styles.textInputIcon} />
+                  <TextInput
+                    style={[styles.textInput, { color: colors.text }]}
+                    placeholder="Ej. Grúas Uriangato - Inventario #045"
+                    placeholderTextColor={colors.textMuted}
+                    value={inventarioGrua}
+                    onChangeText={setInventarioGrua}
+                  />
+                </View>
               </View>
             )}
           </View>
 
-          {/* =========================================
-              SECCIÓN 6: EVIDENCIAS FOTOGRÁFICAS (3 OBLIGATORIAS)
-          ========================================== */}
-          <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="camera-outline" size={18} color={colors.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>6. EVIDENCIAS FOTOGRÁFICAS (3 OBLIGATORIAS)</Text>
-                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-                  Requeridas para la validez legal de la infracción en Uriangato
+          {/* ========================================================
+              CARD 6: EVIDENCIAS FOTOGRÁFICAS (3 OBLIGATORIAS)
+          ========================================================= */}
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIconBadge, { backgroundColor: "rgba(6, 182, 212, 0.12)" }]}>
+                <Ionicons name="camera" size={20} color="#06b6d4" />
+              </View>
+              <View style={styles.cardHeaderTitles}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>6. Evidencia Fotográfica Digital</Text>
+                <Text style={[styles.cardSubtitle, { color: colors.textSecondary }]}>
+                  3 evidencias fotográficas obligatorias para validez legal
                 </Text>
               </View>
             </View>
 
-            <View style={styles.photosUploadGrid}>
+            {/* Botón de llenado rápido de fotos para pruebas */}
+            <TouchableOpacity
+              style={[styles.demoPhotosButton, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
+              onPress={handleCargarFotosDemo}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="flash" size={16} color={colors.primary} />
+              <Text style={[styles.demoPhotosButtonText, { color: colors.primary }]}>
+                ⚡ Cargar 3 Fotos de Demostración (Prueba Rápida)
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.photosGridList}>
               {/* Foto 1: Placa */}
-              <TouchableOpacity
-                style={[
-                  styles.photoUploadBox,
-                  { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
-                  fotoPlaca && { borderColor: colors.success },
-                ]}
-                onPress={() => {
-                  setCapturandoTipoFoto("placa");
-                  setModalCamaraVisible(true);
-                }}
-              >
-                {fotoPlaca ? (
-                  <>
-                    <Image source={{ uri: fotoPlaca }} style={styles.uploadedPhoto} />
-                    <View style={styles.photoDoneBadge}>
-                      <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-                    </View>
-                  </>
-                ) : (
-                  <View style={styles.photoPlaceholder}>
-                    <Ionicons name="camera" size={28} color={colors.primary} />
-                    <Text style={[styles.photoBoxTitle, { color: colors.text }]}>FOTO 1: PLACA</Text>
-                    <Text style={[styles.photoBoxSub, { color: colors.textMuted }]}>Acercamiento nítido</Text>
+              <View style={[styles.photoCardItem, { backgroundColor: colors.surfaceElevated, borderColor: fotoPlaca ? colors.success : colors.border }]}>
+                <View style={styles.photoCardHeader}>
+                  <Text style={[styles.photoCardTitle, { color: colors.text }]}>FOTO 1: PLACA</Text>
+                  <View style={[styles.photoStatusPill, { backgroundColor: fotoPlaca ? colors.successBg : colors.surface }]}>
+                    <Ionicons
+                      name={fotoPlaca ? "checkmark-circle" : "time-outline"}
+                      size={14}
+                      color={fotoPlaca ? colors.success : colors.textMuted}
+                    />
+                    <Text style={[styles.photoStatusText, { color: fotoPlaca ? colors.success : colors.textMuted }]}>
+                      {fotoPlaca ? "LISTA" : "PENDIENTE"}
+                    </Text>
                   </View>
+                </View>
+
+                {fotoPlaca ? (
+                  <View style={styles.photoPreviewWrapper}>
+                    <Image source={{ uri: fotoPlaca }} style={styles.photoPreviewImage} />
+                    <View style={styles.photoActionsRow}>
+                      <TouchableOpacity
+                        style={[styles.photoActionBtn, { backgroundColor: colors.surfaceElevated }]}
+                        onPress={() => setFotoPreviewGrande(fotoPlaca)}
+                      >
+                        <Ionicons name="eye-outline" size={14} color={colors.text} />
+                        <Text style={[styles.photoActionBtnText, { color: colors.text }]}>Ver</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.photoActionBtn, { backgroundColor: colors.primaryBg }]}
+                        onPress={() => {
+                          setCapturandoTipoFoto("placa");
+                          setModalCamaraVisible(true);
+                        }}
+                      >
+                        <Ionicons name="camera-outline" size={14} color={colors.primary} />
+                        <Text style={[styles.photoActionBtnText, { color: colors.primary }]}>Cambiar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.photoPlaceholderBox, { backgroundColor: colors.inputBg }]}
+                    onPress={() => {
+                      setCapturandoTipoFoto("placa");
+                      setModalCamaraVisible(true);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="camera" size={32} color={colors.primary} />
+                    <Text style={[styles.photoPlaceholderText, { color: colors.text }]}>Tomar Foto de la Placa</Text>
+                    <Text style={[styles.photoPlaceholderSub, { color: colors.textMuted }]}>
+                      Enfoque nítido de la matrícula
+                    </Text>
+                  </TouchableOpacity>
                 )}
-              </TouchableOpacity>
+              </View>
 
               {/* Foto 2: Contexto */}
-              <TouchableOpacity
-                style={[
-                  styles.photoUploadBox,
-                  { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
-                  fotoContexto && { borderColor: colors.success },
-                ]}
-                onPress={() => {
-                  setCapturandoTipoFoto("contexto");
-                  setModalCamaraVisible(true);
-                }}
-              >
-                {fotoContexto ? (
-                  <>
-                    <Image source={{ uri: fotoContexto }} style={styles.uploadedPhoto} />
-                    <View style={styles.photoDoneBadge}>
-                      <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-                    </View>
-                  </>
-                ) : (
-                  <View style={styles.photoPlaceholder}>
-                    <Ionicons name="camera" size={28} color={colors.primary} />
-                    <Text style={[styles.photoBoxTitle, { color: colors.text }]}>FOTO 2: CONTEXTO</Text>
-                    <Text style={[styles.photoBoxSub, { color: colors.textMuted }]}>Vialidad y vehículo</Text>
+              <View style={[styles.photoCardItem, { backgroundColor: colors.surfaceElevated, borderColor: fotoContexto ? colors.success : colors.border }]}>
+                <View style={styles.photoCardHeader}>
+                  <Text style={[styles.photoCardTitle, { color: colors.text }]}>FOTO 2: CONTEXTO</Text>
+                  <View style={[styles.photoStatusPill, { backgroundColor: fotoContexto ? colors.successBg : colors.surface }]}>
+                    <Ionicons
+                      name={fotoContexto ? "checkmark-circle" : "time-outline"}
+                      size={14}
+                      color={fotoContexto ? colors.success : colors.textMuted}
+                    />
+                    <Text style={[styles.photoStatusText, { color: fotoContexto ? colors.success : colors.textMuted }]}>
+                      {fotoContexto ? "LISTA" : "PENDIENTE"}
+                    </Text>
                   </View>
+                </View>
+
+                {fotoContexto ? (
+                  <View style={styles.photoPreviewWrapper}>
+                    <Image source={{ uri: fotoContexto }} style={styles.photoPreviewImage} />
+                    <View style={styles.photoActionsRow}>
+                      <TouchableOpacity
+                        style={[styles.photoActionBtn, { backgroundColor: colors.surfaceElevated }]}
+                        onPress={() => setFotoPreviewGrande(fotoContexto)}
+                      >
+                        <Ionicons name="eye-outline" size={14} color={colors.text} />
+                        <Text style={[styles.photoActionBtnText, { color: colors.text }]}>Ver</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.photoActionBtn, { backgroundColor: colors.primaryBg }]}
+                        onPress={() => {
+                          setCapturandoTipoFoto("contexto");
+                          setModalCamaraVisible(true);
+                        }}
+                      >
+                        <Ionicons name="camera-outline" size={14} color={colors.primary} />
+                        <Text style={[styles.photoActionBtnText, { color: colors.primary }]}>Cambiar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.photoPlaceholderBox, { backgroundColor: colors.inputBg }]}
+                    onPress={() => {
+                      setCapturandoTipoFoto("contexto");
+                      setModalCamaraVisible(true);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="camera" size={32} color={colors.primary} />
+                    <Text style={[styles.photoPlaceholderText, { color: colors.text }]}>Tomar Foto del Contexto</Text>
+                    <Text style={[styles.photoPlaceholderSub, { color: colors.textMuted }]}>
+                      Vehículo y señalamiento vial
+                    </Text>
+                  </TouchableOpacity>
                 )}
-              </TouchableOpacity>
+              </View>
 
               {/* Foto 3: Garantía / Documento */}
-              <TouchableOpacity
-                style={[
-                  styles.photoUploadBox,
-                  { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
-                  fotoDocumento && { borderColor: colors.success },
-                ]}
-                onPress={() => {
-                  setCapturandoTipoFoto("documento");
-                  setModalCamaraVisible(true);
-                }}
-              >
-                {fotoDocumento ? (
-                  <>
-                    <Image source={{ uri: fotoDocumento }} style={styles.uploadedPhoto} />
-                    <View style={styles.photoDoneBadge}>
-                      <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-                    </View>
-                  </>
-                ) : (
-                  <View style={styles.photoPlaceholder}>
-                    <Ionicons name="camera" size={28} color={colors.primary} />
-                    <Text style={[styles.photoBoxTitle, { color: colors.text }]}>FOTO 3: GARANTÍA</Text>
-                    <Text style={[styles.photoBoxSub, { color: colors.textMuted }]}>Documento retenido</Text>
+              <View style={[styles.photoCardItem, { backgroundColor: colors.surfaceElevated, borderColor: fotoDocumento ? colors.success : colors.border }]}>
+                <View style={styles.photoCardHeader}>
+                  <Text style={[styles.photoCardTitle, { color: colors.text }]}>FOTO 3: GARANTÍA O BOLETA</Text>
+                  <View style={[styles.photoStatusPill, { backgroundColor: fotoDocumento ? colors.successBg : colors.surface }]}>
+                    <Ionicons
+                      name={fotoDocumento ? "checkmark-circle" : "time-outline"}
+                      size={14}
+                      color={fotoDocumento ? colors.success : colors.textMuted}
+                    />
+                    <Text style={[styles.photoStatusText, { color: fotoDocumento ? colors.success : colors.textMuted }]}>
+                      {fotoDocumento ? "LISTA" : "PENDIENTE"}
+                    </Text>
                   </View>
+                </View>
+
+                {fotoDocumento ? (
+                  <View style={styles.photoPreviewWrapper}>
+                    <Image source={{ uri: fotoDocumento }} style={styles.photoPreviewImage} />
+                    <View style={styles.photoActionsRow}>
+                      <TouchableOpacity
+                        style={[styles.photoActionBtn, { backgroundColor: colors.surfaceElevated }]}
+                        onPress={() => setFotoPreviewGrande(fotoDocumento)}
+                      >
+                        <Ionicons name="eye-outline" size={14} color={colors.text} />
+                        <Text style={[styles.photoActionBtnText, { color: colors.text }]}>Ver</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.photoActionBtn, { backgroundColor: colors.primaryBg }]}
+                        onPress={() => {
+                          setCapturandoTipoFoto("documento");
+                          setModalCamaraVisible(true);
+                        }}
+                      >
+                        <Ionicons name="camera-outline" size={14} color={colors.primary} />
+                        <Text style={[styles.photoActionBtnText, { color: colors.primary }]}>Cambiar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.photoPlaceholderBox, { backgroundColor: colors.inputBg }]}
+                    onPress={() => {
+                      setCapturandoTipoFoto("documento");
+                      setModalCamaraVisible(true);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="camera" size={32} color={colors.primary} />
+                    <Text style={[styles.photoPlaceholderText, { color: colors.text }]}>Tomar Foto del Documento</Text>
+                    <Text style={[styles.photoPlaceholderSub, { color: colors.textMuted }]}>
+                      Licencia, placa o folio notificado
+                    </Text>
+                  </TouchableOpacity>
                 )}
-              </TouchableOpacity>
+              </View>
             </View>
           </View>
 
-          {/* BOTÓN FINAL DE GUARDADO */}
-          <TouchableOpacity
-            style={[styles.saveButton, { backgroundColor: colors.primary }]}
-            onPress={handleGuardarBoleta}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="save" size={22} color="#ffffff" />
-            <Text style={styles.saveButtonText}>EMITIR Y GUARDAR BOLETA OFICIAL</Text>
-          </TouchableOpacity>
+          {/* ========================================================
+              CARD 7: RESUMEN Y EMISIÓN FINAL DE BOLETA
+          ========================================================= */}
+          <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.summaryTitle, { color: colors.text }]}>Resumen de Emisión</Text>
+
+            <View style={styles.summaryItemRow}>
+              <Text style={[styles.summaryKey, { color: colors.textSecondary }]}>Folio Registrado:</Text>
+              <Text style={[styles.summaryVal, { color: colors.primary }]}>{folio}</Text>
+            </View>
+
+            <View style={styles.summaryItemRow}>
+              <Text style={[styles.summaryKey, { color: colors.textSecondary }]}>Sanción Estimada:</Text>
+              <Text style={[styles.summaryVal, { color: colors.success }]}>
+                ${minMontoPesos.toLocaleString("es-MX", { maximumFractionDigits: 0 })} – $
+                {maxMontoPesos.toLocaleString("es-MX", { maximumFractionDigits: 0 })} MXN
+              </Text>
+            </View>
+
+            <View style={styles.summaryItemRow}>
+              <Text style={[styles.summaryKey, { color: colors.textSecondary }]}>Evidencias Fotográficas:</Text>
+              <Text style={[styles.summaryVal, { color: totalFotosListas === 3 ? colors.success : colors.warning }]}>
+                {totalFotosListas} de 3 listas
+              </Text>
+            </View>
+
+            <View style={[styles.offlineAssuranceBox, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+              <Ionicons name="cloud-offline-outline" size={18} color={colors.success} />
+              <Text style={[styles.offlineAssuranceText, { color: colors.textSecondary }]}>
+                La boleta quedará asegurada localmente y se sincronizará de forma transparente con el panel central de Uriangato.
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.saveBigButton,
+                { backgroundColor: colors.primary },
+                guardando && styles.buttonDisabled,
+              ]}
+              onPress={handleGuardarBoleta}
+              disabled={guardando}
+              activeOpacity={0.85}
+            >
+              {guardando ? (
+                <ActivityIndicator color="#ffffff" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-done-circle" size={24} color="#ffffff" />
+                  <Text style={styles.saveBigButtonText}>EMITIR Y GUARDAR BOLETA OFICIAL</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </ScrollView>
 
         {/* MODAL DE CATÁLOGO COMPLETO DE INFRACCIONES */}
@@ -815,8 +1100,10 @@ export default function NuevaInfraccionScreen() {
             <View style={[styles.modalCatalogContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={[styles.modalCatalogHeader, { borderBottomColor: colors.border }]}>
                 <View>
-                  <Text style={[styles.modalCatSubtitle, { color: colors.textMuted }]}>REGLAMENTO DE MOVILIDAD</Text>
-                  <Text style={[styles.modalCatTitle, { color: colors.text }]}>Seleccionar Infracción</Text>
+                  <Text style={[styles.modalCatSubtitle, { color: colors.textMuted }]}>
+                    REGLAMENTO DE MOVILIDAD Y TRANSPORTE
+                  </Text>
+                  <Text style={[styles.modalCatTitle, { color: colors.text }]}>Catálogo Oficial de Infracciones</Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => setModalCatalogoVisible(false)}
@@ -826,16 +1113,55 @@ export default function NuevaInfraccionScreen() {
                 </TouchableOpacity>
               </View>
 
+              {/* Barra de Búsqueda */}
               <View style={[styles.searchBarWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
                 <Ionicons name="search" size={18} color={colors.textMuted} />
                 <TextInput
                   style={[styles.searchBarInput, { color: colors.text }]}
-                  placeholder="Buscar por artículo o descripción..."
+                  placeholder="Buscar por artículo, falta o palabra clave..."
                   placeholderTextColor={colors.textMuted}
                   value={busquedaCatalogo}
                   onChangeText={setBusquedaCatalogo}
                 />
+                {busquedaCatalogo.length > 0 && (
+                  <TouchableOpacity onPress={() => setBusquedaCatalogo("")}>
+                    <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                  </TouchableOpacity>
+                )}
               </View>
+
+              {/* Filtros de Categorías */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.categoryChipsScroll}
+                contentContainerStyle={styles.categoryChipsContent}
+              >
+                {categoriasCatalogo.map((cat) => {
+                  const activa = categoriaFiltro === cat;
+                  return (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[
+                        styles.catFilterPill,
+                        { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
+                        activa && { backgroundColor: colors.primary, borderColor: colors.primary },
+                      ]}
+                      onPress={() => setCategoriaFiltro(cat)}
+                    >
+                      <Text
+                        style={[
+                          styles.catFilterPillText,
+                          { color: activa ? "#ffffff" : colors.textSecondary },
+                          activa && { fontWeight: "800" },
+                        ]}
+                      >
+                        {cat === "todas" ? "Todas las faltas" : cat}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
 
               <ScrollView style={styles.catalogList}>
                 {catalogoFiltrado.map((item) => {
@@ -855,9 +1181,12 @@ export default function NuevaInfraccionScreen() {
                         setFaltaSeleccionada(item);
                         setModalCatalogoVisible(false);
                       }}
+                      activeOpacity={0.75}
                     >
                       <View style={styles.catItemTop}>
-                        <Text style={[styles.catItemLaw, { color: colors.danger }]}>{item.fundamentoLegal}</Text>
+                        <View style={[styles.lawTag, { backgroundColor: colors.dangerBg }]}>
+                          <Text style={[styles.catItemLaw, { color: colors.danger }]}>{item.fundamentoLegal}</Text>
+                        </View>
                         <Text style={[styles.catItemUma, { color: colors.primary }]}>
                           {item.montoMinUma} - {item.montoMaxUma} UMAS
                         </Text>
@@ -866,7 +1195,8 @@ export default function NuevaInfraccionScreen() {
                       <View style={styles.catItemBottom}>
                         <Text style={[styles.catItemCategory, { color: colors.textMuted }]}>{item.categoria}</Text>
                         <Text style={[styles.catItemPesos, { color: colors.success }]}>
-                          ${itemMinPesos.toFixed(0)} - ${itemMaxPesos.toFixed(0)} MXN
+                          ${itemMinPesos.toLocaleString("es-MX", { maximumFractionDigits: 0 })} – $
+                          {itemMaxPesos.toLocaleString("es-MX", { maximumFractionDigits: 0 })} MXN
                         </Text>
                       </View>
                     </TouchableOpacity>
@@ -892,7 +1222,7 @@ export default function NuevaInfraccionScreen() {
                     ? "Capturar Foto 1: Placa"
                     : capturandoTipoFoto === "contexto"
                     ? "Capturar Foto 2: Contexto"
-                    : "Capturar Foto 3: Garantía"}
+                    : "Capturar Foto 3: Garantía / Documento"}
                 </Text>
                 <TouchableOpacity
                   onPress={() => setModalCamaraVisible(false)}
@@ -916,11 +1246,36 @@ export default function NuevaInfraccionScreen() {
               <TouchableOpacity
                 style={[styles.shutterBtn, { backgroundColor: colors.primary }]}
                 onPress={() => capturandoTipoFoto && simularCapturaFoto(capturandoTipoFoto)}
+                activeOpacity={0.85}
               >
                 <Ionicons name="camera" size={24} color="#ffffff" />
                 <Text style={styles.shutterBtnText}>CAPTURAR FOTOGRAFÍA</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </Modal>
+
+        {/* MODAL PARA VER FOTO COMPLETA EN GRANDE */}
+        <Modal
+          visible={!!fotoPreviewGrande}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={() => setFotoPreviewGrande(null)}
+        >
+          <View style={styles.fullPhotoOverlay}>
+            <TouchableOpacity
+              style={styles.closeFullPhotoBtn}
+              onPress={() => setFotoPreviewGrande(null)}
+            >
+              <Ionicons name="close-circle" size={36} color="#ffffff" />
+            </TouchableOpacity>
+            {fotoPreviewGrande && (
+              <Image
+                source={{ uri: fotoPreviewGrande }}
+                style={styles.fullPhotoImage}
+                resizeMode="contain"
+              />
+            )}
           </View>
         </Modal>
       </View>
@@ -939,15 +1294,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
+    paddingTop: 14,
+    paddingBottom: 14,
     borderBottomWidth: 1,
     gap: 12,
   },
   backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -961,336 +1317,575 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 11,
+    marginTop: 1,
   },
   formScroll: {
     flex: 1,
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: 60,
   },
-  folioBanner: {
+
+  // Folio Banner
+  folioBannerCard: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 16,
-    borderRadius: 14,
+    padding: 18,
+    borderRadius: 18,
     borderWidth: 1,
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  folioLabel: {
+  folioBannerLeft: {
+    flex: 1,
+  },
+  folioBadgeTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 4,
+  },
+  folioBadgeTagText: {
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1,
   },
-  folioNumber: {
-    fontSize: 18,
+  folioNumberText: {
+    fontSize: 20,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  offlinePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  greenPulseDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#10b981",
+  },
+  offlinePillText: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  agentBox: {
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginLeft: 12,
+  },
+  agentPlacaLabel: {
+    fontSize: 13,
     fontWeight: "800",
     marginTop: 2,
   },
-  badgeAgente: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: "center",
-  },
-  agentePlacaText: {
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  agenteCargoText: {
+  agentSectorLabel: {
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 0.5,
   },
-  sectionCard: {
-    borderRadius: 16,
-    padding: 16,
+
+  // Cards Estructuradas
+  card: {
+    borderRadius: 20,
+    padding: 20,
     borderWidth: 1,
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  sectionHeader: {
+  cardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 14,
+    gap: 12,
+    marginBottom: 18,
   },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  sectionSubtitle: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  inputGroup: {
-    marginBottom: 12,
-  },
-  labelRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  label: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    marginBottom: 6,
-  },
-  input: {
-    height: 48,
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    fontSize: 14,
-  },
-  textArea: {
-    height: 80,
-    paddingTop: 10,
-    textAlignVertical: "top",
-  },
-  gpsReloadBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  gpsReloadText: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  gpsIndicatorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 4,
-  },
-  gpsCoordsText: {
-    fontSize: 11,
-  },
-  switchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    marginBottom: 12,
-  },
-  switchTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  switchDesc: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-  sinPlacasCheck: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    height: 48,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    marginTop: 18,
-  },
-  sinPlacasText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  tipoVehiculoRow: {
-    flexDirection: "row",
-    gap: 6,
-  },
-  tipoBtn: {
-    flex: 1,
-    height: 48,
-    borderRadius: 10,
-    borderWidth: 1,
+  cardIconBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: "center",
     justifyContent: "center",
   },
-  tipoBtnText: {
+  cardHeaderTitles: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  cardSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+
+  // Campos y filas
+  twoColRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  fieldCol: {
+    flex: 1,
+  },
+  fieldLabel: {
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    marginBottom: 8,
   },
-  catalogoSelector: {
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  catalogoSelectorHeader: {
+  fieldLabelRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 8,
   },
-  badgeCategory: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: "rgba(59, 130, 246, 0.15)",
+  inputGroup: {
+    marginBottom: 16,
   },
-  badgeCategoryText: {
-    color: "#60a5fa",
-    fontSize: 10,
-    fontWeight: "800",
+  readOnlyInputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    gap: 8,
   },
-  changeLink: {
+  readOnlyInputText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  textInputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 50,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+  },
+  textInputIcon: {
+    marginRight: 8,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "500",
+    paddingVertical: 0,
+  },
+  textAreaInput: {
+    height: 90,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 14,
+    fontSize: 14,
+    textAlignVertical: "top",
+  },
+  gpsActionBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-  },
-  changeLinkText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  legalArticle: {
-    fontSize: 14,
-    fontWeight: "800",
-    marginBottom: 4,
-  },
-  legalDesc: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 10,
-  },
-  umaTarifaBar: {
-    flexDirection: "row",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 8,
-    padding: 10,
     borderWidth: 1,
   },
-  umaItem: {
-    flex: 1,
-  },
-  umaLabel: {
-    fontSize: 9,
+  gpsActionBtnText: {
+    fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 0.5,
   },
-  umaValue: {
-    fontSize: 13,
-    fontWeight: "800",
-    marginTop: 2,
+  coordsChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 8,
   },
-  umaDivider: {
-    width: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    marginHorizontal: 10,
+  coordsChipText: {
+    fontSize: 11,
+    fontWeight: "600",
   },
-  garantiasGrid: {
+
+  // Placa Vehicular
+  plateContainer: {
+    marginBottom: 16,
+  },
+  plateBox: {
+    borderWidth: 2,
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  plateHeader: {
+    marginBottom: 2,
+  },
+  plateHeaderText: {
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  plateInput: {
+    fontSize: 24,
+    fontWeight: "900",
+    letterSpacing: 4,
+    textAlign: "center",
+    width: "100%",
+    paddingVertical: 4,
+  },
+  sinPlacasToggleCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  sinPlacasToggleText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  // Tipo de vehículo
+  vehicleTypeGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+  },
+  vehicleTypeCard: {
+    flex: 1,
+    minWidth: "45%",
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 8,
+  },
+  vehicleTypeCardText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  // Switch Card
+  switchToggleCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  switchTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  switchDesc: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  infoBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  infoBannerText: {
+    fontSize: 12,
+    lineHeight: 16,
+    flex: 1,
+    fontWeight: "600",
+  },
+
+  // Falta seleccionada
+  selectedOffenseCard: {
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  selectedOffenseHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  categoryBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  categoryBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  articlePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  articlePillText: {
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  selectedOffenseDesc: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "600",
+    marginBottom: 14,
+  },
+  calculationBar: {
+    flexDirection: "row",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  calcCol: {
+    flex: 1,
+  },
+  calcColLabel: {
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  calcColValue: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  calcDivider: {
+    width: 1,
+    height: "100%",
+    backgroundColor: "rgba(150, 150, 150, 0.2)",
+    marginHorizontal: 10,
+  },
+  changeOffenseBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  changeOffenseBtnText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+
+  // Garantías
+  garantiasGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
   },
   garantiaCard: {
     width: "48%",
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    padding: 12,
-    borderRadius: 10,
+    padding: 14,
+    borderRadius: 14,
     borderWidth: 1,
+    gap: 10,
   },
-  garantiaLabel: {
+  garantiaCardText: {
     fontSize: 12,
     fontWeight: "600",
     flex: 1,
   },
-  photosUploadGrid: {
+
+  // Evidencias Fotográficas
+  demoPhotosButton: {
     flexDirection: "row",
-    gap: 10,
-  },
-  photoUploadBox: {
-    flex: 1,
-    height: 120,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
     borderRadius: 12,
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
+    borderWidth: 1,
+    marginBottom: 16,
+    gap: 6,
   },
-  photoPlaceholder: {
-    alignItems: "center",
-    padding: 6,
+  demoPhotosButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
   },
-  photoBoxTitle: {
-    fontSize: 10,
-    fontWeight: "800",
-    marginTop: 6,
-    textAlign: "center",
+  photosGridList: {
+    gap: 14,
   },
-  photoBoxSub: {
-    fontSize: 9,
-    textAlign: "center",
+  photoCardItem: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
   },
-  uploadedPhoto: {
-    width: "100%",
-    height: "100%",
-  },
-  photoDoneBadge: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    backgroundColor: "#ffffff",
-    borderRadius: 10,
-  },
-  saveButton: {
+  photoCardHeader: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    borderRadius: 14,
-    gap: 10,
-    marginTop: 8,
-    shadowColor: "#2563eb",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    marginBottom: 10,
   },
-  saveButtonText: {
-    color: "#ffffff",
-    fontSize: 15,
+  photoCardTitle: {
+    fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.5,
   },
+  photoStatusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  photoStatusText: {
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  photoPreviewWrapper: {
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  photoPreviewImage: {
+    width: "100%",
+    height: 160,
+    borderRadius: 12,
+  },
+  photoActionsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 8,
+  },
+  photoActionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  photoActionBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  photoPlaceholderBox: {
+    borderRadius: 12,
+    paddingVertical: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  photoPlaceholderText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  photoPlaceholderSub: {
+    fontSize: 11,
+  },
+
+  // Resumen Final
+  summaryCard: {
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    marginBottom: 20,
+  },
+  summaryTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    marginBottom: 14,
+  },
+  summaryItemRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  summaryKey: {
+    fontSize: 13,
+  },
+  summaryVal: {
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  offlineAssuranceBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 6,
+    marginBottom: 16,
+  },
+  offlineAssuranceText: {
+    fontSize: 11,
+    lineHeight: 16,
+    flex: 1,
+  },
+  saveBigButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 56,
+    borderRadius: 14,
+    gap: 10,
+  },
+  saveBigButtonText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+
+  // Modales
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.75)",
+    backgroundColor: "rgba(0,0,0,0.75)",
     justifyContent: "flex-end",
   },
   modalCatalogContent: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: "85%",
+    maxHeight: "88%",
     borderWidth: 1,
-    paddingBottom: 24,
+    paddingTop: 16,
   },
   modalCatalogHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
     borderBottomWidth: 1,
   },
   modalCatSubtitle: {
     fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1,
+    fontWeight: "800",
+    letterSpacing: 0.8,
   },
   modalCatTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "800",
+    marginTop: 2,
   },
   closeCatalogBtn: {
     width: 36,
@@ -1303,66 +1898,95 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 8,
-    paddingHorizontal: 12,
-    height: 44,
-    borderRadius: 10,
+    marginTop: 14,
+    marginBottom: 10,
+    height: 46,
+    borderRadius: 12,
     borderWidth: 1,
+    paddingHorizontal: 14,
     gap: 8,
   },
   searchBarInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  categoryChipsScroll: {
+    maxHeight: 40,
+    marginBottom: 10,
+  },
+  categoryChipsContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  catFilterPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  catFilterPillText: {
+    fontSize: 11,
+    fontWeight: "600",
   },
   catalogList: {
     paddingHorizontal: 16,
+    paddingBottom: 30,
   },
   catalogItemCard: {
-    padding: 12,
-    borderRadius: 10,
+    padding: 14,
+    borderRadius: 14,
     borderWidth: 1,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   catItemTop: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 6,
+  },
+  lawTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
   catItemLaw: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "800",
   },
   catItemUma: {
-    fontSize: 11,
-    fontWeight: "700",
+    fontSize: 12,
+    fontWeight: "800",
   },
   catItemDesc: {
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 8,
   },
   catItemBottom: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 6,
   },
   catItemCategory: {
     fontSize: 10,
-    fontWeight: "600",
-  },
-  catItemPesos: {
-    fontSize: 11,
     fontWeight: "700",
   },
+  catItemPesos: {
+    fontSize: 12,
+    fontWeight: "800",
+  },
+
+  // Modal Cámara
   cameraOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    backgroundColor: "rgba(0,0,0,0.85)",
     justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   cameraModalCard: {
+    width: "100%",
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
@@ -1371,7 +1995,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: 16,
   },
   cameraTitle: {
     fontSize: 16,
@@ -1385,31 +2009,50 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   cameraViewfinder: {
-    height: 220,
-    borderRadius: 14,
-    borderWidth: 1,
+    height: 240,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderStyle: "dashed",
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   viewfinderHint: {
-    fontSize: 12,
+    fontSize: 13,
     textAlign: "center",
     marginTop: 14,
-    lineHeight: 16,
+    lineHeight: 18,
   },
   shutterBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
-    borderRadius: 12,
+    height: 52,
+    borderRadius: 14,
     gap: 8,
   },
   shutterBtnText: {
     color: "#ffffff",
     fontSize: 14,
     fontWeight: "800",
+  },
+
+  // Modal Foto Grande
+  fullPhotoOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  closeFullPhotoBtn: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    zIndex: 10,
+  },
+  fullPhotoImage: {
+    width: "92%",
+    height: "80%",
   },
 });

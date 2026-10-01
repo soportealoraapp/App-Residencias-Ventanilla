@@ -30,21 +30,25 @@ class AuditoriaModel extends Model
 
     public function registrar(string $entidad, $entidadId, string $accion, ?int $usuarioId, ?array $detalle = null, $registroBorrado = null): void
     {
-        $ahora = new DateTime();
-        $fecha = $ahora->format('Y-m-d H:i:s');
+        try {
+            $ahora = new DateTime();
+            $fecha = $ahora->format('Y-m-d H:i:s');
 
-        $data = [
-            'entidad'           => $entidad,
-            'entidad_id'        => $entidadId,
-            'accion'            => $accion,
-            'usuario_id'        => $usuarioId,
-            'fecha'             => $fecha,
-            'detalle'           => $detalle !== null ? json_encode($detalle) : null,
-            'registro_borrados' => $registroBorrado !== null ? (is_string($registroBorrado) ? $registroBorrado : json_encode($registroBorrado)) : null,
-            'created_at'        => $fecha,
-        ];
+            $data = [
+                'entidad'           => $entidad,
+                'entidad_id'        => $entidadId,
+                'accion'            => $accion,
+                'usuario_id'        => $usuarioId,
+                'fecha'             => $fecha,
+                'detalle'           => $detalle !== null ? json_encode($detalle) : null,
+                'registro_borrados' => $registroBorrado !== null ? (is_string($registroBorrado) ? $registroBorrado : json_encode($registroBorrado)) : null,
+                'created_at'        => $fecha,
+            ];
 
-        $this->insert($data);
+            $this->insert($data);
+        } catch (\Throwable $e) {
+            log_message('error', 'Error al registrar auditoría: ' . $e->getMessage());
+        }
     }
 
     public function porEntidad(string $entidad, $entidadId): array
