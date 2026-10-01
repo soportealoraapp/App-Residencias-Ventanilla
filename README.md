@@ -14,6 +14,10 @@ Ambos módulos comparten:
 - **Portal Ciudadano**: registro, selección de trámite, formularios dinámicos, carga de documentos, cálculo de monto, pago (mock BanBajío), resumen de solicitud, consulta de estatus y descarga de documentos.
 - **Panel Admin**: listado de solicitudes por trámite/estatus, cambio de estatus con flujo validado, historial de estatus, comentarios de prevención/rechazo, visualización de documentos subidos, catálogos de concesiones/tarifas y evaluación de convocatorias UR-01.
 
+## App Agentes de Tránsito
+
+El repositorio incluye también un MVP en Expo/React Native para captura local/offline de boletas de infracción. Su acceso es de demostración y el envío real al backend todavía está pendiente; consulta la [guía de desarrollo y pruebas](./mobile/agentes-transito/README.md) para preparar el entorno, iniciar la app y conocer el alcance actual.
+
 ## Stack
 
 | Capa | Tecnología |
