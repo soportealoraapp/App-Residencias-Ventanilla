@@ -856,7 +856,7 @@ export default function NuevaInfraccionScreen() {
             >
               <Ionicons name="flash" size={16} color={colors.primary} />
               <Text style={[styles.demoPhotosButtonText, { color: colors.primary }]}>
-                ⚡ Cargar 3 Fotos de Demostración (Prueba Rápida)
+                Cargar 3 Fotos de Demostración (Prueba Rápida)
               </Text>
             </TouchableOpacity>
 

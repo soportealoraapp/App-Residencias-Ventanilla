@@ -4,6 +4,8 @@
 
 # Dependencias Node.js
 node_modules/
+# Excepción: fuentes de iconos del bundle web de Expo (necesarias para Vercel)
+!public/agentes/assets/
 package-lock.json
 .package-lock.json
 !mobile/agentes-transito/package-lock.json
