@@ -56,6 +56,15 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->get('formatos', 'Admin\\AdminController::formatos');
         $routes->post('formatos/subir', 'Admin\\AdminController::subirFormato');
         $routes->post('formatos/eliminar', 'Admin\\AdminController::eliminarFormato');
+
+        // App Agentes de Tránsito (Configuración, UMA, Agentes, Catálogo, Boletas)
+        $routes->get('app-transito', 'Admin\\AppTransitoController::index');
+        $routes->post('app-transito/guardar-parametros', 'Admin\\AppTransitoController::guardarParametros');
+        $routes->post('app-transito/agentes/guardar', 'Admin\\AppTransitoController::guardarAgente');
+        $routes->post('app-transito/agentes/toggle/(:num)', 'Admin\\AppTransitoController::toggleEstadoAgente/$1');
+        $routes->get('app-transito/boletas', 'Admin\\AppTransitoController::boletas');
+        $routes->get('app-transito/catalogo', 'Admin\\AppTransitoController::catalogo');
+        $routes->post('app-transito/catalogo/guardar', 'Admin\\AppTransitoController::guardarCatalogo');
     });
 });
 

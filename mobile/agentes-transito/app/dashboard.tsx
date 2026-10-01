@@ -15,6 +15,8 @@ import {
 import { useRouter } from "expo-router";
 import { useAuth } from "../src/contexts/AuthContext";
 import { useInfracciones } from "../src/contexts/InfraccionesContext";
+import { useTheme } from "../src/contexts/ThemeContext";
+import { ThemeToggle } from "../src/components/ThemeToggle";
 import { Infraccion } from "../src/types/infraccion";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -23,6 +25,7 @@ type FiltroTab = "todas" | "pendientes" | "sincronizadas";
 export default function DashboardScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const { colors, isDark } = useTheme();
   const {
     infracciones,
     pendientes,
@@ -31,6 +34,7 @@ export default function DashboardScreen() {
     totalSincronizadas,
     isSyncing,
     ultimaSincronizacion,
+    valorUma,
     sincronizar,
     eliminar,
     recargar,
@@ -49,16 +53,16 @@ export default function DashboardScreen() {
   const handleSyncPress = async () => {
     try {
       const res = await sincronizar();
-      Alert.alert("Sincronización de Campo", res.mensaje);
+      Alert.alert("Sincronización con Supabase", res.mensaje);
     } catch (err: any) {
-      Alert.alert("Error de Conexión", err.message || "No se pudo conectar con el servidor central.");
+      Alert.alert("Error de Conexión", err.message || "No se pudo conectar con Supabase.");
     }
   };
 
   const handleCerrarSesion = () => {
     Alert.alert(
       "Cerrar Sesión",
-      "¿Desea salir de la aplicación? Sus infracciones locales permanecerán guardadas de forma segura.",
+      "¿Desea salir de la aplicación? Sus boletas locales permanecerán guardadas de forma segura.",
       [
         { text: "Cancelar", style: "cancel" },
         {
@@ -93,7 +97,6 @@ export default function DashboardScreen() {
     );
   };
 
-  // Filtrar lista según pestaña activa
   const listaFiltrada =
     tabActual === "pendientes"
       ? pendientes
@@ -102,36 +105,40 @@ export default function DashboardScreen() {
       : infracciones;
 
   return (
-    <View style={styles.container}>
-      {/* Barra Superior con Información del Agente */}
-      <View style={styles.topBar}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Barra Superior con Información del Agente y Toggle de Tema */}
+      <View style={[styles.topBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View style={styles.agentInfoWrap}>
-          <View style={styles.agentAvatar}>
-            <Ionicons name="person" size={20} color="#3b82f6" />
+          <View style={[styles.agentAvatar, { backgroundColor: colors.primaryBg, borderColor: colors.border }]}>
+            <Ionicons name="person" size={20} color={colors.primary} />
           </View>
           <View>
             <View style={styles.badgeRow}>
-              <View style={styles.placaPill}>
-                <Text style={styles.placaText}>{user?.placa || "AGT-204"}</Text>
+              <View style={[styles.placaPill, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                <Text style={[styles.placaText, { color: colors.text }]}>{user?.placa || "AGT-204"}</Text>
               </View>
-              <View style={styles.statusPill}>
+              <View style={[styles.statusPill, { backgroundColor: colors.successBg }]}>
                 <View style={styles.statusDot} />
-                <Text style={styles.statusText}>EN TURNO</Text>
+                <Text style={[styles.statusText, { color: colors.success }]}>EN TURNO</Text>
               </View>
             </View>
-            <Text style={styles.agentName} numberOfLines={1}>
+            <Text style={[styles.agentName, { color: colors.text }]} numberOfLines={1}>
               {user?.nombre || "Oficial de Tránsito"}
             </Text>
           </View>
         </View>
 
-        <TouchableOpacity
-          onPress={handleCerrarSesion}
-          style={styles.logoutButton}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="power-outline" size={20} color="#ef4444" />
-        </TouchableOpacity>
+        <View style={styles.topRightActions}>
+          <ThemeToggle compact={true} />
+          <TouchableOpacity
+            onPress={handleCerrarSesion}
+            style={[styles.logoutButton, { backgroundColor: colors.dangerBg, borderColor: colors.border }]}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityLabel="Cerrar sesión"
+          >
+            <Ionicons name="power-outline" size={18} color={colors.danger} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
@@ -141,31 +148,39 @@ export default function DashboardScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="#3b82f6"
+            tintColor={colors.primary}
           />
         }
         contentContainerStyle={styles.listContainer}
         ListHeaderComponent={
           <>
             {/* Banner Institucional Uriangato */}
-            <View style={styles.heroCard}>
+            <View style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={styles.heroTextCol}>
-                <Text style={styles.municipioHeader}>URIANGATO, GTO.</Text>
-                <Text style={styles.heroTitle}>Control Operativo de Tránsito</Text>
-                <Text style={styles.heroSubtitle}>
+                <View style={styles.heroTagRow}>
+                  <Text style={[styles.municipioHeader, { color: colors.primary }]}>URIANGATO, GTO.</Text>
+                  <View style={[styles.umaTag, { backgroundColor: colors.primaryBg, borderColor: colors.border }]}>
+                    <Ionicons name="pricetag-outline" size={12} color={colors.primary} />
+                    <Text style={[styles.umaTagText, { color: colors.primary }]}>
+                      1 UMA = ${valorUma.toFixed(2)} MXN
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.heroTitle, { color: colors.text }]}>Control Operativo de Tránsito</Text>
+                <Text style={[styles.heroSubtitle, { color: colors.textSecondary }]}>
                   {user?.sector || "Sector Centro - Módulo Móvil"}
                 </Text>
               </View>
-              <View style={styles.badgeSeal}>
-                <Ionicons name="car-sport" size={26} color="#60a5fa" />
+              <View style={[styles.badgeSeal, { backgroundColor: colors.primaryBg, borderColor: colors.border }]}>
+                <Ionicons name="car-sport" size={26} color={colors.primary} />
               </View>
             </View>
 
             {/* BOTÓN PRINCIPAL DE ACCIÓN: LEVANTAR NUEVA INFRACCIÓN */}
             <TouchableOpacity
-              style={styles.newInfractionButton}
+              style={[styles.newInfractionButton, { backgroundColor: colors.primary }]}
               onPress={() => router.push("/nueva-infraccion")}
-              activeOpacity={0.85}
+              activeOpacity={0.88}
             >
               <View style={styles.btnIconWrap}>
                 <Ionicons name="add-circle" size={32} color="#ffffff" />
@@ -173,7 +188,7 @@ export default function DashboardScreen() {
               <View style={styles.btnTextWrap}>
                 <Text style={styles.btnMainTitle}>LEVANTAR NUEVA INFRACCIÓN</Text>
                 <Text style={styles.btnSubTitle}>
-                  Boleta electrónica oficial con GPS y 3 fotos obligatorias
+                  Boleta oficial con GPS, catálogo y 3 fotos obligatorias
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={24} color="#ffffff" />
@@ -181,70 +196,70 @@ export default function DashboardScreen() {
 
             {/* Tarjetas de Estadísticas Rápidas */}
             <View style={styles.statsRow}>
-              <View style={styles.statBox}>
-                <Text style={styles.statNumber}>{infracciones.length}</Text>
-                <Text style={styles.statLabel}>TOTAL BOLETAS</Text>
+              <View style={[styles.statBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text style={[styles.statNumber, { color: colors.text }]}>{infracciones.length}</Text>
+                <Text style={[styles.statLabel, { color: colors.textMuted }]}>TOTAL BOLETAS</Text>
               </View>
 
-              <View style={[styles.statBox, styles.statBoxAmber]}>
+              <View style={[styles.statBox, { backgroundColor: colors.surface, borderColor: totalPendientes > 0 ? colors.warning : colors.border }]}>
                 <View style={styles.statHeader}>
-                  <Text style={[styles.statNumber, { color: "#f59e0b" }]}>
+                  <Text style={[styles.statNumber, { color: colors.warning }]}>
                     {totalPendientes}
                   </Text>
                   {totalPendientes > 0 && (
-                    <Ionicons name="cloud-offline" size={16} color="#f59e0b" />
+                    <Ionicons name="cloud-offline" size={16} color={colors.warning} />
                   )}
                 </View>
-                <Text style={[styles.statLabel, { color: "#fcd34d" }]}>
+                <Text style={[styles.statLabel, { color: colors.warning }]}>
                   PENDIENTES
                 </Text>
               </View>
 
-              <View style={[styles.statBox, styles.statBoxGreen]}>
+              <View style={[styles.statBox, { backgroundColor: colors.surface, borderColor: totalSincronizadas > 0 ? colors.success : colors.border }]}>
                 <View style={styles.statHeader}>
-                  <Text style={[styles.statNumber, { color: "#10b981" }]}>
+                  <Text style={[styles.statNumber, { color: colors.success }]}>
                     {totalSincronizadas}
                   </Text>
-                  <Ionicons name="checkmark-done" size={16} color="#10b981" />
+                  <Ionicons name="checkmark-done" size={16} color={colors.success} />
                 </View>
-                <Text style={[styles.statLabel, { color: "#6ee7b7" }]}>
-                  ENVIADAS
+                <Text style={[styles.statLabel, { color: colors.success }]}>
+                  SINCRONIZADAS
                 </Text>
               </View>
             </View>
 
-            {/* Módulo de Sincronización Offline */}
-            <View style={styles.syncCard}>
+            {/* Módulo de Sincronización con Supabase */}
+            <View style={[styles.syncCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={styles.syncInfo}>
                 <View style={styles.syncIconRow}>
                   <Ionicons
-                    name={totalPendientes > 0 ? "sync" : "cloud-done"}
+                    name={totalPendientes > 0 ? "cloud-upload-outline" : "checkmark-circle-outline"}
                     size={22}
-                    color={totalPendientes > 0 ? "#f59e0b" : "#10b981"}
+                    color={totalPendientes > 0 ? colors.warning : colors.success}
                   />
-                  <Text style={styles.syncTitle}>
+                  <Text style={[styles.syncTitle, { color: colors.text }]}>
                     {totalPendientes > 0
                       ? `${totalPendientes} Boletas Pendientes de Envío`
-                      : "Almacenamiento Local Sincronizado"}
+                      : "Base de Datos Sincronizada"}
                   </Text>
                 </View>
-                <Text style={styles.syncSubtitle}>
+                <Text style={[styles.syncSubtitle, { color: colors.textSecondary }]}>
                   {ultimaSincronizacion
-                    ? `Última sincronización: ${new Date(
+                    ? `Último envío a Supabase: ${new Date(
                         ultimaSincronizacion
                       ).toLocaleTimeString("es-MX", {
                         hour: "2-digit",
                         minute: "2-digit",
                         second: "2-digit",
                       })}`
-                    : "No se ha sincronizado en este turno."}
+                    : "Conexión directa activa a Supabase PostgreSQL."}
                 </Text>
               </View>
 
               <TouchableOpacity
                 style={[
                   styles.syncButton,
-                  totalPendientes === 0 && styles.syncButtonSecondary,
+                  { backgroundColor: totalPendientes > 0 ? colors.warning : colors.primary },
                   isSyncing && styles.buttonDisabled,
                 ]}
                 onPress={handleSyncPress}
@@ -268,23 +283,24 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Título de Sección y Selector de Pestañas */}
-            <View style={styles.historySectionHeader}>
-              <Text style={styles.sectionTitle}>Historial de Infracciones</Text>
-              <Text style={styles.sectionSubtitle}>
-                Registro local persistente en memoria del dispositivo
-              </Text>
+            {/* Pestañas de Filtro */}
+            <View style={styles.sectionHeaderRow}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>HISTORIAL DE BOLETAS</Text>
+              <Text style={[styles.sectionCounter, { color: colors.textMuted }]}>{listaFiltrada.length} registros</Text>
             </View>
 
-            <View style={styles.tabsContainer}>
+            <View style={[styles.tabsWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <TouchableOpacity
-                style={[styles.tab, tabActual === "todas" && styles.tabActive]}
+                style={[
+                  styles.tabBtn,
+                  tabActual === "todas" && [styles.tabBtnActive, { backgroundColor: colors.primary }],
+                ]}
                 onPress={() => setTabActual("todas")}
               >
                 <Text
                   style={[
-                    styles.tabText,
-                    tabActual === "todas" && styles.tabTextActive,
+                    styles.tabBtnText,
+                    { color: tabActual === "todas" ? "#ffffff" : colors.textSecondary },
                   ]}
                 >
                   Todas ({infracciones.length})
@@ -293,15 +309,15 @@ export default function DashboardScreen() {
 
               <TouchableOpacity
                 style={[
-                  styles.tab,
-                  tabActual === "pendientes" && styles.tabActiveAmber,
+                  styles.tabBtn,
+                  tabActual === "pendientes" && [styles.tabBtnActive, { backgroundColor: colors.warning }],
                 ]}
                 onPress={() => setTabActual("pendientes")}
               >
                 <Text
                   style={[
-                    styles.tabText,
-                    tabActual === "pendientes" && styles.tabTextAmber,
+                    styles.tabBtnText,
+                    { color: tabActual === "pendientes" ? "#ffffff" : colors.textSecondary },
                   ]}
                 >
                   Pendientes ({totalPendientes})
@@ -310,169 +326,124 @@ export default function DashboardScreen() {
 
               <TouchableOpacity
                 style={[
-                  styles.tab,
-                  tabActual === "sincronizadas" && styles.tabActiveGreen,
+                  styles.tabBtn,
+                  tabActual === "sincronizadas" && [styles.tabBtnActive, { backgroundColor: colors.success }],
                 ]}
                 onPress={() => setTabActual("sincronizadas")}
               >
                 <Text
                   style={[
-                    styles.tabText,
-                    tabActual === "sincronizadas" && styles.tabTextGreen,
+                    styles.tabBtnText,
+                    { color: tabActual === "sincronizadas" ? "#ffffff" : colors.textSecondary },
                   ]}
                 >
-                  Sincronizadas ({totalSincronizadas})
+                  Enviadas ({totalSincronizadas})
                 </Text>
               </TouchableOpacity>
             </View>
           </>
         }
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="document-text-outline" size={54} color="#3f3f46" />
-            <Text style={styles.emptyTitle}>No hay infracciones en esta lista</Text>
-            <Text style={styles.emptyDesc}>
+          <View style={[styles.emptyContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Ionicons name="document-text-outline" size={54} color={colors.textMuted} />
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No hay boletas en esta sección</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
               {tabActual === "pendientes"
-                ? "Excelente, todas tus boletas han sido sincronizadas con el servidor."
-                : "Presiona el botón superior para levantar la primera boleta."}
+                ? "Todas las boletas han sido transmitidas a Supabase."
+                : tabActual === "sincronizadas"
+                ? "Aún no ha sincronizado boletas en este turno."
+                : "Presione 'Levantar Nueva Infracción' para registrar la primera boleta."}
             </Text>
           </View>
         }
         renderItem={({ item }) => {
           const esPendiente = item.estado === "pendiente";
+          const minPesos = Number(item.falta.montoMinUma) * valorUma;
+          const maxPesos = Number(item.falta.montoMaxUma) * valorUma;
 
           return (
             <TouchableOpacity
-              style={styles.cardItem}
+              style={[
+                styles.ticketCard,
+                { backgroundColor: colors.surface, borderColor: esPendiente ? colors.warning : colors.border },
+              ]}
               onPress={() => setInfraccionSeleccionada(item)}
               activeOpacity={0.75}
             >
-              <View style={styles.cardItemHeader}>
-                <View style={styles.folioBadgeWrap}>
-                  <Text style={styles.cardFolio}>{item.folio}</Text>
-                  <Text style={styles.cardDateTime}>
-                    {item.generales.fecha} • {item.generales.hora} hrs
-                  </Text>
-                </View>
-
-                <View
-                  style={[
-                    styles.statusBadge,
-                    esPendiente
-                      ? styles.statusBadgeAmber
-                      : styles.statusBadgeGreen,
-                  ]}
-                >
-                  <Ionicons
-                    name={esPendiente ? "time-outline" : "checkmark-circle"}
-                    size={13}
-                    color={esPendiente ? "#f59e0b" : "#10b981"}
-                  />
-                  <Text
+              <View style={styles.ticketTopRow}>
+                <View style={styles.folioBadgeRow}>
+                  <Text style={[styles.ticketFolio, { color: colors.primary }]}>{item.folio}</Text>
+                  <View
                     style={[
-                      styles.statusBadgeText,
-                      esPendiente
-                        ? styles.statusBadgeTextAmber
-                        : styles.statusBadgeTextGreen,
+                      styles.syncBadge,
+                      {
+                        backgroundColor: esPendiente ? colors.warningBg : colors.successBg,
+                        borderColor: esPendiente ? colors.warning : colors.success,
+                      },
                     ]}
                   >
-                    {esPendiente ? "Pendiente" : "Sincronizada"}
-                  </Text>
+                    <Ionicons
+                      name={esPendiente ? "cloud-offline" : "checkmark-circle"}
+                      size={12}
+                      color={esPendiente ? colors.warning : colors.success}
+                    />
+                    <Text
+                      style={[
+                        styles.syncBadgeText,
+                        { color: esPendiente ? colors.warning : colors.success },
+                      ]}
+                    >
+                      {esPendiente ? "PENDIENTE" : "SINCRONIZADA"}
+                    </Text>
+                  </View>
                 </View>
+                <Text style={[styles.ticketDate, { color: colors.textMuted }]}>
+                  {item.generales.fecha} · {item.generales.hora}
+                </Text>
               </View>
 
-              {/* Fundamento legal y descripción de la falta */}
-              <View style={styles.faltaBox}>
-                <Text style={styles.fundamentoTag}>
-                  {item.falta?.fundamentoLegal || "Art. de Tránsito"}
-                </Text>
-                <Text style={styles.faltaDesc} numberOfLines={2}>
-                  {item.falta?.descripcion}
-                </Text>
-              </View>
-
-              {/* Datos del infractor y vehículo */}
-              <View style={styles.detailsGrid}>
-                <View style={styles.detailRow}>
-                  <Ionicons name="car" size={15} color="#93c5fd" />
-                  <Text style={styles.detailText} numberOfLines={1}>
-                    {item.vehiculo.sinPlacas
-                      ? "Sin placas"
-                      : `Placa: ${item.vehiculo.placas}`}{" "}
-                    • {item.vehiculo.marca} {item.vehiculo.lineaModelo}
+              <View style={styles.ticketBody}>
+                <View style={styles.vehicleRow}>
+                  <View style={[styles.platePill, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                    <Ionicons name="car" size={15} color={colors.primary} />
+                    <Text style={[styles.platePillText, { color: colors.text }]}>
+                      {item.vehiculo.sinPlacas
+                        ? "SIN PLACAS"
+                        : item.vehiculo.placas || "S/P"}
+                    </Text>
+                  </View>
+                  <Text style={[styles.vehicleModel, { color: colors.textSecondary }]} numberOfLines={1}>
+                    {item.vehiculo.marca} {item.vehiculo.lineaModelo} ({item.vehiculo.color})
                   </Text>
                 </View>
 
-                <View style={styles.detailRow}>
-                  <Ionicons
-                    name={item.infractor.conductorAusente ? "warning" : "person"}
-                    size={15}
-                    color={
-                      item.infractor.conductorAusente ? "#fbbf24" : "#a1a1aa"
-                    }
-                  />
-                  <Text style={styles.detailText} numberOfLines={1}>
-                    {item.infractor.conductorAusente
-                      ? "CONDUCTOR AUSENTE"
-                      : item.infractor.nombre}
-                  </Text>
-                </View>
-
-                <View style={styles.detailRow}>
-                  <Ionicons name="location-outline" size={15} color="#a1a1aa" />
-                  <Text style={styles.detailText} numberOfLines={1}>
+                <View style={styles.locationRow}>
+                  <Ionicons name="location-outline" size={15} color={colors.textMuted} />
+                  <Text style={[styles.locationText, { color: colors.textSecondary }]} numberOfLines={1}>
                     {item.generales.lugar}
                   </Text>
                 </View>
-              </View>
 
-              {/* Garantías Retenidas Chips */}
-              {item.garantiasRetenidas && item.garantiasRetenidas.length > 0 && (
-                <View style={styles.garantiasRow}>
-                  <Text style={styles.garantiasLabel}>Garantía:</Text>
-                  {item.garantiasRetenidas.map((g, idx) => (
-                    <View key={idx} style={styles.garantiaChip}>
-                      <Text style={styles.garantiaChipText}>
-                        {g === "licencia"
-                          ? "Licencia"
-                          : g === "placa"
-                          ? "Placa"
-                          : g === "tarjeta_circulacion"
-                          ? "Tarjeta Circ."
-                          : "Vehículo"}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              {/* Miniaturas de Evidencias */}
-              <View style={styles.evidenciasThumbnailsRow}>
-                <View style={styles.thumbWrap}>
-                  <Image
-                    source={{ uri: item.evidencias.fotoPlaca }}
-                    style={styles.thumbnail}
-                  />
-                  <Text style={styles.thumbLabel}>Placa</Text>
-                </View>
-                <View style={styles.thumbWrap}>
-                  <Image
-                    source={{ uri: item.evidencias.fotoContexto }}
-                    style={styles.thumbnail}
-                  />
-                  <Text style={styles.thumbLabel}>Contexto</Text>
-                </View>
-                <View style={styles.thumbWrap}>
-                  <Image
-                    source={{ uri: item.evidencias.fotoDocumento }}
-                    style={styles.thumbnail}
-                  />
-                  <Text style={styles.thumbLabel}>Documento</Text>
+                <View style={[styles.violationHighlight, { backgroundColor: colors.dangerBg, borderColor: colors.border }]}>
+                  <Text style={[styles.violationLegal, { color: colors.danger }]}>
+                    {item.falta.fundamentoLegal}
+                  </Text>
+                  <Text style={[styles.violationDesc, { color: colors.text }]} numberOfLines={2}>
+                    {item.falta.descripcion}
+                  </Text>
                 </View>
 
-                <View style={styles.verDetalleArrow}>
-                  <Text style={styles.verDetalleText}>Ver Boleta</Text>
-                  <Ionicons name="chevron-forward" size={16} color="#60a5fa" />
+                <View style={styles.ticketFooter}>
+                  <View style={styles.amountWrap}>
+                    <Text style={[styles.amountLabel, { color: colors.textMuted }]}>IMPORTE ESTIMADO</Text>
+                    <Text style={[styles.amountValue, { color: colors.success }]}>
+                      ${minPesos.toLocaleString("es-MX", { maximumFractionDigits: 0 })} - ${maxPesos.toLocaleString("es-MX", { maximumFractionDigits: 0 })} MXN
+                    </Text>
+                  </View>
+                  <View style={styles.detailLink}>
+                    <Text style={[styles.detailLinkText, { color: colors.primary }]}>Ver Detalles</Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+                  </View>
                 </View>
               </View>
             </TouchableOpacity>
@@ -480,7 +451,7 @@ export default function DashboardScreen() {
         }}
       />
 
-      {/* MODAL DETALLES COMPLETOS DE LA BOLETA */}
+      {/* MODAL DE DETALLE COMPLETO DE LA BOLETA */}
       <Modal
         visible={!!infraccionSeleccionada}
         animationType="slide"
@@ -488,198 +459,215 @@ export default function DashboardScreen() {
         onRequestClose={() => setInfraccionSeleccionada(null)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            {infraccionSeleccionada && (
-              <>
-                <View style={styles.modalHeader}>
-                  <View>
-                    <Text style={styles.modalFolio}>
-                      {infraccionSeleccionada.folio}
-                    </Text>
-                    <Text style={styles.modalDate}>
-                      {infraccionSeleccionada.generales.fecha} a las{" "}
-                      {infraccionSeleccionada.generales.hora} hrs
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => setInfraccionSeleccionada(null)}
-                    style={styles.modalCloseBtn}
-                  >
-                    <Ionicons name="close" size={24} color="#ffffff" />
-                  </TouchableOpacity>
-                </View>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <View>
+                <Text style={[styles.modalSubtitle, { color: colors.textMuted }]}>DETALLE OFICIAL DE INFRACCIÓN</Text>
+                <Text style={[styles.modalTitle, { color: colors.primary }]}>
+                  {infraccionSeleccionada?.folio}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setInfraccionSeleccionada(null)}
+                style={[styles.closeModalBtn, { backgroundColor: colors.surfaceElevated }]}
+              >
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
 
-                <ScrollView style={styles.modalBody}>
-                  {/* Estatus */}
-                  <View
-                    style={[
-                      styles.modalStatusBanner,
+            {infraccionSeleccionada && (
+              <ScrollView
+                style={styles.modalScroll}
+                contentContainerStyle={styles.modalScrollInner}
+              >
+                {/* Estatus de Sincronización */}
+                <View
+                  style={[
+                    styles.syncStatusBanner,
+                    {
+                      backgroundColor:
+                        infraccionSeleccionada.estado === "pendiente"
+                          ? colors.warningBg
+                          : colors.successBg,
+                      borderColor:
+                        infraccionSeleccionada.estado === "pendiente"
+                          ? colors.warning
+                          : colors.success,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={
                       infraccionSeleccionada.estado === "pendiente"
-                        ? styles.statusBadgeAmber
-                        : styles.statusBadgeGreen,
+                        ? "cloud-offline"
+                        : "checkmark-circle"
+                    }
+                    size={20}
+                    color={
+                      infraccionSeleccionada.estado === "pendiente"
+                        ? colors.warning
+                        : colors.success
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.syncStatusText,
+                      {
+                        color:
+                          infraccionSeleccionada.estado === "pendiente"
+                            ? colors.warning
+                            : colors.success,
+                      },
                     ]}
                   >
-                    <Ionicons
-                      name={
-                        infraccionSeleccionada.estado === "pendiente"
-                          ? "cloud-offline"
-                          : "checkmark-circle"
-                      }
-                      size={20}
-                      color={
-                        infraccionSeleccionada.estado === "pendiente"
-                          ? "#f59e0b"
-                          : "#10b981"
-                      }
-                    />
-                    <Text
-                      style={[
-                        styles.modalStatusText,
-                        infraccionSeleccionada.estado === "pendiente"
-                          ? { color: "#f59e0b" }
-                          : { color: "#10b981" },
-                      ]}
-                    >
-                      {infraccionSeleccionada.estado === "pendiente"
-                        ? "Boleta Local en Dispositivo (Pendiente de Envío)"
-                        : "Boleta Sincronizada con el Servidor Central"}
+                    {infraccionSeleccionada.estado === "pendiente"
+                      ? "Guardada localmente — Pendiente de sincronizar a Supabase"
+                      : `Sincronizada con Supabase exitosamente`}
+                  </Text>
+                </View>
+
+                {/* Sección 1: Generales y Ubicación */}
+                <View style={[styles.detailSection, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                  <Text style={[styles.detailSectionTitle, { color: colors.primary }]}>LUGAR Y FECHA</Text>
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailKey, { color: colors.textMuted }]}>Fecha y Hora:</Text>
+                    <Text style={[styles.detailVal, { color: colors.text }]}>
+                      {infraccionSeleccionada.generales.fecha} a las {infraccionSeleccionada.generales.hora} hrs
                     </Text>
                   </View>
-
-                  {/* Sección Falta */}
-                  <View style={styles.modalSection}>
-                    <Text style={styles.modalSectionTitle}>
-                      FUNDAMENTO Y FALTA COMETIDA
-                    </Text>
-                    <Text style={styles.modalFundamento}>
-                      {infraccionSeleccionada.falta.fundamentoLegal}
-                    </Text>
-                    <Text style={styles.modalDesc}>
-                      {infraccionSeleccionada.falta.descripcion}
-                    </Text>
-                    <Text style={styles.modalUma}>
-                      Sanción sugerida: {infraccionSeleccionada.falta.montoMinUma}{" "}
-                      a {infraccionSeleccionada.falta.montoMaxUma} UMA
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailKey, { color: colors.textMuted }]}>Ubicación:</Text>
+                    <Text style={[styles.detailVal, { color: colors.text }]}>
+                      {infraccionSeleccionada.generales.lugar}
                     </Text>
                   </View>
+                  {infraccionSeleccionada.generales.coordenadas && (
+                    <View style={styles.detailRow}>
+                      <Text style={[styles.detailKey, { color: colors.textMuted }]}>Coordenadas GPS:</Text>
+                      <Text style={[styles.detailVal, { color: colors.text }]}>
+                        {infraccionSeleccionada.generales.coordenadas.latitud.toFixed(5)},{" "}
+                        {infraccionSeleccionada.generales.coordenadas.longitud.toFixed(5)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
 
-                  {/* Sección Motivación / Hechos */}
-                  <View style={styles.modalSection}>
-                    <Text style={styles.modalSectionTitle}>
-                      MOTIVACIÓN DE LOS HECHOS
-                    </Text>
-                    <Text style={styles.modalHechos}>
-                      {infraccionSeleccionada.hechos || "Sin observaciones adicionales."}
-                    </Text>
-                  </View>
-
-                  {/* Sección Infractor y Vehículo */}
-                  <View style={styles.modalSection}>
-                    <Text style={styles.modalSectionTitle}>
-                      INFRACTOR Y VEHÍCULO
-                    </Text>
-                    <Text style={styles.modalInfoLine}>
-                      <Text style={styles.bold}>Infractor: </Text>
-                      {infraccionSeleccionada.infractor.conductorAusente
-                        ? "CONDUCTOR AUSENTE"
-                        : infraccionSeleccionada.infractor.nombre}
-                    </Text>
-                    {!infraccionSeleccionada.infractor.conductorAusente && (
-                      <>
-                        <Text style={styles.modalInfoLine}>
-                          <Text style={styles.bold}>Domicilio: </Text>
-                          {infraccionSeleccionada.infractor.domicilio}
-                        </Text>
-                        <Text style={styles.modalInfoLine}>
-                          <Text style={styles.bold}>Licencia: </Text>
-                          {infraccionSeleccionada.infractor.numeroLicencia ||
-                            "No presentó"}
-                        </Text>
-                      </>
-                    )}
-                    <Text style={styles.modalInfoLine}>
-                      <Text style={styles.bold}>Vehículo: </Text>
-                      {infraccionSeleccionada.vehiculo.marca}{" "}
-                      {infraccionSeleccionada.vehiculo.lineaModelo} (
-                      {infraccionSeleccionada.vehiculo.color})
-                    </Text>
-                    <Text style={styles.modalInfoLine}>
-                      <Text style={styles.bold}>Placas: </Text>
+                {/* Sección 2: Vehículo */}
+                <View style={[styles.detailSection, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                  <Text style={[styles.detailSectionTitle, { color: colors.primary }]}>VEHÍCULO</Text>
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailKey, { color: colors.textMuted }]}>Placas:</Text>
+                    <Text style={[styles.detailVal, { color: colors.text, fontWeight: "700" }]}>
                       {infraccionSeleccionada.vehiculo.sinPlacas
-                        ? "SIN PLACAS"
+                        ? "SIN PLACAS REGISTRADAS"
                         : infraccionSeleccionada.vehiculo.placas}
                     </Text>
                   </View>
-
-                  {/* Lugar y GPS */}
-                  <View style={styles.modalSection}>
-                    <Text style={styles.modalSectionTitle}>UBICACIÓN Y GPS</Text>
-                    <Text style={styles.modalInfoLine}>
-                      <Text style={styles.bold}>Lugar: </Text>
-                      {infraccionSeleccionada.generales.lugar}
-                    </Text>
-                    {infraccionSeleccionada.generales.coordenadas && (
-                      <Text style={styles.modalInfoLine}>
-                        <Text style={styles.bold}>Coordenadas: </Text>
-                        {infraccionSeleccionada.generales.coordenadas.latitud},{" "}
-                        {infraccionSeleccionada.generales.coordenadas.longitud}
-                      </Text>
-                    )}
-                  </View>
-
-                  {/* Garantías Retenidas */}
-                  <View style={styles.modalSection}>
-                    <Text style={styles.modalSectionTitle}>
-                      GARANTÍA RETENIDA
-                    </Text>
-                    <Text style={styles.modalInfoLine}>
-                      {infraccionSeleccionada.garantiasRetenidas.length > 0
-                        ? infraccionSeleccionada.garantiasRetenidas
-                            .map((g) => g.toUpperCase())
-                            .join(", ")
-                        : "Ninguna garantía retenida."}
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailKey, { color: colors.textMuted }]}>Marca / Modelo:</Text>
+                    <Text style={[styles.detailVal, { color: colors.text }]}>
+                      {infraccionSeleccionada.vehiculo.marca} {infraccionSeleccionada.vehiculo.lineaModelo}
                     </Text>
                   </View>
-
-                  {/* Evidencias Fotográficas */}
-                  <View style={styles.modalSection}>
-                    <Text style={styles.modalSectionTitle}>
-                      EVIDENCIA FOTOGRÁFICA (3 FOTOS)
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailKey, { color: colors.textMuted }]}>Color / Tipo:</Text>
+                    <Text style={[styles.detailVal, { color: colors.text }]}>
+                      {infraccionSeleccionada.vehiculo.color} · {infraccionSeleccionada.vehiculo.tipo}
                     </Text>
-                    <View style={styles.modalPhotosGrid}>
-                      <View style={styles.modalPhotoItem}>
-                        <Text style={styles.modalPhotoTag}>1. Placa</Text>
-                        <Image
-                          source={{
-                            uri: infraccionSeleccionada.evidencias.fotoPlaca,
-                          }}
-                          style={styles.modalPhoto}
-                        />
+                  </View>
+                </View>
+
+                {/* Sección 3: Infractor */}
+                <View style={[styles.detailSection, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                  <Text style={[styles.detailSectionTitle, { color: colors.primary }]}>CONDUCTOR / INFRACTOR</Text>
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailKey, { color: colors.textMuted }]}>Estado:</Text>
+                    <Text style={[styles.detailVal, { color: colors.text }]}>
+                      {infraccionSeleccionada.infractor.conductorAusente
+                        ? "Conductor Ausente en el Sitio"
+                        : "Conductor Presente"}
+                    </Text>
+                  </View>
+                  {!infraccionSeleccionada.infractor.conductorAusente && (
+                    <>
+                      <View style={styles.detailRow}>
+                        <Text style={[styles.detailKey, { color: colors.textMuted }]}>Nombre:</Text>
+                        <Text style={[styles.detailVal, { color: colors.text }]}>
+                          {infraccionSeleccionada.infractor.nombre}
+                        </Text>
                       </View>
-                      <View style={styles.modalPhotoItem}>
-                        <Text style={styles.modalPhotoTag}>2. Contexto</Text>
-                        <Image
-                          source={{
-                            uri: infraccionSeleccionada.evidencias.fotoContexto,
-                          }}
-                          style={styles.modalPhoto}
-                        />
+                      <View style={styles.detailRow}>
+                        <Text style={[styles.detailKey, { color: colors.textMuted }]}>Licencia:</Text>
+                        <Text style={[styles.detailVal, { color: colors.text }]}>
+                          {infraccionSeleccionada.infractor.numeroLicencia || "No presentada"}
+                        </Text>
                       </View>
-                      <View style={styles.modalPhotoItem}>
-                        <Text style={styles.modalPhotoTag}>3. Documento</Text>
-                        <Image
-                          source={{
-                            uri: infraccionSeleccionada.evidencias.fotoDocumento,
-                          }}
-                          style={styles.modalPhoto}
-                        />
-                      </View>
+                    </>
+                  )}
+                </View>
+
+                {/* Sección 4: Falta e Importes */}
+                <View style={[styles.detailSection, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                  <Text style={[styles.detailSectionTitle, { color: colors.danger }]}>INFRACCIÓN COMETIDA</Text>
+                  <Text style={[styles.detailLawText, { color: colors.danger }]}>
+                    {infraccionSeleccionada.falta.fundamentoLegal}
+                  </Text>
+                  <Text style={[styles.detailDescText, { color: colors.text }]}>
+                    {infraccionSeleccionada.falta.descripcion}
+                  </Text>
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailKey, { color: colors.textMuted }]}>Sanción en UMAS:</Text>
+                    <Text style={[styles.detailVal, { color: colors.text }]}>
+                      {infraccionSeleccionada.falta.montoMinUma} a {infraccionSeleccionada.falta.montoMaxUma} UMAS
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailKey, { color: colors.textMuted }]}>Equivalente en Pesos:</Text>
+                    <Text style={[styles.detailVal, { color: colors.success, fontWeight: "700" }]}>
+                      ${(Number(infraccionSeleccionada.falta.montoMinUma) * valorUma).toFixed(2)} - $
+                      {(Number(infraccionSeleccionada.falta.montoMaxUma) * valorUma).toFixed(2)} MXN
+                    </Text>
+                  </View>
+                  <View style={[styles.hechosBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <Text style={[styles.hechosLabel, { color: colors.textMuted }]}>HECHOS CIRCUNSTANCIADOS:</Text>
+                    <Text style={[styles.hechosText, { color: colors.text }]}>
+                      {infraccionSeleccionada.hechos}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Sección 5: Evidencias Fotográficas */}
+                <View style={[styles.detailSection, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                  <Text style={[styles.detailSectionTitle, { color: colors.primary }]}>EVIDENCIAS FOTOGRÁFICAS (3 FOTOS)</Text>
+                  <View style={styles.photosGrid}>
+                    <View style={styles.photoItem}>
+                      <Image
+                        source={{ uri: infraccionSeleccionada.evidencias.fotoPlaca }}
+                        style={[styles.evidenceThumb, { borderColor: colors.border }]}
+                      />
+                      <Text style={[styles.photoLabel, { color: colors.textSecondary }]}>Placa</Text>
+                    </View>
+                    <View style={styles.photoItem}>
+                      <Image
+                        source={{ uri: infraccionSeleccionada.evidencias.fotoContexto }}
+                        style={[styles.evidenceThumb, { borderColor: colors.border }]}
+                      />
+                      <Text style={[styles.photoLabel, { color: colors.textSecondary }]}>Contexto</Text>
+                    </View>
+                    <View style={styles.photoItem}>
+                      <Image
+                        source={{ uri: infraccionSeleccionada.evidencias.fotoDocumento }}
+                        style={[styles.evidenceThumb, { borderColor: colors.border }]}
+                      />
+                      <Text style={[styles.photoLabel, { color: colors.textSecondary }]}>Garantía</Text>
                     </View>
                   </View>
+                </View>
 
-                  {/* Botón eliminar si es local */}
+                {/* Acciones del Modal */}
+                <View style={styles.modalActionButtons}>
                   <TouchableOpacity
-                    style={styles.modalDeleteBtn}
+                    style={[styles.deleteButton, { backgroundColor: colors.dangerBg, borderColor: colors.danger }]}
                     onPress={() =>
                       handleEliminarBoleta(
                         infraccionSeleccionada.id,
@@ -687,13 +675,18 @@ export default function DashboardScreen() {
                       )
                     }
                   >
-                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
-                    <Text style={styles.modalDeleteBtnText}>
-                      Eliminar Boleta del Registro Local
-                    </Text>
+                    <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                    <Text style={[styles.deleteButtonText, { color: colors.danger }]}>Eliminar Local</Text>
                   </TouchableOpacity>
-                </ScrollView>
-              </>
+
+                  <TouchableOpacity
+                    style={[styles.closeBottomBtn, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
+                    onPress={() => setInfraccionSeleccionada(null)}
+                  >
+                    <Text style={[styles.closeBottomBtnText, { color: colors.text }]}>Cerrar</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
             )}
           </View>
         </View>
@@ -705,63 +698,54 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#09090b",
   },
   topBar: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 16,
-    backgroundColor: "#121214",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#27272a",
   },
   agentInfoWrap: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
     flex: 1,
   },
   agentAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#18181b",
-    borderWidth: 1.5,
-    borderColor: "#3b82f6",
-    justifyContent: "center",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
     alignItems: "center",
+    justifyContent: "center",
   },
   badgeRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     marginBottom: 2,
   },
   placaPill: {
-    backgroundColor: "#2563eb",
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
+    borderWidth: 1,
   },
   placaText: {
-    color: "#ffffff",
-    fontWeight: "800",
     fontSize: 11,
+    fontWeight: "800",
     letterSpacing: 0.5,
   },
   statusPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    backgroundColor: "rgba(16, 185, 129, 0.15)",
-    paddingHorizontal: 8,
+    gap: 4,
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "rgba(16, 185, 129, 0.3)",
   },
   statusDot: {
     width: 6,
@@ -770,55 +754,73 @@ const styles = StyleSheet.create({
     backgroundColor: "#10b981",
   },
   statusText: {
-    color: "#34d399",
     fontSize: 10,
     fontWeight: "700",
   },
   agentName: {
-    color: "#ffffff",
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
-    maxWidth: 220,
+  },
+  topRightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   logoutButton: {
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: "#18181b",
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     borderWidth: 1,
-    borderColor: "#27272a",
+    alignItems: "center",
+    justifyContent: "center",
   },
   listContainer: {
     padding: 16,
     paddingBottom: 40,
   },
   heroCard: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#18181b",
-    borderWidth: 1,
-    borderColor: "#27272a",
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 16,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
   },
   heroTextCol: {
     flex: 1,
   },
+  heroTagRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+    flexWrap: "wrap",
+  },
   municipioHeader: {
-    color: "#60a5fa",
     fontSize: 11,
     fontWeight: "800",
-    letterSpacing: 1.5,
+    letterSpacing: 1,
+  },
+  umaTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  umaTagText: {
+    fontSize: 10,
+    fontWeight: "700",
   },
   heroTitle: {
-    color: "#ffffff",
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "800",
-    marginTop: 2,
+    letterSpacing: -0.3,
   },
   heroSubtitle: {
-    color: "#a1a1aa",
     fontSize: 12,
     marginTop: 2,
   },
@@ -826,28 +828,25 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#1e293b",
-    justifyContent: "center",
-    alignItems: "center",
     borderWidth: 1,
-    borderColor: "#334155",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 10,
   },
   newInfractionButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#2563eb",
+    padding: 16,
     borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 18,
     marginBottom: 16,
     shadowColor: "#2563eb",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   btnIconWrap: {
-    marginRight: 14,
+    marginRight: 12,
   },
   btnTextWrap: {
     flex: 1,
@@ -855,453 +854,404 @@ const styles = StyleSheet.create({
   btnMainTitle: {
     color: "#ffffff",
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "800",
     letterSpacing: 0.5,
   },
   btnSubTitle: {
-    color: "#bfdbfe",
-    fontSize: 12,
+    color: "rgba(255, 255, 255, 0.85)",
+    fontSize: 11,
     marginTop: 2,
   },
   statsRow: {
     flexDirection: "row",
     gap: 10,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   statBox: {
     flex: 1,
-    backgroundColor: "#18181b",
-    borderWidth: 1,
-    borderColor: "#27272a",
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 12,
-    alignItems: "center",
-  },
-  statBoxAmber: {
-    borderColor: "rgba(245, 158, 11, 0.3)",
-    backgroundColor: "rgba(245, 158, 11, 0.08)",
-  },
-  statBoxGreen: {
-    borderColor: "rgba(16, 185, 129, 0.3)",
-    backgroundColor: "rgba(16, 185, 129, 0.08)",
+    borderWidth: 1,
   },
   statHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    justifyContent: "space-between",
   },
   statNumber: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#ffffff",
   },
   statLabel: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#a1a1aa",
-    marginTop: 4,
     letterSpacing: 0.5,
+    marginTop: 4,
   },
   syncCard: {
-    backgroundColor: "#121214",
-    borderWidth: 1,
-    borderColor: "#27272a",
     borderRadius: 14,
-    padding: 16,
+    padding: 14,
+    borderWidth: 1,
     marginBottom: 20,
     gap: 12,
   },
-  syncInfo: {},
+  syncInfo: {
+    flex: 1,
+  },
   syncIconRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    marginBottom: 4,
   },
   syncTitle: {
-    color: "#ffffff",
     fontSize: 14,
     fontWeight: "700",
   },
   syncSubtitle: {
-    color: "#a1a1aa",
-    fontSize: 12,
-    marginTop: 3,
+    fontSize: 11,
   },
   syncButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#d97706",
-    paddingVertical: 12,
     borderRadius: 10,
-    gap: 8,
-  },
-  syncButtonSecondary: {
-    backgroundColor: "#27272a",
-  },
-  syncButtonText: {
-    color: "#ffffff",
-    fontSize: 13,
-    fontWeight: "800",
-    letterSpacing: 0.5,
+    paddingVertical: 10,
+    gap: 6,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
-  historySectionHeader: {
-    marginBottom: 12,
-  },
-  sectionTitle: {
+  syncButtonText: {
     color: "#ffffff",
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  sectionSubtitle: {
-    color: "#a1a1aa",
     fontSize: 12,
-    marginTop: 2,
-  },
-  tabsContainer: {
-    flexDirection: "row",
-    backgroundColor: "#18181b",
-    borderRadius: 10,
-    padding: 4,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#27272a",
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 9,
-    alignItems: "center",
-    borderRadius: 8,
-  },
-  tabActive: {
-    backgroundColor: "#2563eb",
-  },
-  tabActiveAmber: {
-    backgroundColor: "#b45309",
-  },
-  tabActiveGreen: {
-    backgroundColor: "#059669",
-  },
-  tabText: {
-    color: "#a1a1aa",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  tabTextActive: {
-    color: "#ffffff",
-    fontWeight: "800",
-  },
-  tabTextAmber: {
-    color: "#ffffff",
-    fontWeight: "800",
-  },
-  tabTextGreen: {
-    color: "#ffffff",
-    fontWeight: "800",
-  },
-  emptyContainer: {
-    alignItems: "center",
-    paddingVertical: 48,
-    paddingHorizontal: 24,
-  },
-  emptyTitle: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "700",
-    marginTop: 12,
-  },
-  emptyDesc: {
-    color: "#71717a",
-    fontSize: 13,
-    textAlign: "center",
-    marginTop: 6,
-    lineHeight: 18,
-  },
-  cardItem: {
-    backgroundColor: "#121214",
-    borderWidth: 1,
-    borderColor: "#27272a",
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  cardItemHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 10,
-  },
-  folioBadgeWrap: {},
-  cardFolio: {
-    color: "#ffffff",
-    fontSize: 15,
     fontWeight: "800",
     letterSpacing: 0.5,
   },
-  cardDateTime: {
-    color: "#a1a1aa",
-    fontSize: 11,
-    marginTop: 2,
-  },
-  statusBadge: {
+  sectionHeaderRow: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    marginBottom: 8,
   },
-  statusBadgeAmber: {
-    backgroundColor: "rgba(245, 158, 11, 0.15)",
-    borderWidth: 1,
-    borderColor: "rgba(245, 158, 11, 0.4)",
-  },
-  statusBadgeGreen: {
-    backgroundColor: "rgba(16, 185, 129, 0.15)",
-    borderWidth: 1,
-    borderColor: "rgba(16, 185, 129, 0.4)",
-  },
-  statusBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  statusBadgeTextAmber: {
-    color: "#f59e0b",
-  },
-  statusBadgeTextGreen: {
-    color: "#10b981",
-  },
-  faltaBox: {
-    backgroundColor: "#18181b",
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 10,
-    borderLeftWidth: 3,
-    borderLeftColor: "#3b82f6",
-  },
-  fundamentoTag: {
-    color: "#60a5fa",
+  sectionTitle: {
     fontSize: 12,
     fontWeight: "800",
+    letterSpacing: 0.8,
   },
-  faltaDesc: {
-    color: "#e4e4e7",
-    fontSize: 13,
-    marginTop: 2,
+  sectionCounter: {
+    fontSize: 11,
+  },
+  tabsWrapper: {
+    flexDirection: "row",
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 1,
+    marginBottom: 14,
+    gap: 4,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  tabBtnActive: {},
+  tabBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  emptyContainer: {
+    padding: 36,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    fontSize: 12,
+    textAlign: "center",
     lineHeight: 18,
   },
-  detailsGrid: {
-    gap: 6,
-    marginBottom: 10,
+  ticketCard: {
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    marginBottom: 12,
   },
-  detailRow: {
+  ticketTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  folioBadgeRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-  detailText: {
-    color: "#d4d4d8",
+  ticketFolio: {
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  syncBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  syncBadgeText: {
+    fontSize: 9,
+    fontWeight: "800",
+  },
+  ticketDate: {
+    fontSize: 11,
+  },
+  ticketBody: {
+    gap: 6,
+  },
+  vehicleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  platePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  platePillText: {
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  vehicleModel: {
     fontSize: 12,
     flex: 1,
   },
-  garantiasRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flexWrap: "wrap",
-    marginBottom: 10,
-  },
-  garantiasLabel: {
-    color: "#a1a1aa",
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  garantiaChip: {
-    backgroundColor: "#27272a",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  garantiaChipText: {
-    color: "#f4f4f5",
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  evidenciasThumbnailsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#27272a",
-  },
-  thumbWrap: {
-    alignItems: "center",
-  },
-  thumbnail: {
-    width: 48,
-    height: 48,
-    borderRadius: 6,
-    backgroundColor: "#27272a",
-  },
-  thumbLabel: {
-    color: "#a1a1aa",
-    fontSize: 9,
-    marginTop: 2,
-  },
-  verDetalleArrow: {
-    marginLeft: "auto",
+  locationRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
-  verDetalleText: {
-    color: "#60a5fa",
+  locationText: {
+    fontSize: 11,
+    flex: 1,
+  },
+  violationHighlight: {
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 4,
+  },
+  violationLegal: {
+    fontSize: 11,
+    fontWeight: "800",
+    marginBottom: 2,
+  },
+  violationDesc: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  ticketFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    marginTop: 6,
+    paddingTop: 6,
+  },
+  amountWrap: {
+    flex: 1,
+  },
+  amountLabel: {
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  amountValue: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  detailLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
+  detailLinkText: {
     fontSize: 12,
     fontWeight: "700",
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.85)",
+    backgroundColor: "rgba(0, 0, 0, 0.75)",
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#121214",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     maxHeight: "90%",
     borderWidth: 1,
-    borderColor: "#27272a",
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
+    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#27272a",
   },
-  modalFolio: {
-    color: "#ffffff",
+  modalSubtitle: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+  },
+  modalTitle: {
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "800",
   },
-  modalDate: {
-    color: "#a1a1aa",
-    fontSize: 12,
-    marginTop: 2,
+  closeModalBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  modalCloseBtn: {
-    padding: 6,
-    backgroundColor: "#27272a",
-    borderRadius: 20,
+  modalScroll: {
+    flexGrow: 0,
   },
-  modalBody: {
-    padding: 20,
+  modalScrollInner: {
+    padding: 16,
+    gap: 12,
+    paddingBottom: 32,
   },
-  modalStatusBanner: {
+  syncStatusBanner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
+    borderRadius: 10,
+    borderWidth: 1,
   },
-  modalStatusText: {
-    fontSize: 13,
+  syncStatusText: {
+    fontSize: 12,
     fontWeight: "700",
     flex: 1,
   },
-  modalSection: {
-    marginBottom: 18,
-    backgroundColor: "#18181b",
-    padding: 14,
-    borderRadius: 10,
+  detailSection: {
+    padding: 12,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#27272a",
+    gap: 6,
   },
-  modalSectionTitle: {
-    color: "#60a5fa",
+  detailSectionTitle: {
     fontSize: 11,
     fontWeight: "800",
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  modalFundamento: {
-    color: "#ffffff",
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  modalDesc: {
-    color: "#d4d4d8",
-    fontSize: 13,
-    marginTop: 4,
-    lineHeight: 18,
-  },
-  modalUma: {
-    color: "#f59e0b",
-    fontSize: 12,
-    fontWeight: "700",
-    marginTop: 6,
-  },
-  modalHechos: {
-    color: "#e4e4e7",
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  modalInfoLine: {
-    color: "#e4e4e7",
-    fontSize: 13,
+    letterSpacing: 0.8,
     marginBottom: 4,
   },
-  bold: {
-    fontWeight: "700",
-    color: "#ffffff",
-  },
-  modalPhotosGrid: {
+  detailRow: {
     flexDirection: "row",
-    gap: 8,
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 12,
   },
-  modalPhotoItem: {
+  detailKey: {
+    fontSize: 12,
+    width: 130,
+  },
+  detailVal: {
+    fontSize: 12,
+    fontWeight: "500",
+    flex: 1,
+    textAlign: "right",
+  },
+  detailLawText: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  detailDescText: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  hechosBox: {
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 6,
+  },
+  hechosLabel: {
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  hechosText: {
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  photosGrid: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 6,
+  },
+  photoItem: {
     flex: 1,
     alignItems: "center",
   },
-  modalPhotoTag: {
-    color: "#a1a1aa",
-    fontSize: 10,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  modalPhoto: {
+  evidenceThumb: {
     width: "100%",
-    height: 100,
+    height: 90,
     borderRadius: 8,
-    backgroundColor: "#27272a",
+    borderWidth: 1,
   },
-  modalDeleteBtn: {
+  photoLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    marginTop: 4,
+  },
+  modalActionButtons: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 10,
+  },
+  deleteButton: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
-    borderWidth: 1,
-    borderColor: "rgba(239, 68, 68, 0.3)",
-    paddingVertical: 14,
+    padding: 12,
     borderRadius: 10,
-    marginTop: 10,
-    marginBottom: 40,
+    borderWidth: 1,
+    gap: 6,
   },
-  modalDeleteBtnText: {
-    color: "#ef4444",
-    fontSize: 13,
+  deleteButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  closeBottomBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  closeBottomBtnText: {
+    fontSize: 12,
     fontWeight: "700",
   },
 });

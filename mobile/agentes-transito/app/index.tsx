@@ -13,11 +13,14 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../src/contexts/AuthContext";
+import { useTheme } from "../src/contexts/ThemeContext";
+import { ThemeToggle } from "../src/components/ThemeToggle";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function LoginScreen() {
   const router = useRouter();
   const { signIn, isLoading, isAuthenticated, user } = useAuth();
+  const { colors, isDark } = useTheme();
 
   const [placa, setPlaca] = useState("");
   const [password, setPassword] = useState("");
@@ -61,48 +64,58 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.keyboardContainer}
+      style={[styles.keyboardContainer, { backgroundColor: colors.background }]}
     >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Barra superior con selector de tema */}
+        <View style={styles.topBar}>
+          <View style={styles.topLiveTag}>
+            <View style={styles.onlineDot} />
+            <Text style={[styles.topLiveText, { color: colors.textSecondary }]}>SISTEMA EN LÍNEA</Text>
+          </View>
+          <ThemeToggle />
+        </View>
+
         {/* Header Institucional de Uriangato */}
         <View style={styles.header}>
-          <View style={styles.shieldBadge}>
-            <Ionicons name="shield-checkmark" size={44} color="#3b82f6" />
+          <View style={[styles.shieldBadge, { backgroundColor: colors.primaryBg, borderColor: colors.border }]}>
+            <Ionicons name="shield-checkmark" size={44} color={colors.primary} />
           </View>
-          <Text style={styles.govTitle}>MUNICIPIO DE URIANGATO</Text>
-          <Text style={styles.deptTitle}>Movilidad y Transporte</Text>
-          <View style={styles.badgePill}>
-            <View style={styles.onlineDot} />
-            <Text style={styles.badgePillText}>SISTEMA DE BOLETAS DE INFRACCIÓN</Text>
+          <Text style={[styles.govTitle, { color: colors.primary }]}>MUNICIPIO DE URIANGATO</Text>
+          <Text style={[styles.deptTitle, { color: colors.text }]}>Movilidad y Transporte</Text>
+          <View style={[styles.badgePill, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+            <Text style={[styles.badgePillText, { color: colors.textSecondary }]}>
+              SISTEMA DE BOLETAS DE INFRACCIÓN
+            </Text>
           </View>
         </View>
 
         {/* Tarjeta de Formulario de Acceso */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Acceso de Agentes</Text>
-          <Text style={styles.cardSubtitle}>
-            Identifíquese con su número de placa/credencial asignado.
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>Acceso de Agentes</Text>
+          <Text style={[styles.cardSubtitle, { color: colors.textSecondary }]}>
+            Identifíquese con su placa/credencial asignada en el padrón de Uriangato.
           </Text>
 
           {errorMsg && (
-            <View style={styles.errorBox}>
-              <Ionicons name="alert-circle" size={18} color="#ef4444" />
-              <Text style={styles.errorText}>{errorMsg}</Text>
+            <View style={[styles.errorBox, { backgroundColor: colors.dangerBg, borderColor: colors.danger }]}>
+              <Ionicons name="alert-circle" size={18} color={colors.danger} />
+              <Text style={[styles.errorText, { color: colors.danger }]}>{errorMsg}</Text>
             </View>
           )}
 
           {/* Campo Placa / Credencial */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>NÚMERO DE PLACA / CREDENCIAL</Text>
-            <View style={styles.inputWrapper}>
-              <Ionicons name="id-card-outline" size={20} color="#a1a1aa" style={styles.inputIcon} />
+            <Text style={[styles.label, { color: colors.textSecondary }]}>NÚMERO DE PLACA / CREDENCIAL</Text>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+              <Ionicons name="id-card-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text }]}
                 placeholder="Ej. AGT-204"
-                placeholderTextColor="#71717a"
+                placeholderTextColor={colors.textMuted}
                 value={placa}
                 onChangeText={(val) => {
                   setPlaca(val.toUpperCase());
@@ -116,13 +129,13 @@ export default function LoginScreen() {
 
           {/* Campo Contraseña */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>CONTRASEÑA</Text>
-            <View style={styles.inputWrapper}>
-              <Ionicons name="lock-closed-outline" size={20} color="#a1a1aa" style={styles.inputIcon} />
+            <Text style={[styles.label, { color: colors.textSecondary }]}>CONTRASEÑA</Text>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
+              <Ionicons name="lock-closed-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text }]}
                 placeholder="••••••••"
-                placeholderTextColor="#71717a"
+                placeholderTextColor={colors.textMuted}
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={(val) => {
@@ -138,7 +151,7 @@ export default function LoginScreen() {
                 <Ionicons
                   name={showPassword ? "eye-off-outline" : "eye-outline"}
                   size={20}
-                  color="#a1a1aa"
+                  color={colors.textMuted}
                 />
               </TouchableOpacity>
             </View>
@@ -146,10 +159,10 @@ export default function LoginScreen() {
 
           {/* Botón de Entrada Principal */}
           <TouchableOpacity
-            style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
+            style={[styles.primaryButton, { backgroundColor: colors.primary }, isLoading && styles.buttonDisabled]}
             onPress={handleLogin}
             disabled={isLoading}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
           >
             {isLoading ? (
               <ActivityIndicator color="#ffffff" />
@@ -163,22 +176,24 @@ export default function LoginScreen() {
 
           {/* Botón de prueba rápida */}
           <TouchableOpacity
-            style={styles.demoButton}
+            style={[styles.demoButton, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
             onPress={handleAutoFillDemo}
             activeOpacity={0.7}
           >
-            <Ionicons name="flash-outline" size={16} color="#60a5fa" />
-            <Text style={styles.demoButtonText}>Autocompletar Agente de Prueba (AGT-204)</Text>
+            <Ionicons name="flash-outline" size={16} color={colors.primary} />
+            <Text style={[styles.demoButtonText, { color: colors.primary }]}>
+              Autocompletar Agente de Prueba (AGT-204)
+            </Text>
           </TouchableOpacity>
         </View>
 
         {/* Indicador de Respaldo Offline */}
-        <View style={styles.offlineNotice}>
-          <Ionicons name="cloud-offline-outline" size={20} color="#10b981" />
+        <View style={[styles.offlineNotice, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Ionicons name="cloud-offline-outline" size={22} color={colors.success} />
           <View style={styles.offlineNoticeTextWrap}>
-            <Text style={styles.offlineNoticeTitle}>Operación Offline Garantizada</Text>
-            <Text style={styles.offlineNoticeDesc}>
-              El sistema guarda las boletas en la memoria del dispositivo y sincroniza al recuperar señal.
+            <Text style={[styles.offlineNoticeTitle, { color: colors.text }]}>Operación Offline Garantizada</Text>
+            <Text style={[styles.offlineNoticeDesc, { color: colors.textSecondary }]}>
+              Las boletas se almacenan localmente y se sincronizan con Supabase al contar con cobertura.
             </Text>
           </View>
         </View>
@@ -190,157 +205,136 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   keyboardContainer: {
     flex: 1,
-    backgroundColor: "#09090b",
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: 20,
-    paddingVertical: 36,
+    paddingVertical: 24,
+  },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  topLiveTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  topLiveText: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  onlineDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#10b981",
   },
   header: {
     alignItems: "center",
-    marginBottom: 28,
+    marginBottom: 24,
   },
   shieldBadge: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#18181b",
-    borderWidth: 2,
-    borderColor: "#27272a",
-    justifyContent: "center",
+    borderWidth: 1,
     alignItems: "center",
-    marginBottom: 16,
-    shadowColor: "#3b82f6",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 8,
+    justifyContent: "center",
+    marginBottom: 14,
   },
   govTitle: {
     fontSize: 12,
+    fontWeight: "800",
     letterSpacing: 2,
-    color: "#a1a1aa",
-    fontWeight: "700",
-    textTransform: "uppercase",
+    marginBottom: 4,
   },
   deptTitle: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#ffffff",
-    marginTop: 4,
-    textAlign: "center",
+    letterSpacing: -0.5,
+    marginBottom: 10,
   },
   badgePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#18181b",
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 20,
-    marginTop: 10,
     borderWidth: 1,
-    borderColor: "#27272a",
-  },
-  onlineDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#10b981",
-    marginRight: 8,
   },
   badgePillText: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#d4d4d8",
     letterSpacing: 0.5,
   },
   card: {
-    backgroundColor: "#121214",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#27272a",
+    borderRadius: 20,
     padding: 24,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 10,
+    borderWidth: 1,
+    marginBottom: 20,
   },
   cardTitle: {
     fontSize: 19,
-    fontWeight: "700",
-    color: "#ffffff",
+    fontWeight: "800",
+    marginBottom: 6,
   },
   cardSubtitle: {
     fontSize: 13,
-    color: "#a1a1aa",
-    marginTop: 4,
-    marginBottom: 20,
     lineHeight: 18,
+    marginBottom: 20,
   },
   errorBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(239, 68, 68, 0.15)",
+    padding: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(239, 68, 68, 0.4)",
-    borderRadius: 8,
-    padding: 10,
     marginBottom: 16,
     gap: 8,
   },
   errorText: {
-    color: "#f87171",
     fontSize: 13,
+    fontWeight: "600",
     flex: 1,
   },
   inputGroup: {
-    marginBottom: 18,
+    marginBottom: 16,
   },
   label: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#d4d4d8",
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     marginBottom: 8,
   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#18181b",
-    borderWidth: 1.5,
-    borderColor: "#3f3f46",
-    borderRadius: 10,
+    borderWidth: 1,
+    borderRadius: 12,
     paddingHorizontal: 14,
-    minHeight: 52,
+    height: 52,
   },
   inputIcon: {
     marginRight: 10,
   },
   input: {
     flex: 1,
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "600",
-    paddingVertical: 12,
+    fontSize: 15,
+    fontWeight: "500",
+    paddingVertical: 0,
   },
   eyeIcon: {
-    padding: 4,
+    padding: 6,
   },
   primaryButton: {
-    backgroundColor: "#2563eb",
-    borderRadius: 10,
-    paddingVertical: 15,
+    borderRadius: 12,
+    height: 52,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 8,
-    shadowColor: "#2563eb",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 6,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -348,54 +342,46 @@ const styles = StyleSheet.create({
   buttonContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
   primaryButtonText: {
     color: "#ffffff",
     fontSize: 15,
     fontWeight: "800",
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
   },
   demoButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 16,
-    paddingVertical: 10,
-    backgroundColor: "rgba(59, 130, 246, 0.1)",
-    borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(59, 130, 246, 0.3)",
-    gap: 8,
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginTop: 14,
+    gap: 6,
   },
   demoButtonText: {
-    color: "#93c5fd",
     fontSize: 13,
     fontWeight: "600",
   },
   offlineNotice: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(16, 185, 129, 0.1)",
-    borderWidth: 1,
-    borderColor: "rgba(16, 185, 129, 0.25)",
-    borderRadius: 12,
     padding: 14,
-    marginTop: 24,
+    borderRadius: 14,
+    borderWidth: 1,
     gap: 12,
   },
   offlineNoticeTextWrap: {
     flex: 1,
   },
   offlineNoticeTitle: {
-    color: "#34d399",
     fontSize: 13,
     fontWeight: "700",
+    marginBottom: 2,
   },
   offlineNoticeDesc: {
-    color: "#a1a1aa",
     fontSize: 12,
-    marginTop: 2,
     lineHeight: 16,
   },
 });

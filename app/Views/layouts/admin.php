@@ -93,6 +93,20 @@
             <span class="sidebar-text">Convocatorias UR-01</span>
         </a>
 
+        <div class="sidebar-section-title mt-3">App Tránsito</div>
+        <a href="/admin/app-transito" class="sidebar-link <?= uri_string() === 'admin/app-transito' ? 'active' : '' ?>">
+            <i class="bi bi-sliders me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Configuración & UMA</span>
+        </a>
+        <a href="/admin/app-transito/boletas" class="sidebar-link <?= uri_string() === 'admin/app-transito/boletas' ? 'active' : '' ?>">
+            <i class="bi bi-receipt-cutoff me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Boletas de Campo</span>
+        </a>
+        <a href="/admin/app-transito/catalogo" class="sidebar-link <?= uri_string() === 'admin/app-transito/catalogo' ? 'active' : '' ?>">
+            <i class="bi bi-journal-bookmark me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Catálogo de Faltas</span>
+        </a>
+
         <div class="sidebar-section-title mt-3">Sesión</div>
         <div class="px-3 py-2 text-white-50 small sidebar-user-info">
             <div class="fw-semibold text-white text-truncate sidebar-text"><?= esc(session('nombre_completo') ?? session('username') ?? 'Usuario') ?></div>

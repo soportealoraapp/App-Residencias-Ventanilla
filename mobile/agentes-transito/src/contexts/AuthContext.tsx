@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { loginAgente } from "../services/supabase";
 
 export interface AgenteUsuario {
   id: number;
@@ -45,8 +46,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (placa: string, password: string): Promise<void> => {
     setIsLoading(true);
     try {
-      // Simulación de autenticación offline/online robusta para agentes de campo
-      // Permite acceso con cualquier placa válida o credenciales de Uriangato
       if (!placa || !password) {
         throw new Error("Debe ingresar su número de placa/credencial y contraseña.");
       }
@@ -55,14 +54,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error("La contraseña debe tener al menos 3 caracteres.");
       }
 
+      // Autenticación con Supabase en tiempo real (con fallback offline automático)
+      const agente = await loginAgente(placa, password);
+
       const agenteFormateado: AgenteUsuario = {
-        id: 104,
-        placa: placa.toUpperCase().trim(),
-        nombre: placa.toUpperCase().includes("204")
-          ? "Oficial Carlos Mendoza Ruiz"
-          : `Oficial ${placa.toUpperCase().trim()}`,
-        rol: "Agente Vial Operativo",
-        sector: "Sector Centro - Uriangato, Gto.",
+        id: agente.id,
+        placa: agente.placa,
+        nombre: agente.nombre_completo,
+        rol: agente.rol === "operativo" ? "Agente Vial Operativo" : agente.rol,
+        sector: agente.sector || "Sector Centro - Uriangato, Gto.",
       };
 
       await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(agenteFormateado));

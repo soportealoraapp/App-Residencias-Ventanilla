@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { Infraccion } from "../types/infraccion";
+import { Infraccion, FaltaCatalogo } from "../types/infraccion";
 import {
   actualizarInfraccionesLocales,
   eliminarInfraccionLocal,
@@ -8,6 +8,10 @@ import {
   obtenerUltimaSincronizacion,
 } from "../services/storage";
 import { sincronizarInfraccionesLocales, SyncResultado } from "../services/sync";
+import {
+  fetchCatalogoInfracciones,
+  fetchParametros,
+} from "../services/supabase";
 import { CATALOGO_FALTAS_URIANGATO } from "../constants/catalogoInfracciones";
 
 interface InfraccionesContextValue {
@@ -19,6 +23,8 @@ interface InfraccionesContextValue {
   isLoading: boolean;
   isSyncing: boolean;
   ultimaSincronizacion: string | null;
+  valorUma: number;
+  catalogo: FaltaCatalogo[];
   guardarInfraccion: (infraccion: Infraccion) => Promise<void>;
   sincronizar: () => Promise<SyncResultado>;
   eliminar: (id: string) => Promise<void>;
@@ -61,7 +67,7 @@ const DATOS_INICIALES_DEMO: Infraccion[] = [
       color: "Plata",
       tipo: "particular",
     },
-    falta: CATALOGO_FALTAS_URIANGATO[0], // Semáforo en rojo
+    falta: CATALOGO_FALTAS_URIANGATO[0],
     hechos: "El conductor del vehículo particular no respetó la señal de alto preventivo/fijo con luz roja del semáforo en el crucero señalado, cruzando con flujo peatonal activo.",
     garantiasRetenidas: ["licencia"],
     evidencias: {
@@ -104,7 +110,7 @@ const DATOS_INICIALES_DEMO: Infraccion[] = [
       color: "Rojo Tinto",
       tipo: "particular",
     },
-    falta: CATALOGO_FALTAS_URIANGATO[3], // Estacionado en lugar prohibido / rampa
+    falta: CATALOGO_FALTAS_URIANGATO[3],
     hechos: "Vehículo estacionado obstruyendo completamente la rampa de acceso peatonal y personas con discapacidad, sin conductor a bordo tras 15 minutos de aviso sonoro.",
     garantiasRetenidas: ["placa"],
     evidencias: {
@@ -123,13 +129,15 @@ export function InfraccionesProvider({ children }: { children: React.ReactNode }
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [ultimaSincronizacion, setUltimaSincronizacion] = useState<string | null>(null);
+  const [valorUma, setValorUma] = useState<number>(117.31);
+  const [catalogo, setCatalogo] = useState<FaltaCatalogo[]>(CATALOGO_FALTAS_URIANGATO);
 
   const cargarDatos = async () => {
     setIsLoading(true);
     try {
+      // 1. Cargar infracciones locales
       let items = await obtenerInfraccionesLocales();
       if (!items || items.length === 0) {
-        // Cargar datos demo iniciales si está vacío para experiencia lista para usar
         await actualizarInfraccionesLocales(DATOS_INICIALES_DEMO);
         items = DATOS_INICIALES_DEMO;
       }
@@ -137,6 +145,35 @@ export function InfraccionesProvider({ children }: { children: React.ReactNode }
 
       const ultimaSync = await obtenerUltimaSincronizacion();
       setUltimaSincronizacion(ultimaSync);
+
+      // 2. Cargar UMA y parámetros desde Supabase en background
+      fetchParametros()
+        .then((params) => {
+          if (params.valor_uma_vigente) {
+            const parsed = parseFloat(params.valor_uma_vigente);
+            if (!isNaN(parsed) && parsed > 0) {
+              setValorUma(parsed);
+            }
+          }
+        })
+        .catch(() => {});
+
+      // 3. Cargar catálogo oficial desde Supabase
+      fetchCatalogoInfracciones()
+        .then((dbFaltas) => {
+          if (dbFaltas && dbFaltas.length > 0) {
+            const mapped: FaltaCatalogo[] = dbFaltas.map((f) => ({
+              id: `falta-${f.id}`,
+              fundamentoLegal: f.fundamento_legal,
+              descripcion: f.descripcion,
+              categoria: f.categoria,
+              montoMinUma: Number(f.monto_min_uma),
+              montoMaxUma: Number(f.monto_max_uma),
+            }));
+            setCatalogo(mapped);
+          }
+        })
+        .catch(() => {});
     } catch (err) {
       console.error("Error cargando infracciones:", err);
     } finally {
@@ -192,12 +229,14 @@ export function InfraccionesProvider({ children }: { children: React.ReactNode }
       isLoading,
       isSyncing,
       ultimaSincronizacion,
+      valorUma,
+      catalogo,
       guardarInfraccion,
       sincronizar,
       eliminar,
       recargar: cargarDatos,
     }),
-    [infracciones, pendientes, sincronizadas, isLoading, isSyncing, ultimaSincronizacion]
+    [infracciones, pendientes, sincronizadas, isLoading, isSyncing, ultimaSincronizacion, valorUma, catalogo]
   );
 
   return (
