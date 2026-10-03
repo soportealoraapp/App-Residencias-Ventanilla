@@ -16,8 +16,7 @@ import {
   Platform,
   BackHandler,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
+import { useRouter, useFocusEffect } from "expo-router";
 import * as Location from "expo-location";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useAuth } from "../src/contexts/AuthContext";
