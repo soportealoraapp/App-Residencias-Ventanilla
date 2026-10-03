@@ -21,9 +21,9 @@ export interface FaltaCatalogo {
 }
 
 export interface InfraccionEvidencias {
-  fotoPlaca: string;     // URI o base64
-  fotoContexto: string;  // URI o base64
-  fotoDocumento: string; // URI o base64
+  fotoPlaca: string | null;     // URI local (expo-camera) o base64
+  fotoContexto: string | null;  // URI local (expo-camera) o base64
+  fotoDocumento: string | null; // URI local (expo-camera) o base64
 }
 
 export interface Infraccion {
@@ -36,7 +36,7 @@ export interface Infraccion {
     rol?: string;
   };
   generales: {
-    fecha: string;       // Formato YYYY-MM-DD o DD/MM/YYYY
+    fecha: string;       // Formato YYYY-MM-DD
     hora: string;        // Formato HH:mm
     lugar: string;
     coordenadas?: {
@@ -59,7 +59,8 @@ export interface Infraccion {
     color: string;
     tipo: TipoVehiculo;
   };
-  falta: FaltaCatalogo;
+  /** Array de una o más faltas cometidas simultáneamente */
+  faltas: FaltaCatalogo[];
   hechos: string;
   garantiasRetenidas: GarantiaRetenida[];
   detalleGarantia?: {

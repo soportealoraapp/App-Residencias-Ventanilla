@@ -33,11 +33,11 @@ interface InfraccionesContextValue {
 
 const InfraccionesContext = createContext<InfraccionesContextValue | undefined>(undefined);
 
-// Infracciones muestra iniciales representativas de Uriangato
+// Infracciones muestra solo para DEV — NUNCA se cargan automáticamente en producción
 const DATOS_INICIALES_DEMO: Infraccion[] = [
   {
     id: "demo-inf-01",
-    folio: "BOLETA-URI-2026-0038",
+    folio: "BOLETA-URI-2026-AGT204-DEMO1",
     agente: {
       placa: "AGT-204",
       nombre: "Oficial Carlos Mendoza Ruiz",
@@ -67,7 +67,7 @@ const DATOS_INICIALES_DEMO: Infraccion[] = [
       color: "Plata",
       tipo: "particular",
     },
-    falta: CATALOGO_FALTAS_URIANGATO[0],
+    faltas: [CATALOGO_FALTAS_URIANGATO[0]],
     hechos: "El conductor del vehículo particular no respetó la señal de alto preventivo/fijo con luz roja del semáforo en el crucero señalado, cruzando con flujo peatonal activo.",
     garantiasRetenidas: ["licencia"],
     evidencias: {
@@ -81,7 +81,7 @@ const DATOS_INICIALES_DEMO: Infraccion[] = [
   },
   {
     id: "demo-inf-02",
-    folio: "BOLETA-URI-2026-0037",
+    folio: "BOLETA-URI-2026-AGT204-DEMO2",
     agente: {
       placa: "AGT-204",
       nombre: "Oficial Carlos Mendoza Ruiz",
@@ -110,7 +110,11 @@ const DATOS_INICIALES_DEMO: Infraccion[] = [
       color: "Rojo Tinto",
       tipo: "particular",
     },
-    falta: CATALOGO_FALTAS_URIANGATO[3],
+    // Ejemplo con MÚLTIPLES faltas simultaneas
+    faltas: [
+      CATALOGO_FALTAS_URIANGATO[3],
+      CATALOGO_FALTAS_URIANGATO[6],
+    ],
     hechos: "Vehículo estacionado obstruyendo completamente la rampa de acceso peatonal y personas con discapacidad, sin conductor a bordo tras 15 minutos de aviso sonoro.",
     garantiasRetenidas: ["placa"],
     evidencias: {
@@ -136,12 +140,18 @@ export function InfraccionesProvider({ children }: { children: React.ReactNode }
     setIsLoading(true);
     try {
       // 1. Cargar infracciones locales
-      let items = await obtenerInfraccionesLocales();
+      const items = await obtenerInfraccionesLocales();
+      // Solo se cargan datos demo en entorno de desarrollo y si no hay nada guardado
       if (!items || items.length === 0) {
-        await actualizarInfraccionesLocales(DATOS_INICIALES_DEMO);
-        items = DATOS_INICIALES_DEMO;
+        if (process.env.EXPO_PUBLIC_APP_ENV === "development") {
+          await actualizarInfraccionesLocales(DATOS_INICIALES_DEMO);
+          setInfracciones(DATOS_INICIALES_DEMO);
+        } else {
+          setInfracciones([]);
+        }
+      } else {
+        setInfracciones(items);
       }
-      setInfracciones(items);
 
       const ultimaSync = await obtenerUltimaSincronizacion();
       setUltimaSincronizacion(ultimaSync);

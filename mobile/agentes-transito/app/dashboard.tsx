@@ -101,8 +101,13 @@ export default function DashboardScreen() {
 
   const renderTicketCard = ({ item }: { item: Infraccion }) => {
     const esPendiente = item.estado === "pendiente";
-    const minPesos = Number(item.falta.montoMinUma) * valorUma;
-    const maxPesos = Number(item.falta.montoMaxUma) * valorUma;
+    // Compatibilidad: usar faltas[] (nuevo) o falta singular (heredado)
+    const faltas = item.faltas ?? [];
+    const faltaPrincipal = faltas[0];
+    const montoMinTotal = faltas.reduce((s, f) => s + Number(f.montoMinUma), 0);
+    const montoMaxTotal = faltas.reduce((s, f) => s + Number(f.montoMaxUma), 0);
+    const minPesos = montoMinTotal * valorUma;
+    const maxPesos = montoMaxTotal * valorUma;
 
     return (
       <View
@@ -156,17 +161,26 @@ export default function DashboardScreen() {
         {/* Bloque Falta / Infracción */}
         <View style={[styles.offenseBlock, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
           <View style={styles.offenseTagRow}>
-            <View style={[styles.lawPill, { backgroundColor: colors.dangerBg }]}>
-              <Text style={[styles.lawPillText, { color: colors.danger }]}>
-                {item.falta.fundamentoLegal}
-              </Text>
-            </View>
+            {faltaPrincipal && (
+              <View style={[styles.lawPill, { backgroundColor: colors.dangerBg }]}>
+                <Text style={[styles.lawPillText, { color: colors.danger }]}>
+                  {faltaPrincipal.fundamentoLegal}
+                </Text>
+              </View>
+            )}
+            {faltas.length > 1 && (
+              <View style={[styles.lawPill, { backgroundColor: colors.primaryBg }]}>
+                <Text style={[styles.lawPillText, { color: colors.primary }]}>
+                  +{faltas.length - 1} más
+                </Text>
+              </View>
+            )}
             <Text style={[styles.categoryPillText, { color: colors.textMuted }]}>
-              {item.falta.categoria}
+              {faltaPrincipal?.categoria ?? ""}
             </Text>
           </View>
           <Text style={[styles.offenseDescText, { color: colors.text }]} numberOfLines={2}>
-            {item.falta.descripcion}
+            {faltaPrincipal?.descripcion ?? ""}
           </Text>
         </View>
 
@@ -618,41 +632,35 @@ export default function DashboardScreen() {
                 {/* Sección 3: Falta y Sanción */}
                 <View style={[styles.modalSectionCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
                   <Text style={[styles.modalSectionTitle, { color: colors.text }]}>3. SANCIÓN Y REGLAMENTO</Text>
-                  <View style={styles.modalOffenseLegal}>
-                    <View style={[styles.lawPill, { backgroundColor: colors.dangerBg }]}>
-                      <Text style={[styles.lawPillText, { color: colors.danger }]}>
-                        {infraccionSeleccionada.falta.fundamentoLegal}
-                      </Text>
+                  {/* Mostrar todas las faltas de esta boleta */}
+                  {(infraccionSeleccionada.faltas ?? []).map((f, idx) => (
+                    <View key={f.id} style={{ marginBottom: 12 }}>
+                      <View style={styles.modalOffenseLegal}>
+                        <View style={[styles.lawPill, { backgroundColor: colors.dangerBg }]}>
+                          <Text style={[styles.lawPillText, { color: colors.danger }]}>{f.fundamentoLegal}</Text>
+                        </View>
+                        <Text style={[styles.categoryPillText, { color: colors.textMuted }]}>{f.categoria}</Text>
+                      </View>
+                      <Text style={[styles.modalOffenseDesc, { color: colors.text }]}>{f.descripcion}</Text>
+                      {idx < (infraccionSeleccionada.faltas?.length ?? 1) - 1 && (
+                        <View style={{ height: 1, backgroundColor: colors.border, marginTop: 8 }} />
+                      )}
                     </View>
-                    <Text style={[styles.categoryPillText, { color: colors.textMuted }]}>
-                      {infraccionSeleccionada.falta.categoria}
-                    </Text>
-                  </View>
-                  <Text style={[styles.modalOffenseDesc, { color: colors.text }]}>
-                    {infraccionSeleccionada.falta.descripcion}
-                  </Text>
+                  ))}
                   <View style={[styles.modalUmaBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                     <Text style={[styles.modalUmaText, { color: colors.primary }]}>
-                      Sanción: {infraccionSeleccionada.falta.montoMinUma} a {infraccionSeleccionada.falta.montoMaxUma} UMA
+                      Sanción Total: {(infraccionSeleccionada.faltas ?? []).reduce((s, f) => s + Number(f.montoMinUma), 0)} a{" "}
+                      {(infraccionSeleccionada.faltas ?? []).reduce((s, f) => s + Number(f.montoMaxUma), 0)} UMA
                     </Text>
                     <Text style={[styles.modalPesosText, { color: colors.success }]}>
-                      $
-                      {(Number(infraccionSeleccionada.falta.montoMinUma) * valorUma).toLocaleString("es-MX", {
-                        maximumFractionDigits: 0,
-                      })}{" "}
-                      a $
-                      {(Number(infraccionSeleccionada.falta.montoMaxUma) * valorUma).toLocaleString("es-MX", {
-                        maximumFractionDigits: 0,
-                      })}{" "}
-                      MXN
+                      ${((infraccionSeleccionada.faltas ?? []).reduce((s, f) => s + Number(f.montoMinUma), 0) * valorUma).toLocaleString("es-MX", { maximumFractionDigits: 0 })}{" "}
+                      a ${((infraccionSeleccionada.faltas ?? []).reduce((s, f) => s + Number(f.montoMaxUma), 0) * valorUma).toLocaleString("es-MX", { maximumFractionDigits: 0 })}{" "}MXN
                     </Text>
                   </View>
                   {infraccionSeleccionada.hechos ? (
                     <View style={[styles.modalHechosBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                       <Text style={[styles.modalHechosTitle, { color: colors.textMuted }]}>OBSERVACIONES:</Text>
-                      <Text style={[styles.modalHechosText, { color: colors.text }]}>
-                        {infraccionSeleccionada.hechos}
-                      </Text>
+                      <Text style={[styles.modalHechosText, { color: colors.text }]}>{infraccionSeleccionada.hechos}</Text>
                     </View>
                   ) : null}
                 </View>

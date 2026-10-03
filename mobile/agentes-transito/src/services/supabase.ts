@@ -2,13 +2,17 @@ import { createClient } from "@supabase/supabase-js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Infraccion } from "../types/infraccion";
 
-const SUPABASE_URL =
-  process.env.EXPO_PUBLIC_SUPABASE_URL ??
-  "https://kuwxjtwjjefqpzubtrlc.supabase.co";
+// Las credenciales DEBEN estar en .env (EXPO_PUBLIC_*)
+// Nunca deben quedar hardcodeadas en el código fuente.
+if (!process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
+  console.warn(
+    "[supabase] Variables de entorno EXPO_PUBLIC_SUPABASE_URL y EXPO_PUBLIC_SUPABASE_ANON_KEY " +
+    "no están definidas. Asegúrate de tener un archivo .env en la raíz de la app."
+  );
+}
 
-const SUPABASE_ANON_KEY =
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1d3hqdHdqamVmcXB6dWJ0cmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2ODg5ODQsImV4cCI6MjEwMzI2NDk4NH0.I52FP-sHJpyI_jKu4vrY0qu3nQ7TMMxUksM4gFhZzVQ";
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "";
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -68,11 +72,14 @@ export interface BoletaInsert {
   vehiculo_linea?: string | null;
   vehiculo_color?: string | null;
   vehiculo_tipo: string;
-  falta_fundamento_legal: string;
-  falta_descripcion: string;
-  falta_categoria: string;
-  falta_monto_min_uma: number;
-  falta_monto_max_uma: number;
+  /** JSON serializado del array de FaltaCatalogo[] */
+  faltas_json: string;
+  /** Resumen del primer fundamento legal (para consultas rápidas en Supabase) */
+  falta_fundamento_legal_principal: string;
+  /** Suma total de montos mínimos en UMA de todas las faltas */
+  falta_monto_min_uma_total: number;
+  /** Suma total de montos máximos en UMA de todas las faltas */
+  falta_monto_max_uma_total: number;
   hechos: string;
   garantias_retenidas: string[];
   inventario_grua?: string | null;
@@ -86,6 +93,11 @@ export interface BoletaInsert {
 // ─── Transformer ────────────────────────────────────────────────────────────────
 
 export function transformarInfraccionABoleta(inf: Infraccion): BoletaInsert {
+  const faltas = inf.faltas ?? [];
+  const montoMinTotal = faltas.reduce((sum, f) => sum + Number(f.montoMinUma), 0);
+  const montoMaxTotal = faltas.reduce((sum, f) => sum + Number(f.montoMaxUma), 0);
+  const fundPrincipal = faltas[0]?.fundamentoLegal ?? "";
+
   return {
     folio: inf.folio,
     agente_placa: inf.agente.placa,
@@ -105,11 +117,10 @@ export function transformarInfraccionABoleta(inf: Infraccion): BoletaInsert {
     vehiculo_linea: inf.vehiculo.lineaModelo || null,
     vehiculo_color: inf.vehiculo.color || null,
     vehiculo_tipo: inf.vehiculo.tipo || "particular",
-    falta_fundamento_legal: inf.falta.fundamentoLegal,
-    falta_descripcion: inf.falta.descripcion,
-    falta_categoria: inf.falta.categoria,
-    falta_monto_min_uma: Number(inf.falta.montoMinUma) || 0,
-    falta_monto_max_uma: Number(inf.falta.montoMaxUma) || 0,
+    faltas_json: JSON.stringify(faltas),
+    falta_fundamento_legal_principal: fundPrincipal,
+    falta_monto_min_uma_total: montoMinTotal,
+    falta_monto_max_uma_total: montoMaxTotal,
     hechos: inf.hechos || "",
     garantias_retenidas: (inf.garantiasRetenidas as string[]) || [],
     inventario_grua: inf.detalleGarantia?.inventarioGrua || null,
