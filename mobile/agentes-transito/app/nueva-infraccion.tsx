@@ -110,6 +110,15 @@ export default function NuevaInfraccionScreen() {
 
   // ── Estado de guardado ────────────────────────────────────────────────────────
   const [guardando, setGuardando] = useState(false);
+  const [boletaGuardada, setBoletaGuardada] = useState<string | null>(null);
+  const mensajeExitoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (mensajeExitoTimer.current) clearTimeout(mensajeExitoTimer.current);
+    },
+    []
+  );
 
   // ── Precargar fecha, hora y GPS al abrir ──────────────────────────────────────
   useEffect(() => {
@@ -467,12 +476,14 @@ export default function NuevaInfraccionScreen() {
       };
 
       await guardarInfraccion(nuevaBoleta);
+      const folioGuardado = nuevaBoleta.folio;
       resetFormularioBoleta();
-      Alert.alert(
-        "Boleta guardada correctamente",
-        `La boleta ${nuevaBoleta.folio} se guardó localmente. El formulario está listo para capturar otra boleta.`,
-        [{ text: "Aceptar" }]
-      );
+      if (mensajeExitoTimer.current) clearTimeout(mensajeExitoTimer.current);
+      setBoletaGuardada(folioGuardado);
+      mensajeExitoTimer.current = setTimeout(() => {
+        setBoletaGuardada(null);
+        mensajeExitoTimer.current = null;
+      }, 5000);
     } catch (error) {
       console.error("Error guardando boleta localmente:", error);
       Alert.alert(
@@ -579,6 +590,26 @@ export default function NuevaInfraccionScreen() {
           </View>
           <ThemeToggle compact={true} />
         </View>
+
+        {boletaGuardada && (
+          <View
+            accessibilityRole="alert"
+            style={[
+              styles.successNotice,
+              { backgroundColor: colors.successBg, borderColor: colors.success },
+            ]}
+          >
+            <Ionicons name="checkmark-circle" size={24} color={colors.success} />
+            <View style={styles.successNoticeContent}>
+              <Text style={[styles.successNoticeTitle, { color: colors.success }]}>
+                Boleta guardada correctamente
+              </Text>
+              <Text style={[styles.successNoticeFolio, { color: colors.text }]}>
+                Folio: {boletaGuardada}
+              </Text>
+            </View>
+          </View>
+        )}
 
         <ScrollView
           style={styles.formScroll}
@@ -1419,6 +1450,10 @@ const styles = StyleSheet.create({
   headerTitleWrap: { flex: 1 },
   headerTitle: { fontSize: 14, fontWeight: "800", letterSpacing: 0.5 },
   headerSubtitle: { fontSize: 11, marginTop: 1 },
+  successNotice: { flexDirection: "row", alignItems: "center", gap: 12, marginHorizontal: 16, marginTop: 12, padding: 14, borderRadius: 14, borderWidth: 1 },
+  successNoticeContent: { flex: 1 },
+  successNoticeTitle: { fontSize: 14, fontWeight: "800" },
+  successNoticeFolio: { fontSize: 12, fontWeight: "600", marginTop: 3 },
 
   // Scroll
   formScroll: { flex: 1 },
