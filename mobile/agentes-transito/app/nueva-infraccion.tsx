@@ -33,13 +33,16 @@ import { Ionicons } from "@expo/vector-icons";
 
 type TipoFoto = "placa" | "contexto" | "documento";
 
+let folioSequence = 0;
+
 /** Genera un folio único por agente + timestamp para evitar colisiones */
 function generarFolioUnico(agentePlaca: string): string {
   const ahora = new Date();
   const yyyy = ahora.getFullYear();
   const ts = Date.now().toString(36).toUpperCase();
+  folioSequence += 1;
   const placa = agentePlaca.replace(/[^A-Z0-9]/gi, "").toUpperCase().slice(0, 6);
-  return `BOLETA-URI-${yyyy}-${placa}-${ts}`;
+  return `BOLETA-URI-${yyyy}-${placa}-${ts}-${folioSequence.toString(36).toUpperCase()}`;
 }
 
 export default function NuevaInfraccionScreen() {
@@ -49,10 +52,13 @@ export default function NuevaInfraccionScreen() {
   const { colors, isDark } = useTheme();
 
   // ── Folio único con placa del agente + timestamp ──────────────────────────────
-  const [folio] = useState(() => generarFolioUnico(user?.placa || "AGENTE"));
+  const [folio, setFolio] = useState(() => generarFolioUnico(user?.placa || "AGENTE"));
 
   // ── Estado: ¿El formulario tiene datos sin guardar? ────────────────────────────
   const hayDatosSinGuardar = useRef(false);
+  const ubicacionGeneradaPorGps = useRef("");
+  const gpsRequestId = useRef(0);
+  const guardandoRef = useRef(false);
 
   // ── Generales ─────────────────────────────────────────────────────────────────
   const [fecha, setFecha] = useState("");
@@ -79,12 +85,11 @@ export default function NuevaInfraccionScreen() {
   const [tipoVehiculo, setTipoVehiculo] = useState<TipoVehiculo>("particular");
 
   // ── Faltas múltiples seleccionadas del catálogo ───────────────────────────────
-  const [faltasSeleccionadas, setFaltasSeleccionadas] = useState<FaltaCatalogo[]>(
-    catalogo[0] ? [catalogo[0]] : []
-  );
+  const [faltasSeleccionadas, setFaltasSeleccionadas] = useState<FaltaCatalogo[]>([]);
   const [modalCatalogoVisible, setModalCatalogoVisible] = useState(false);
   const [busquedaCatalogo, setBusquedaCatalogo] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>("todas");
+  const [salirConfirmacionVisible, setSalirConfirmacionVisible] = useState(false);
 
   // ── Hechos ────────────────────────────────────────────────────────────────────
   const [hechos, setHechos] = useState("");
@@ -120,12 +125,58 @@ export default function NuevaInfraccionScreen() {
     obtenerUbicacionGps();
   }, []);
 
-  // ── Inicializar faltas cuando el catálogo carga (puede ser async) ─────────────
+  // ── Detectar datos capturados (excluye fecha y ubicación generadas) ────────────
   useEffect(() => {
-    if (faltasSeleccionadas.length === 0 && catalogo.length > 0) {
-      setFaltasSeleccionadas([catalogo[0]]);
+    const lugarCapturado =
+      lugar.trim().length > 0 && lugar.trim() !== ubicacionGeneradaPorGps.current;
+    hayDatosSinGuardar.current = Boolean(
+      lugarCapturado ||
+        conductorAusente ||
+        nombreInfractor.trim() ||
+        domicilioInfractor.trim() ||
+        licenciaInfractor.trim() ||
+        placas.trim() ||
+        sinPlacas ||
+        marca.trim() ||
+        lineaModelo.trim() ||
+        color.trim() ||
+        tipoVehiculo !== "particular" ||
+        faltasSeleccionadas.length > 0 ||
+        hechos.trim() ||
+        garantias.length > 0 ||
+        inventarioGrua.trim() ||
+        fotoPlaca ||
+        fotoContexto ||
+        fotoDocumento
+    );
+  }, [
+    lugar,
+    conductorAusente,
+    nombreInfractor,
+    domicilioInfractor,
+    licenciaInfractor,
+    placas,
+    sinPlacas,
+    marca,
+    lineaModelo,
+    color,
+    tipoVehiculo,
+    faltasSeleccionadas,
+    hechos,
+    garantias,
+    inventarioGrua,
+    fotoPlaca,
+    fotoContexto,
+    fotoDocumento,
+  ]);
+
+  const confirmarSalida = useCallback(() => {
+    if (!hayDatosSinGuardar.current) {
+      router.replace("/dashboard");
+      return;
     }
-  }, [catalogo]);
+    setSalirConfirmacionVisible(true);
+  }, [router]);
 
   // ── Guardia al presionar atrás en Android ─────────────────────────────────────
   useFocusEffect(
@@ -136,57 +187,56 @@ export default function NuevaInfraccionScreen() {
       };
       const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
       return () => sub.remove();
-    }, [])
+    }, [confirmarSalida])
   );
-
-  const confirmarSalida = () => {
-    Alert.alert(
-      "¿Descartar boleta?",
-      "Si sales ahora, perderás los datos ingresados en esta boleta. Esta acción no se puede deshacer.",
-      [
-        { text: "Continuar editando", style: "cancel" },
-        {
-          text: "Descartar y salir",
-          style: "destructive",
-          onPress: () => router.back(),
-        },
-      ]
-    );
-  };
 
   // ── GPS ───────────────────────────────────────────────────────────────────────
   const obtenerUbicacionGps = async () => {
+    const requestId = ++gpsRequestId.current;
     setBuscandoGps(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
+      if (requestId !== gpsRequestId.current) return;
       if (status !== "granted") {
         setCoordenadas({ latitud: 20.1419, longitud: -101.1764 });
-        if (!lugar) setLugar("Av. Hidalgo esq. Juárez, Zona Centro, Uriangato, Gto.");
+        const ubicacionDemo = "Av. Hidalgo esq. Juárez, Zona Centro, Uriangato, Gto.";
+        ubicacionGeneradaPorGps.current = ubicacionDemo;
+        if (!lugar) setLugar(ubicacionDemo);
         return;
       }
       const loc = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
+      if (requestId !== gpsRequestId.current) return;
       setCoordenadas({ latitud: loc.coords.latitude, longitud: loc.coords.longitude });
       try {
         const reverse = await Location.reverseGeocodeAsync({
           latitude: loc.coords.latitude,
           longitude: loc.coords.longitude,
         });
+        if (requestId !== gpsRequestId.current) return;
         if (reverse && reverse.length > 0) {
           const r = reverse[0];
           const calle = r.street || "Vialidad Urbana";
           const col = r.district || r.subregion || "Zona Centro";
-          setLugar(`${calle}, ${col}, Uriangato, Gto.`);
+          const ubicacion = `${calle}, ${col}, Uriangato, Gto.`;
+          ubicacionGeneradaPorGps.current = ubicacion;
+          setLugar(ubicacion);
         }
       } catch {
-        if (!lugar) setLugar("Sector Centro, Uriangato, Gto.");
+        if (requestId !== gpsRequestId.current) return;
+        const ubicacionDemo = "Sector Centro, Uriangato, Gto.";
+        ubicacionGeneradaPorGps.current = ubicacionDemo;
+        if (!lugar) setLugar(ubicacionDemo);
       }
     } catch {
+      if (requestId !== gpsRequestId.current) return;
       setCoordenadas({ latitud: 20.1419, longitud: -101.1764 });
-      if (!lugar) setLugar("Prolongación Morelos, Uriangato, Gto.");
+      const ubicacionDemo = "Prolongación Morelos, Uriangato, Gto.";
+      ubicacionGeneradaPorGps.current = ubicacionDemo;
+      if (!lugar) setLugar(ubicacionDemo);
     } finally {
-      setBuscandoGps(false);
+      if (requestId === gpsRequestId.current) setBuscandoGps(false);
     }
   };
 
@@ -297,8 +347,57 @@ export default function NuevaInfraccionScreen() {
   const totalFotosListas =
     (fotoPlaca ? 1 : 0) + (fotoContexto ? 1 : 0) + (fotoDocumento ? 1 : 0);
 
+  const resetFormularioBoleta = () => {
+    gpsRequestId.current += 1;
+    hayDatosSinGuardar.current = false;
+    ubicacionGeneradaPorGps.current = "";
+    setFolio(generarFolioUnico(user?.placa || "AGENTE"));
+
+    const ahora = new Date();
+    const yyyy = ahora.getFullYear();
+    const mm = String(ahora.getMonth() + 1).padStart(2, "0");
+    const dd = String(ahora.getDate()).padStart(2, "0");
+    const hh = String(ahora.getHours()).padStart(2, "0");
+    const min = String(ahora.getMinutes()).padStart(2, "0");
+    setFecha(`${yyyy}-${mm}-${dd}`);
+    setHora(`${hh}:${min}`);
+    setLugar("");
+    setCoordenadas(null);
+    setBuscandoGps(false);
+
+    setConductorAusente(false);
+    setNombreInfractor("");
+    setDomicilioInfractor("");
+    setLicenciaInfractor("");
+
+    setPlacas("");
+    setSinPlacas(false);
+    setMarca("");
+    setLineaModelo("");
+    setColor("");
+    setTipoVehiculo("particular");
+
+    setFaltasSeleccionadas([]);
+    setBusquedaCatalogo("");
+    setCategoriaFiltro("todas");
+    setHechos("");
+    setGarantias([]);
+    setInventarioGrua("");
+
+    setFotoPlaca(null);
+    setFotoContexto(null);
+    setFotoDocumento(null);
+    setCapturandoTipoFoto(null);
+    setModalCatalogoVisible(false);
+    setModalCamaraVisible(false);
+    setFotoPreviewGrande(null);
+    setSalirConfirmacionVisible(false);
+  };
+
   // ── Guardar boleta ─────────────────────────────────────────────────────────────
   const handleGuardarBoleta = async () => {
+    if (guardandoRef.current) return;
+
     if (!lugar.trim()) {
       Alert.alert("Falta Ubicación", "Debe registrar la ubicación o calle de la infracción.");
       return;
@@ -327,55 +426,64 @@ export default function NuevaInfraccionScreen() {
       return;
     }
 
+    guardandoRef.current = true;
     setGuardando(true);
-    const nuevaBoleta: Infraccion = {
-      id: `inf-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      folio,
-      agente: {
-        placa: user?.placa || "AGT-XXX",
-        nombre: user?.nombre || "Oficial de Tránsito",
-        rol: user?.rol || "Agente Vial",
-      },
-      generales: { fecha, hora, lugar: lugar.trim(), coordenadas },
-      infractor: {
-        conductorAusente,
-        nombre: conductorAusente ? "Conductor Ausente" : nombreInfractor.trim(),
-        domicilio: conductorAusente ? "No disponible" : domicilioInfractor.trim(),
-        numeroLicencia: conductorAusente ? undefined : licenciaInfractor.trim(),
-      },
-      vehiculo: {
-        placas: sinPlacas ? "SIN_PLACAS" : placas.toUpperCase().trim(),
-        sinPlacas,
-        marca: marca.trim(),
-        lineaModelo: lineaModelo.trim() || "No especificada",
-        color: color.trim() || "No especificado",
-        tipo: tipoVehiculo,
-      },
-      faltas: faltasSeleccionadas,
-      hechos:
-        hechos.trim() ||
-        faltasSeleccionadas
-          .map((f) => `Infracción ${f.fundamentoLegal}: ${f.descripcion}`)
-          .join(". "),
-      garantiasRetenidas: garantias,
-      detalleGarantia: { inventarioGrua: inventarioGrua.trim() || undefined },
-      evidencias: { fotoPlaca, fotoContexto, fotoDocumento },
-      estado: "pendiente",
-      creadoEn: new Date().toISOString(),
-      sincronizadoEn: null,
-    };
-
     try {
+      const nuevaBoleta: Infraccion = {
+        id: `inf-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        folio,
+        agente: {
+          placa: user?.placa || "AGT-XXX",
+          nombre: user?.nombre || "Oficial de Tránsito",
+          rol: user?.rol || "Agente Vial",
+        },
+        generales: { fecha, hora, lugar: lugar.trim(), coordenadas },
+        infractor: {
+          conductorAusente,
+          nombre: conductorAusente ? "Conductor Ausente" : nombreInfractor.trim(),
+          domicilio: conductorAusente ? "No disponible" : domicilioInfractor.trim(),
+          numeroLicencia: conductorAusente ? undefined : licenciaInfractor.trim(),
+        },
+        vehiculo: {
+          placas: sinPlacas ? "SIN_PLACAS" : placas.toUpperCase().trim(),
+          sinPlacas,
+          marca: marca.trim(),
+          lineaModelo: lineaModelo.trim() || "No especificada",
+          color: color.trim() || "No especificado",
+          tipo: tipoVehiculo,
+        },
+        faltas: [...faltasSeleccionadas],
+        hechos:
+          hechos.trim() ||
+          faltasSeleccionadas
+            .map((f) => `Infracción ${f.fundamentoLegal}: ${f.descripcion}`)
+            .join(". "),
+        garantiasRetenidas: [...garantias],
+        detalleGarantia: { inventarioGrua: inventarioGrua.trim() || undefined },
+        evidencias: { fotoPlaca, fotoContexto, fotoDocumento },
+        estado: "pendiente",
+        creadoEn: new Date().toISOString(),
+        sincronizadoEn: null,
+      };
+
       await guardarInfraccion(nuevaBoleta);
-      setGuardando(false);
+      resetFormularioBoleta();
       Alert.alert(
-        "Boleta Guardada",
-        `La boleta ${folio} ha sido guardada. Se sincronizará automáticamente con el panel al tener conexión.`,
-        [{ text: "Aceptar", onPress: () => router.replace("/dashboard") }]
+        "Boleta guardada correctamente",
+        `La boleta ${nuevaBoleta.folio} se guardó localmente. El formulario está listo para capturar otra boleta.`,
+        [{ text: "Aceptar" }]
       );
-    } catch {
+    } catch (error) {
+      console.error("Error guardando boleta localmente:", error);
+      Alert.alert(
+        "Error al guardar",
+        error instanceof Error
+          ? error.message
+          : "No se pudo guardar la boleta en el almacenamiento local."
+      );
+    } finally {
+      guardandoRef.current = false;
       setGuardando(false);
-      Alert.alert("Error", "No se pudo guardar la boleta en el almacenamiento local.");
     }
   };
 
@@ -560,7 +668,10 @@ export default function NuevaInfraccionScreen() {
                   placeholder="Ej. Av. Hidalgo esq. Morelos, Centro"
                   placeholderTextColor={colors.textMuted}
                   value={lugar}
-                  onChangeText={setLugar}
+                  onChangeText={(value) => {
+                    ubicacionGeneradaPorGps.current = "";
+                    setLugar(value);
+                  }}
                 />
               </View>
               {coordenadas && (
@@ -994,10 +1105,13 @@ export default function NuevaInfraccionScreen() {
               style={[styles.saveBigButton, { backgroundColor: colors.primary }, guardando && styles.buttonDisabled]}
               onPress={handleGuardarBoleta}
               disabled={guardando}
-              activeOpacity={0.85}
+              activeOpacity={0.75}
             >
               {guardando ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <>
+                  <ActivityIndicator color="#ffffff" size="small" />
+                  <Text style={styles.saveBigButtonText}>GUARDANDO BOLETA...</Text>
+                </>
               ) : (
                 <>
                   <Ionicons name="checkmark-done-circle" size={24} color="#ffffff" />
@@ -1007,6 +1121,54 @@ export default function NuevaInfraccionScreen() {
             </TouchableOpacity>
           </View>
         </ScrollView>
+
+        <Modal
+          visible={salirConfirmacionVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setSalirConfirmacionVisible(false)}
+        >
+          <View style={[styles.modalOverlay, { justifyContent: "center", padding: 24 }]}>
+            <View
+              style={{
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderWidth: 1,
+                borderRadius: 18,
+                padding: 22,
+                width: "100%",
+                maxWidth: 420,
+                alignSelf: "center",
+              }}
+            >
+              <Text style={[styles.modalCatTitle, { color: colors.text, marginBottom: 10 }]}>
+                ¿Salir de la boleta?
+              </Text>
+              <Text style={[styles.selectedOffenseDesc, { color: colors.textSecondary, marginBottom: 20 }]}>
+                Los datos capturados todavía no se han guardado. Si sales ahora, se perderán.
+              </Text>
+              <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 10 }}>
+                <TouchableOpacity
+                  style={[styles.changeOffenseBtn, { backgroundColor: colors.surfaceElevated, paddingHorizontal: 16 }]}
+                  onPress={() => setSalirConfirmacionVisible(false)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.changeOffenseBtnText, { color: colors.text }]}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.changeOffenseBtn, { backgroundColor: colors.danger, paddingHorizontal: 16 }]}
+                  onPress={() => {
+                    setSalirConfirmacionVisible(false);
+                    router.replace("/dashboard");
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <Text style={styles.changeOffenseBtnText}>Salir</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* ══ MODAL: Catálogo de Infracciones (multi-select con FlatList) ══════ */}
         <Modal
