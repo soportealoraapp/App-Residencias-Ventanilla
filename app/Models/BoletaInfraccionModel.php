@@ -35,6 +35,7 @@ class BoletaInfraccionModel extends Model
         'falta_categoria',
         'falta_monto_min_uma',
         'falta_monto_max_uma',
+        'faltas_json',
         'hechos',
         'garantias_retenidas',
         'inventario_grua',

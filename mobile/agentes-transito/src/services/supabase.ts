@@ -72,14 +72,18 @@ export interface BoletaInsert {
   vehiculo_linea?: string | null;
   vehiculo_color?: string | null;
   vehiculo_tipo: string;
-  /** JSON serializado del array de FaltaCatalogo[] */
+  /** JSON serializado del array completo de FaltaCatalogo[] (multi-infracciones) */
   faltas_json: string;
-  /** Resumen del primer fundamento legal (para consultas rápidas en Supabase) */
-  falta_fundamento_legal_principal: string;
-  /** Suma total de montos mínimos en UMA de todas las faltas */
-  falta_monto_min_uma_total: number;
-  /** Suma total de montos máximos en UMA de todas las faltas */
-  falta_monto_max_uma_total: number;
+  /** Fundamento legal de la falta PRINCIPAL (primera del array) — columna existente en DB */
+  falta_fundamento_legal: string;
+  /** Descripción de la falta PRINCIPAL (primera del array) */
+  falta_descripcion: string;
+  /** Categoría de la falta PRINCIPAL (primera del array) */
+  falta_categoria: string;
+  /** Suma total de montos mínimos en UMA de TODAS las faltas */
+  falta_monto_min_uma: number;
+  /** Suma total de montos máximos en UMA de TODAS las faltas */
+  falta_monto_max_uma: number;
   hechos: string;
   garantias_retenidas: string[];
   inventario_grua?: string | null;
@@ -96,7 +100,8 @@ export function transformarInfraccionABoleta(inf: Infraccion): BoletaInsert {
   const faltas = inf.faltas ?? [];
   const montoMinTotal = faltas.reduce((sum, f) => sum + Number(f.montoMinUma), 0);
   const montoMaxTotal = faltas.reduce((sum, f) => sum + Number(f.montoMaxUma), 0);
-  const fundPrincipal = faltas[0]?.fundamentoLegal ?? "";
+  // Resumen de la falta principal (primera) para columnas planas de consulta rápida
+  const principal = faltas[0];
 
   return {
     folio: inf.folio,
@@ -118,9 +123,11 @@ export function transformarInfraccionABoleta(inf: Infraccion): BoletaInsert {
     vehiculo_color: inf.vehiculo.color || null,
     vehiculo_tipo: inf.vehiculo.tipo || "particular",
     faltas_json: JSON.stringify(faltas),
-    falta_fundamento_legal_principal: fundPrincipal,
-    falta_monto_min_uma_total: montoMinTotal,
-    falta_monto_max_uma_total: montoMaxTotal,
+    falta_fundamento_legal: principal?.fundamentoLegal ?? "",
+    falta_descripcion: principal?.descripcion ?? "",
+    falta_categoria: principal?.categoria ?? "",
+    falta_monto_min_uma: montoMinTotal,
+    falta_monto_max_uma: montoMaxTotal,
     hechos: inf.hechos || "",
     garantias_retenidas: (inf.garantiasRetenidas as string[]) || [],
     inventario_grua: inf.detalleGarantia?.inventarioGrua || null,
@@ -131,6 +138,7 @@ export function transformarInfraccionABoleta(inf: Infraccion): BoletaInsert {
     creado_en_dispositivo: inf.creadoEn,
   };
 }
+
 
 // ─── API helpers ────────────────────────────────────────────────────────────────
 
