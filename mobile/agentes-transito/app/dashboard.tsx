@@ -40,6 +40,11 @@ export default function DashboardScreen() {
   const [infraccionSeleccionada, setInfraccionSeleccionada] = useState<Infraccion | null>(null);
   const [fotoZoom, setFotoZoom] = useState<string | null>(null);
 
+  const handleLogout = async () => {
+    await logout();
+    router.replace("/");
+  };
+
   const infraccionesFiltradas =
     filtro === "pendientes"
       ? pendientes
@@ -294,7 +299,7 @@ export default function DashboardScreen() {
           <ThemeToggle compact={true} />
           <TouchableOpacity
             style={[styles.logoutBtn, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
-            onPress={logout}
+            onPress={handleLogout}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityLabel="Cerrar sesión"
           >

@@ -25,6 +25,8 @@ function AppNavigation() {
         }}
       >
         <Stack.Screen name="index" options={{ title: "Acceso Agentes" }} />
+        <Stack.Screen name="login" options={{ title: "Iniciar sesión" }} />
+        <Stack.Screen name="registro" options={{ title: "Crear una cuenta" }} />
         <Stack.Screen name="dashboard" options={{ title: "Panel de Control" }} />
         <Stack.Screen name="nueva-infraccion" options={{ title: "Nueva Boleta de Infracción" }} />
       </Stack>
