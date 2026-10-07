@@ -75,9 +75,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      console.log("[LOGOUT] intentando eliminar sesión");
       await AsyncStorage.removeItem(AUTH_STORAGE_KEY);
+      console.log("[LOGOUT] sesión eliminada de AsyncStorage");
       setUser(null);
+      console.log("[LOGOUT] user establecido en null");
     } catch (err) {
+      console.log("[LOGOUT] ERROR:", err);
       console.error("Error al cerrar sesión:", err);
     }
   };

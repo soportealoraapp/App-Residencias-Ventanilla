@@ -19,6 +19,7 @@ export default function WelcomeScreen() {
   const { colors } = useTheme();
 
   React.useEffect(() => {
+    console.log("[INDEX] isLoading:", isLoading, "user:", user);
     if (!isLoading && user) {
       router.replace("/dashboard");
     }

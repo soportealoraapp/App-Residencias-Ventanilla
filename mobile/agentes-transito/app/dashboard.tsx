@@ -39,9 +39,13 @@ export default function DashboardScreen() {
   const [filtro, setFiltro] = useState<"todas" | "pendientes" | "sincronizadas">("todas");
   const [infraccionSeleccionada, setInfraccionSeleccionada] = useState<Infraccion | null>(null);
   const [fotoZoom, setFotoZoom] = useState<string | null>(null);
+  const [logoutConfirmacionVisible, setLogoutConfirmacionVisible] = useState(false);
 
   const handleLogout = async () => {
+    console.log("[LOGOUT] handleLogout iniciado");
     await logout();
+    console.log("[LOGOUT] logout terminó");
+    console.log("[LOGOUT] ejecutando router.replace('/')");
     router.replace("/");
   };
 
@@ -299,11 +303,12 @@ export default function DashboardScreen() {
           <ThemeToggle compact={true} />
           <TouchableOpacity
             style={[styles.logoutBtn, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
-            onPress={handleLogout}
+            onPress={() => setLogoutConfirmacionVisible(true)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityLabel="Cerrar sesión"
           >
             <Ionicons name="log-out-outline" size={18} color={colors.danger} />
+            <Text style={[styles.logoutText, { color: colors.danger }]}>Cerrar sesión</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -509,6 +514,64 @@ export default function DashboardScreen() {
           </View>
         }
       />
+
+      <Modal
+        visible={logoutConfirmacionVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLogoutConfirmacionVisible(false)}
+      >
+        <View style={[styles.modalOverlay, { justifyContent: "center", padding: 24 }]}>
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderWidth: 1,
+              borderRadius: 18,
+              padding: 22,
+              width: "100%",
+              maxWidth: 420,
+              alignSelf: "center",
+            }}
+          >
+            <Text style={[styles.modalTitle, { color: colors.text, marginBottom: 10 }]}>
+              ¿Cerrar sesión?
+            </Text>
+            <Text style={[styles.modalSubtitle, { color: colors.textSecondary, marginBottom: 20 }]}>
+              ¿Estás seguro de que deseas cerrar tu sesión?
+            </Text>
+            <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 10 }}>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: colors.surfaceElevated,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  borderRadius: 10,
+                }}
+                onPress={() => setLogoutConfirmacionVisible(false)}
+                activeOpacity={0.75}
+              >
+                <Text style={{ color: colors.text, fontSize: 13, fontWeight: "700" }}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: colors.danger,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  borderRadius: 10,
+                }}
+                onPress={() => {
+                  setLogoutConfirmacionVisible(false);
+                  void handleLogout();
+                }}
+                activeOpacity={0.75}
+              >
+                <Text style={{ color: "#ffffff", fontSize: 13, fontWeight: "700" }}>Cerrar sesión</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* MODAL DETALLE COMPLETO DE INFRACCIÓN */}
       <Modal
@@ -828,13 +891,17 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   logoutBtn: {
-    width: 38,
+    minWidth: 38,
     height: 38,
-    borderRadius: 19,
+    paddingHorizontal: 10,
+    borderRadius: 12,
     borderWidth: 1,
+    flexDirection: "row",
+    gap: 6,
     alignItems: "center",
     justifyContent: "center",
   },
+  logoutText: { fontSize: 12, fontWeight: "700" },
   listContent: {
     padding: 16,
     paddingBottom: 60,
