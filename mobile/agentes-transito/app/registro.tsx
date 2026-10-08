@@ -8,8 +8,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { ApiError } from "../src/api/client";
+import { registerAgente } from "../src/api/agents";
 import { useTheme } from "../src/contexts/ThemeContext";
 import { ThemeToggle } from "../src/components/ThemeToggle";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,7 +24,61 @@ export default function RegistroScreen() {
   const [nombre, setNombre] = useState("");
   const [password, setPassword] = useState("");
   const [confirmarPassword, setConfirmarPassword] = useState("");
-  const [mostrarAviso, setMostrarAviso] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [registroExitoso, setRegistroExitoso] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleRegister = async () => {
+    setErrorMsg(null);
+    setRegistroExitoso(false);
+
+    const placaNormalizada = placa.toUpperCase().trim();
+    const nombreCompleto = nombre.trim();
+
+    if (!placaNormalizada || !nombreCompleto || !password || !confirmarPassword) {
+      setErrorMsg("Completa todos los campos para crear tu cuenta.");
+      return;
+    }
+
+    if (password.length < 3) {
+      setErrorMsg("La contraseña debe tener al menos 3 caracteres.");
+      return;
+    }
+
+    if (password !== confirmarPassword) {
+      setErrorMsg("Las contraseñas no coinciden.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await registerAgente({
+        placa: placaNormalizada,
+        nombreCompleto,
+        password,
+      });
+      setRegistroExitoso(true);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        if (error.status === 409) {
+          setErrorMsg("Ya existe un agente registrado con esa placa.");
+        } else if (error.status >= 500) {
+          setErrorMsg("Ocurrió un error en el servidor. Inténtalo más tarde.");
+        } else {
+          setErrorMsg("No se pudo completar el registro. Revisa los datos e inténtalo de nuevo.");
+        }
+      } else {
+        setErrorMsg("No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const limpiarMensajes = () => {
+    setErrorMsg(null);
+    setRegistroExitoso(false);
+  };
 
   return (
     <KeyboardAvoidingView
@@ -58,7 +115,7 @@ export default function RegistroScreen() {
           </View>
           <Text style={[styles.title, { color: colors.text }]}>Crear una cuenta</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Captura tus datos para solicitar el acceso al sistema de agentes.
+            Captura tus datos para crear una cuenta de agente.
           </Text>
 
           <View
@@ -89,7 +146,7 @@ export default function RegistroScreen() {
                 value={placa}
                 onChangeText={(value) => {
                   setPlaca(value.toUpperCase());
-                  setMostrarAviso(false);
+                  limpiarMensajes();
                 }}
                 autoCapitalize="characters"
                 autoCorrect={false}
@@ -118,7 +175,7 @@ export default function RegistroScreen() {
                 value={nombre}
                 onChangeText={(value) => {
                   setNombre(value);
-                  setMostrarAviso(false);
+                  limpiarMensajes();
                 }}
                 autoCapitalize="words"
                 autoCorrect={false}
@@ -147,7 +204,7 @@ export default function RegistroScreen() {
                 value={password}
                 onChangeText={(value) => {
                   setPassword(value);
-                  setMostrarAviso(false);
+                  limpiarMensajes();
                 }}
                 secureTextEntry
                 autoCapitalize="none"
@@ -176,45 +233,71 @@ export default function RegistroScreen() {
                 value={confirmarPassword}
                 onChangeText={(value) => {
                   setConfirmarPassword(value);
-                  setMostrarAviso(false);
+                  limpiarMensajes();
                 }}
                 secureTextEntry
                 autoCapitalize="none"
               />
             </View>
 
-            {mostrarAviso && (
+            {(errorMsg || registroExitoso) && (
               <View
                 accessibilityRole="alert"
                 style={[
                   styles.notice,
-                  { backgroundColor: colors.primaryBg, borderColor: colors.primary },
+                  {
+                    backgroundColor: registroExitoso ? colors.successBg : colors.dangerBg,
+                    borderColor: registroExitoso ? colors.success : colors.danger,
+                  },
                 ]}
               >
                 <Ionicons
-                  name="information-circle-outline"
+                  name={registroExitoso ? "checkmark-circle-outline" : "alert-circle-outline"}
                   size={20}
-                  color={colors.primary}
+                  color={registroExitoso ? colors.success : colors.danger}
                 />
                 <Text style={[styles.noticeText, { color: colors.text }]}>
-                  El registro aún no está conectado al sistema. No se creó ni guardó
-                  ninguna cuenta.
+                  {registroExitoso
+                    ? "Cuenta creada correctamente. Ya puedes iniciar sesión."
+                    : errorMsg}
                 </Text>
               </View>
             )}
 
-            <TouchableOpacity
-              style={[styles.createButton, { backgroundColor: colors.primary }]}
-              onPress={() => setMostrarAviso(true)}
-              activeOpacity={0.82}
-            >
-              <Ionicons name="person-add-outline" size={20} color="#ffffff" />
-              <Text style={styles.createButtonText}>Crear cuenta</Text>
-            </TouchableOpacity>
+            {registroExitoso ? (
+              <TouchableOpacity
+                style={[styles.createButton, { backgroundColor: colors.primary }]}
+                onPress={() => router.replace("/login")}
+                activeOpacity={0.82}
+              >
+                <Ionicons name="log-in-outline" size={20} color="#ffffff" />
+                <Text style={styles.createButtonText}>Ir a iniciar sesión</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.createButton,
+                  { backgroundColor: colors.primary },
+                  isSubmitting && styles.buttonDisabled,
+                ]}
+                onPress={handleRegister}
+                disabled={isSubmitting}
+                activeOpacity={0.82}
+              >
+                {isSubmitting ? (
+                  <>
+                    <ActivityIndicator color="#ffffff" />
+                    <Text style={styles.createButtonText}>Registrando...</Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="person-add-outline" size={20} color="#ffffff" />
+                    <Text style={styles.createButtonText}>Crear cuenta</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
 
-            <Text style={[styles.pendingText, { color: colors.textMuted }]}>
-              Formulario de demostración; todavía no envía ni almacena información.
-            </Text>
           </View>
         </View>
       </ScrollView>
@@ -299,6 +382,6 @@ const styles = StyleSheet.create({
     gap: 9,
     marginTop: 2,
   },
+  buttonDisabled: { opacity: 0.7 },
   createButtonText: { color: "#ffffff", fontSize: 14, fontWeight: "800" },
-  pendingText: { fontSize: 11, textAlign: "center", lineHeight: 16, marginTop: 12 },
 });

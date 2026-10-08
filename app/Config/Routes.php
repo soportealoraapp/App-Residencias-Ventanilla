@@ -26,6 +26,8 @@ $routes->get('auth/privacidad', 'AuthController::privacidad');
 
 // API Móvil - Infracciones y Checklist
 $routes->get('api/checklist-infracciones', 'Api\InfraccionesApiController::checklist');
+$routes->options('api/agentes/registro', 'Api\AgentesTransitoApiController::registrar');
+$routes->post('api/agentes/registro', 'Api\AgentesTransitoApiController::registrar');
 
 $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->group('', ['filter' => 'role:administrador,operador_ventanilla'], function($routes) {
