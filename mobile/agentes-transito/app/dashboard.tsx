@@ -10,6 +10,7 @@ import {
   Image,
   ScrollView,
   ActivityIndicator,
+  TextInput,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../src/contexts/AuthContext";
@@ -37,6 +38,7 @@ export default function DashboardScreen() {
   const { colors, isDark } = useTheme();
 
   const [filtro, setFiltro] = useState<"todas" | "pendientes" | "sincronizadas">("todas");
+  const [busqueda, setBusqueda] = useState("");
   const [infraccionSeleccionada, setInfraccionSeleccionada] = useState<Infraccion | null>(null);
   const [fotoZoom, setFotoZoom] = useState<string | null>(null);
   const [logoutConfirmacionVisible, setLogoutConfirmacionVisible] = useState(false);
@@ -49,12 +51,29 @@ export default function DashboardScreen() {
     router.replace("/");
   };
 
-  const infraccionesFiltradas =
+  const infraccionesPorPestana =
     filtro === "pendientes"
       ? pendientes
       : filtro === "sincronizadas"
       ? sincronizadas
       : infracciones;
+
+  const infraccionesFiltradas = infraccionesPorPestana.filter((inf) => {
+    if (!busqueda.trim()) return true;
+    const q = busqueda.toLowerCase().trim();
+    const placas = (inf.vehiculo?.placas || "").toLowerCase();
+    const folio = (inf.folio || "").toLowerCase();
+    const conductor = (inf.infractor?.nombre || "").toLowerCase();
+    const marca = (inf.vehiculo?.marca || "").toLowerCase();
+    const lugar = (inf.generales?.lugar || "").toLowerCase();
+    return (
+      placas.includes(q) ||
+      folio.includes(q) ||
+      conductor.includes(q) ||
+      marca.includes(q) ||
+      lugar.includes(q)
+    );
+  });
 
   const handleSincronizar = async () => {
     try {
@@ -500,17 +519,47 @@ export default function DashboardScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {/* 7. Barra de Búsqueda Rápida */}
+            <View style={[styles.searchBarWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Ionicons name="search-outline" size={18} color={colors.textMuted} style={{ marginRight: 8 }} />
+              <TextInput
+                style={[styles.searchInput, { color: colors.text }]}
+                placeholder="Buscar por placa, folio, marca o infractor..."
+                placeholderTextColor={colors.textMuted}
+                value={busqueda}
+                onChangeText={setBusqueda}
+                autoCorrect={false}
+              />
+              {busqueda.length > 0 && (
+                <TouchableOpacity onPress={() => setBusqueda("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                </TouchableOpacity>
+              )}
+            </View>
           </>
         }
         ListEmptyComponent={
           <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Ionicons name="document-text-outline" size={48} color={colors.textMuted} />
-            <Text style={[styles.emptyCardTitle, { color: colors.text }]}>No hay boletas en este apartado</Text>
+            <Text style={[styles.emptyCardTitle, { color: colors.text }]}>
+              {busqueda ? "Sin resultados para tu búsqueda" : "No hay boletas en este apartado"}
+            </Text>
             <Text style={[styles.emptyCardDesc, { color: colors.textSecondary }]}>
-              {filtro === "pendientes"
+              {busqueda
+                ? `No se encontró ninguna boleta que coincida con "${busqueda}".`
+                : filtro === "pendientes"
                 ? "No existen boletas pendientes de sincronización."
                 : "Presione 'Levantar Nueva Infracción' para emitir la primera boleta."}
             </Text>
+            {busqueda.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setBusqueda("")}
+                style={[styles.emptyClearBtn, { backgroundColor: colors.primaryBg }]}
+              >
+                <Text style={{ color: colors.primary, fontWeight: "600", fontSize: 13 }}>Limpiar búsqueda</Text>
+              </TouchableOpacity>
+            )}
           </View>
         }
       />
@@ -1509,5 +1558,26 @@ const styles = StyleSheet.create({
   zoomImage: {
     width: "92%",
     height: "80%",
+  },
+  searchBarWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
+    marginBottom: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "500",
+    paddingVertical: 0,
+  },
+  emptyClearBtn: {
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
   },
 });

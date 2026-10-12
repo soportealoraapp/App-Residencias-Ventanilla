@@ -23,6 +23,8 @@ export interface ThemeColors {
   warningBg: string;
   danger: string;
   dangerBg: string;
+  info: string;
+  infoBg: string;
   inputBg: string;
   inputBorder: string;
   cardShadow: string;
@@ -48,6 +50,8 @@ export const darkColors: ThemeColors = {
   warningBg: "rgba(245, 158, 11, 0.12)",
   danger: "#ef4444",
   dangerBg: "rgba(239, 68, 68, 0.12)",
+  info: "#8b5cf6",
+  infoBg: "rgba(139, 92, 246, 0.12)",
   inputBg: "#18181b",
   inputBorder: "#27272a",
   cardShadow: "rgba(0, 0, 0, 0.5)",
@@ -73,6 +77,8 @@ export const lightColors: ThemeColors = {
   warningBg: "rgba(217, 119, 6, 0.08)",
   danger: "#dc2626",
   dangerBg: "rgba(220, 38, 38, 0.08)",
+  info: "#7c3aed",
+  infoBg: "rgba(124, 58, 237, 0.08)",
   inputBg: "#f8fafc",
   inputBorder: "#cbd5e1",
   cardShadow: "rgba(0, 0, 0, 0.06)",

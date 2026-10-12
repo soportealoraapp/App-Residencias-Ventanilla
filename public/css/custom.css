@@ -2,10 +2,10 @@
    Ventanilla Digital Uriangato - Mobile First Responsive & Modern CSS System
    ========================================================================== */
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap");
 
 :root {
-  --font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-family: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --primary-color: #0d47a1;
   --primary-hover: #0b3c8a;
   --primary-light: #e8f0fe;
@@ -1121,3 +1121,170 @@ body.sidebar-open-no-scroll {
   border-color: var(--primary-color);
   background: #f0f7ff;
 }
+
+/* ==========================================================================
+   UI / UX ELEVATION SYSTEM (MICRO-INTERACTIONS, CARDS, TOOLTIPS, PRINT)
+   ========================================================================== */
+
+/* Indicator Dots */
+.indicator-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #94a3b8;
+}
+.indicator-dot.online {
+  background-color: var(--success-color);
+}
+.indicator-dot.pulse {
+  box-shadow: 0 0 0 0 rgba(14, 159, 110, 0.7);
+  animation: pulse-green 2s infinite;
+}
+@keyframes pulse-green {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(14, 159, 110, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(14, 159, 110, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(14, 159, 110, 0); }
+}
+
+/* Copy-to-clipboard pill buttons */
+.btn-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #64748b;
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.btn-copy:hover {
+  background-color: var(--primary-light);
+  color: var(--primary-color);
+  border-color: #bfdbfe;
+}
+.btn-copy.copied {
+  background-color: var(--success-light);
+  color: var(--success-color);
+  border-color: #a7f3d0;
+}
+
+/* Stat Cards & KPI Elevators */
+.stat-card-elevated {
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), 0 8px 16px -4px rgba(15, 23, 42, 0.04);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  position: relative;
+}
+.stat-card-elevated:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -6px rgba(15, 23, 42, 0.08);
+  border-color: #cbd5e1;
+}
+.stat-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+}
+
+/* Modals: Glassmorphism and Smooth Entrance */
+.modal.fade .modal-dialog {
+  transform: scale(0.96) translateY(10px);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.modal.show .modal-dialog {
+  transform: scale(1) translateY(0);
+}
+.modal-content {
+  border-radius: 18px;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+  overflow: hidden;
+}
+
+/* Fast demo selector chips in auth */
+.auth-demo-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+.auth-demo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  border-radius: 9999px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.auth-demo-chip:hover {
+  background-color: var(--primary-light);
+  color: var(--primary-color);
+  border-color: #93c5fd;
+  transform: translateY(-1px);
+}
+
+/* Smooth Table Responsive & Sticky Headers */
+.table-responsive {
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.6);
+}
+.table-sticky-header thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: #f8fafc;
+  box-shadow: inset 0 -1px 0 rgba(226, 232, 240, 0.8);
+}
+.table tbody tr {
+  transition: background-color 0.15s ease;
+}
+.table tbody tr:hover {
+  background-color: rgba(241, 245, 249, 0.7) !important;
+}
+
+/* Print Stylesheet */
+@media print {
+  .sidebar-admin, .topbar-admin, .navbar-uriangato, .footer-ciudadano,
+  .mobile-bottom-bar, .btn, .no-print {
+    display: none !important;
+  }
+  body, .admin-wrapper, .main-admin {
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .modal-dialog {
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+  .modal-content {
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .printable-receipt {
+    display: block !important;
+    padding: 20px;
+    font-size: 12pt;
+    color: #000;
+  }
+}
+

@@ -174,17 +174,45 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
-          {/* Botón de prueba rápida */}
-          <TouchableOpacity
-            style={[styles.demoButton, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
-            onPress={handleAutoFillDemo}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="flash-outline" size={16} color={colors.primary} />
-            <Text style={[styles.demoButtonText, { color: colors.primary }]}>
-              Autocompletar Agente de Prueba (AGT-204)
+          {/* Selector de Agentes de Prueba Rápidos */}
+          <View style={styles.demoSection}>
+            <Text style={[styles.demoSectionLabel, { color: colors.textMuted }]}>
+              ACCESO RÁPIDO PARA EVALUACIÓN:
             </Text>
-          </TouchableOpacity>
+            <View style={styles.demoChipsRow}>
+              <TouchableOpacity
+                style={[
+                  styles.demoChip,
+                  { backgroundColor: colors.surfaceElevated, borderColor: placa === "AGT-204" ? colors.primary : colors.border },
+                ]}
+                onPress={() => {
+                  setPlaca("AGT-204");
+                  setPassword("transito2026");
+                  setErrorMsg(null);
+                }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="shield" size={13} color={colors.primary} />
+                <Text style={[styles.demoChipText, { color: colors.text }]}>AGT-204 · Carlos M.</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.demoChip,
+                  { backgroundColor: colors.surfaceElevated, borderColor: placa === "AGT-107" ? colors.primary : colors.border },
+                ]}
+                onPress={() => {
+                  setPlaca("AGT-107");
+                  setPassword("transito2026");
+                  setErrorMsg(null);
+                }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="shield" size={13} color={colors.info || colors.primary} />
+                <Text style={[styles.demoChipText, { color: colors.text }]}>AGT-107 · María H.</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
         {/* Indicador de Respaldo Offline */}
@@ -350,18 +378,34 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.5,
   },
-  demoButton: {
+  demoSection: {
+    marginTop: 16,
+  },
+  demoSectionLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  demoChipsRow: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  demoChip: {
+    flex: 1,
+    minWidth: 130,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 12,
-    marginTop: 14,
     gap: 6,
   },
-  demoButtonText: {
-    fontSize: 13,
+  demoChipText: {
+    fontSize: 12,
     fontWeight: "600",
   },
   offlineNotice: {

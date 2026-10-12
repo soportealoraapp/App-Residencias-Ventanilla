@@ -31,6 +31,24 @@
         </div>
     <?php endif ?>
 
+    <!-- Demo Quick-Fill Chips for UX testing -->
+    <div class="mb-3">
+        <label class="form-label text-muted small fw-semibold d-block mb-1">
+            <i class="bi bi-lightning-charge-fill text-warning me-1"></i>Acceso Rápido de Prueba:
+        </label>
+        <div class="auth-demo-chips">
+            <button type="button" class="auth-demo-chip" onclick="fillLogin('admin', '12345678')">
+                <i class="bi bi-shield-lock-fill text-primary"></i> Administrador
+            </button>
+            <button type="button" class="auth-demo-chip" onclick="fillLogin('operador1', '12345678')">
+                <i class="bi bi-person-workspace text-info"></i> Operador
+            </button>
+            <button type="button" class="auth-demo-chip" onclick="fillLogin('ciudadano1', '12345678')">
+                <i class="bi bi-person-fill text-success"></i> Ciudadano
+            </button>
+        </div>
+    </div>
+
     <?= form_open('/auth/attempt-login') ?>
         <div class="mb-3">
             <label for="username" class="form-label small fw-semibold">Usuario o Correo</label>
@@ -47,6 +65,9 @@
             <div class="input-group mt-1">
                 <span class="input-group-text bg-light text-muted"><i class="bi bi-lock"></i></span>
                 <input type="password" class="form-control" id="password" name="password" placeholder="Tu contraseña" required>
+                <button class="btn btn-outline-secondary" type="button" id="togglePasswordBtn" title="Mostrar/ocultar contraseña" tabindex="-1">
+                    <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                </button>
             </div>
         </div>
         <div class="d-grid gap-2 mt-4">
@@ -65,6 +86,27 @@
         </p>
     </div>
 </div>
+
+<script>
+function fillLogin(user, pass) {
+    document.getElementById('username').value = user;
+    document.getElementById('password').value = pass;
+    document.getElementById('password').focus();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var toggleBtn = document.getElementById('togglePasswordBtn');
+    var passwordInput = document.getElementById('password');
+    var icon = document.getElementById('togglePasswordIcon');
+    if (toggleBtn && passwordInput && icon) {
+        toggleBtn.addEventListener('click', function() {
+            var isPass = passwordInput.type === 'password';
+            passwordInput.type = isPass ? 'text' : 'password';
+            icon.className = isPass ? 'bi bi-eye-slash' : 'bi bi-eye';
+        });
+    }
+});
+</script>
 
 <?= $this->endSection() ?>
 

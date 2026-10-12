@@ -244,3 +244,45 @@ export async function sincronizarBoleta(boleta: BoletaInsert): Promise<void> {
     throw new Error(error.message);
   }
 }
+
+/** Subir foto de evidencia al bucket público 'evidencias' de Supabase Storage */
+export async function subirFotoEvidencia(
+  folio: string,
+  tipo: "placa" | "contexto" | "documento",
+  uri: string | null | undefined
+): Promise<string | null> {
+  if (!uri) return null;
+
+  // Si ya es una URL remota de Supabase o HTTP pública válida, la conservamos
+  if (uri.startsWith("http://") || uri.startsWith("https://")) {
+    return uri;
+  }
+
+  try {
+    const res = await fetch(uri);
+    const blob = await res.blob();
+    const mime = blob.type || "image/jpeg";
+    const ext = mime.includes("png") ? "png" : "jpg";
+    const folioLimpio = folio.replace(/[^A-Za-z0-9_-]/g, "_");
+    const filePath = `${folioLimpio}/${tipo}_${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("evidencias")
+      .upload(filePath, blob, {
+        contentType: mime,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.warn(`[storage] Error subiendo evidencia ${tipo}:`, uploadError);
+      return uri;
+    }
+
+    const { data } = supabase.storage.from("evidencias").getPublicUrl(filePath);
+    return data.publicUrl;
+  } catch (err) {
+    console.warn(`[storage] Excepción subiendo evidencia ${tipo}:`, err);
+    return uri;
+  }
+}
+

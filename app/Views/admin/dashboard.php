@@ -22,70 +22,74 @@ function badge_color_estatus(string $estatus): string {
 
 <div class="row g-2 g-md-3 mb-3 mb-md-4">
     <div class="col-6 col-md-4 col-lg">
-        <div class="card text-bg-primary h-100 shadow-sm border-0">
-            <div class="card-body p-3">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="card-title text-white-50 small mb-1">Total Solicitudes</h6>
-                        <h2 class="card-text mb-0 fs-3 fw-bold"><?= number_format($estadisticas['total']) ?></h2>
+        <a href="<?= site_url('admin/solicitudes') ?>" class="text-decoration-none">
+            <div class="stat-card-elevated p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small fw-semibold">Total Solicitudes</span>
+                    <div class="stat-icon-wrapper bg-primary-subtle text-primary">
+                        <i class="bi bi-folder2-open"></i>
                     </div>
-                    <i class="bi bi-clipboard-data fs-2 opacity-50 d-none d-sm-inline" aria-hidden="true"></i>
                 </div>
+                <h3 class="mb-0 fw-bold text-dark fs-3"><?= number_format($estadisticas['total']) ?></h3>
+                <small class="text-muted">Registro global</small>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-md-4 col-lg">
-        <div class="card text-bg-warning h-100 shadow-sm border-0">
-            <div class="card-body p-3">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="card-title text-dark-50 small mb-1">Pendientes</h6>
-                        <h2 class="card-text mb-0 fs-3 fw-bold text-dark"><?= number_format($estadisticas['pendientes']) ?></h2>
-                        <small class="text-dark-50 d-none d-sm-inline">Rec: <?= $estadisticas['recibido'] ?> | Rev: <?= $estadisticas['en_revision'] ?></small>
+        <a href="<?= site_url('admin/solicitudes?estatus=Recibido') ?>" class="text-decoration-none">
+            <div class="stat-card-elevated p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small fw-semibold">Pendientes</span>
+                    <div class="stat-icon-wrapper bg-warning-subtle text-warning">
+                        <i class="bi bi-hourglass-split"></i>
                     </div>
-                    <i class="bi bi-hourglass-split fs-2 opacity-50 d-none d-sm-inline" aria-hidden="true"></i>
                 </div>
+                <h3 class="mb-0 fw-bold text-warning fs-3"><?= number_format($estadisticas['pendientes']) ?></h3>
+                <small class="text-muted">Rec: <?= $estadisticas['recibido'] ?> | Rev: <?= $estadisticas['en_revision'] ?></small>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-md-4 col-lg">
-        <div class="card text-bg-info h-100 shadow-sm border-0">
-            <div class="card-body p-3">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="card-title text-dark small mb-1">En Revisión</h6>
-                        <h2 class="card-text mb-0 fs-3 fw-bold text-dark"><?= number_format($estadisticas['en_revision']) ?></h2>
+        <a href="<?= site_url('admin/solicitudes?estatus=En revisión') ?>" class="text-decoration-none">
+            <div class="stat-card-elevated p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small fw-semibold">En Revisión</span>
+                    <div class="stat-icon-wrapper bg-info-subtle text-info">
+                        <i class="bi bi-search"></i>
                     </div>
-                    <i class="bi bi-search fs-2 opacity-50 d-none d-sm-inline" aria-hidden="true"></i>
                 </div>
+                <h3 class="mb-0 fw-bold text-info fs-3"><?= number_format($estadisticas['en_revision']) ?></h3>
+                <small class="text-muted">En dictamen técnico</small>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-md-4 col-lg">
-        <div class="card text-bg-success h-100 shadow-sm border-0">
-            <div class="card-body p-3">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="card-title text-white-50 small mb-1">Vigentes / Pagados</h6>
-                        <h2 class="card-text mb-0 fs-3 fw-bold"><?= number_format($estadisticas['pagados_vigentes']) ?></h2>
+        <a href="<?= site_url('admin/solicitudes?estatus=Pagado') ?>" class="text-decoration-none">
+            <div class="stat-card-elevated p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small fw-semibold">Vigentes / Pagados</span>
+                    <div class="stat-icon-wrapper bg-success-subtle text-success">
+                        <i class="bi bi-check-circle-fill"></i>
                     </div>
-                    <i class="bi bi-check-circle fs-2 opacity-50 d-none d-sm-inline" aria-hidden="true"></i>
                 </div>
+                <h3 class="mb-0 fw-bold text-success fs-3"><?= number_format($estadisticas['pagados_vigentes']) ?></h3>
+                <small class="text-muted">Trámites autorizados</small>
             </div>
-        </div>
+        </a>
     </div>
     <div class="col-12 col-md-4 col-lg">
-        <div class="card text-bg-danger h-100 shadow-sm border-0">
-            <div class="card-body p-3">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="card-title text-white-50 small mb-1">Rechazados</h6>
-                        <h2 class="card-text mb-0 fs-3 fw-bold"><?= number_format($estadisticas['rechazados']) ?></h2>
+        <a href="<?= site_url('admin/solicitudes?estatus=Rechazado') ?>" class="text-decoration-none">
+            <div class="stat-card-elevated p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small fw-semibold">Rechazados</span>
+                    <div class="stat-icon-wrapper bg-danger-subtle text-danger">
+                        <i class="bi bi-x-circle-fill"></i>
                     </div>
-                    <i class="bi bi-x-circle fs-2 opacity-50 d-none d-sm-inline" aria-hidden="true"></i>
                 </div>
+                <h3 class="mb-0 fw-bold text-danger fs-3"><?= number_format($estadisticas['rechazados']) ?></h3>
+                <small class="text-muted">Con observaciones</small>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 
