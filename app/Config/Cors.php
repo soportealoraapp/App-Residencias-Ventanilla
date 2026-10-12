@@ -47,16 +47,6 @@ class Cors extends BaseConfig
             'https://.*\.vercel\.app',
             'http://localhost.*',
         ],
-         *
-         * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin
-         *
-         * NOTE: A pattern specified here is part of a regular expression. It will
-         *       be actually `#\A<pattern>\z#`.
-         *
-         * E.g.:
-         *   - ['https://\w+\.example\.com']
-         */
-        'allowedOriginsPatterns' => [],
 
         /**
          * Weather to send the `Access-Control-Allow-Credentials` header.
