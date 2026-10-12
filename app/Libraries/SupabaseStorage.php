@@ -206,7 +206,11 @@ class SupabaseStorage
         curl_close($ch);
 
         if ($responseBody === false) {
-            log_message('error', 'SupabaseStorage cURL error: ' . $error);
+            if (function_exists('log_message')) {
+                \log_message('error', 'SupabaseStorage cURL error: ' . $error);
+            } else {
+                error_log('SupabaseStorage cURL error: ' . $error);
+            }
             return false;
         }
 

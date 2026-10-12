@@ -60,12 +60,19 @@ export default function RegistroScreen() {
       setRegistroExitoso(true);
     } catch (error) {
       if (error instanceof ApiError) {
+        // Try to get the server's message from the response body
+        const serverMsg =
+          error.body && typeof error.body === "object" && "message" in (error.body as object)
+            ? (error.body as { message: string }).message
+            : null;
         if (error.status === 409) {
           setErrorMsg("Ya existe un agente registrado con esa placa.");
+        } else if (error.status === 404) {
+          setErrorMsg("No se encontró el servicio de registro. Contacta al administrador.");
         } else if (error.status >= 500) {
-          setErrorMsg("Ocurrió un error en el servidor. Inténtalo más tarde.");
+          setErrorMsg(serverMsg || "Ocurrió un error en el servidor. Inténtalo más tarde.");
         } else {
-          setErrorMsg("No se pudo completar el registro. Revisa los datos e inténtalo de nuevo.");
+          setErrorMsg(serverMsg || "No se pudo completar el registro. Revisa los datos e inténtalo de nuevo.");
         }
       } else {
         setErrorMsg("No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.");

@@ -11,6 +11,17 @@ class AgentesTransitoApiController extends Controller
 {
     public function registrar(): ResponseInterface
     {
+        $origin = $this->request->getHeaderLine('Origin') ?: '*';
+        $this->response
+            ->setHeader('Access-Control-Allow-Origin', $origin)
+            ->setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin')
+            ->setHeader('Access-Control-Max-Age', '7200');
+
+        if (strtoupper($this->request->getMethod()) === 'OPTIONS') {
+            return $this->response->setStatusCode(204)->setBody('');
+        }
+
         $payload = $this->request->getJSON(true);
         if (! is_array($payload)) {
             return $this->response->setStatusCode(400)->setJSON([

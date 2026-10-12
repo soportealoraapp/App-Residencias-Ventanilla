@@ -34,20 +34,19 @@ class Cors extends BaseConfig
          *   - ['http://localhost:8080']
          *   - ['https://www.example.com']
          */
-        'allowedOrigins' => ['http://localhost:8081'],
+        'allowedOrigins' => [
+            'http://localhost:8081',
+            'http://localhost:8080',
+            'https://app-residencias.vercel.app',
+        ],
 
         /**
          * Origin regex patterns for the `Access-Control-Allow-Origin` header.
-         *
-         * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin
-         *
-         * NOTE: A pattern specified here is part of a regular expression. It will
-         *       be actually `#\A<pattern>\z#`.
-         *
-         * E.g.:
-         *   - ['https://\w+\.example\.com']
          */
-        'allowedOriginsPatterns' => [],
+        'allowedOriginsPatterns' => [
+            'https://.*\.vercel\.app',
+            'http://localhost.*',
+        ],
 
         /**
          * Weather to send the `Access-Control-Allow-Credentials` header.
@@ -68,7 +67,7 @@ class Cors extends BaseConfig
          *
          * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Headers
          */
-        'allowedHeaders' => ['Accept', 'Content-Type'],
+        'allowedHeaders' => ['Accept', 'Content-Type', 'Authorization', 'X-Requested-With', 'Origin'],
 
         /**
          * Set headers to expose.

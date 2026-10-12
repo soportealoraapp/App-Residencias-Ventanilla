@@ -18,6 +18,7 @@ class AgenteTransitoModel extends Model
         'rol',
         'sector',
         'activo',
+        'created_at',
         'updated_at',
     ];
     protected $useTimestamps    = true;

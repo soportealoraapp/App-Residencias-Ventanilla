@@ -111,8 +111,8 @@ $estatusOpciones = isset($estatusOpciones) && is_array($estatusOpciones)
                                     <span class="badge <?= $badgeClass ?>"><?= esc($estatusLabel) ?></span>
                                 </td>
                                 <td class="text-end text-nowrap">
-                                    <a href="/admin/concesiones/editar/<?= $c->id ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i></a>
-                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmarEliminar(<?= $c->id ?>)"><i class="bi bi-trash"></i></button>
+                                    <a href="/admin/concesiones/editar/<?= $c->id ?>" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Editar concesión" aria-label="Editar concesión"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Eliminar concesión" aria-label="Eliminar concesión" onclick="confirmarEliminar(<?= $c->id ?>)"><i class="bi bi-trash" aria-hidden="true"></i></button>
                                     <form id="form-eliminar-<?= $c->id ?>" action="/admin/concesiones/eliminar/<?= $c->id ?>" method="post" class="d-none"></form>
                                 </td>
                             </tr>

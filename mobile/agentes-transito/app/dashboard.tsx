@@ -7,6 +7,7 @@ import {
   FlatList,
   Alert,
   ActivityIndicator,
+  TextInput,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../src/contexts/AuthContext";
@@ -65,6 +66,7 @@ export default function DashboardScreen() {
     horaActual < 12 ? "BUENOS DÍAS" : horaActual < 19 ? "BUENAS TARDES" : "BUENAS NOCHES";
 
   const [filtro, setFiltro] = useState<"todas" | "pendientes" | "sincronizadas">("todas");
+  const [busqueda, setBusqueda] = useState("");
   const [infraccionSeleccionada, setInfraccionSeleccionada] = useState<Infraccion | null>(null);
   const [logoutConfirmacionVisible, setLogoutConfirmacionVisible] = useState(false);
 
@@ -80,12 +82,24 @@ export default function DashboardScreen() {
     if (!authLoading && !user) router.replace("/");
   }, [authLoading, user, router]);
 
-  const infraccionesFiltradas =
+  const infraccionesPorPestana =
     filtro === "pendientes"
       ? pendientes
       : filtro === "sincronizadas"
       ? sincronizadas
       : infracciones;
+
+  const terminoBusqueda = busqueda.trim().toLocaleLowerCase();
+  const infraccionesFiltradas = infraccionesPorPestana.filter((item) =>
+    !terminoBusqueda ||
+    [
+      item.vehiculo?.placas,
+      item.folio,
+      item.infractor?.nombre,
+      item.vehiculo?.marca,
+      item.generales?.lugar,
+    ].some((valor) => valor?.toLocaleLowerCase().includes(terminoBusqueda))
+  );
 
   const obtenerFechaCreacion = (item: Infraccion) => {
     const fechaCreacion = Date.parse(item.creadoEn);
@@ -380,14 +394,50 @@ export default function DashboardScreen() {
                 </View>
               </View>
             </View>
+
+            {/* 7. Barra de Búsqueda Rápida */}
+            <View style={[styles.searchBarWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Ionicons name="search-outline" size={18} color={colors.textMuted} style={{ marginRight: 8 }} />
+              <TextInput
+                style={[styles.searchInput, { color: colors.text }]}
+                placeholder="Buscar por placa, folio, conductor, marca o lugar..."
+                placeholderTextColor={colors.textMuted}
+                value={busqueda}
+                onChangeText={setBusqueda}
+                autoCorrect={false}
+              />
+              {busqueda.length > 0 && (
+                <TouchableOpacity onPress={() => setBusqueda("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                </TouchableOpacity>
+              )}
+            </View>
           </>
         }
         ListEmptyComponent={
           <View style={[styles.emptyRecent, { borderColor: colors.border }]}>
             <Ionicons name="document-text-outline" size={22} color={colors.textMuted} />
             <Text style={[styles.emptyRecentText, { color: colors.textSecondary }]}>
-              Aún no hay boletas registradas.
+              {busqueda.trim()
+                ? `No se encontró ninguna boleta para “${busqueda.trim()}”.`
+                : filtro === "pendientes"
+                  ? "No hay boletas pendientes de sincronización."
+                  : filtro === "sincronizadas"
+                    ? "No hay boletas sincronizadas disponibles."
+                    : "Aún no hay boletas registradas."}
             </Text>
+            {!!busqueda.trim() && (
+              <TouchableOpacity
+                onPress={() => setBusqueda("")}
+                style={[styles.emptyClearBtn, { backgroundColor: colors.primaryBg }]}
+                accessibilityRole="button"
+                accessibilityLabel="Limpiar búsqueda"
+              >
+                <Text style={[styles.emptyClearBtnText, { color: colors.primary }]}>
+                  Limpiar búsqueda
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         }
       />
@@ -1106,4 +1156,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
 
+  searchBarWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
+    marginBottom: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "500",
+    paddingVertical: 0,
+  },
+  emptyClearBtn: {
+    marginTop: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  emptyClearBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
 });

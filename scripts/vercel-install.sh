@@ -16,6 +16,8 @@ rm -f /tmp/composer
 cd mobile/agentes-transito
 npm install --legacy-peer-deps
 npx expo export -p web --output-dir ../../public/agentes --clear
+mkdir -p ../../public/agentes/fonts
+cp -f node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/*.ttf ../../public/agentes/fonts/ 2>/dev/null || true
 cd ../..
 
 echo "Build completo: PHP backend + App Agentes de Transito"

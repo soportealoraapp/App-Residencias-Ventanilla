@@ -1444,13 +1444,16 @@ export default function NuevaInfraccionScreen() {
                     >
                       <Ionicons name="close-circle" size={36} color="#ffffff" />
                     </TouchableOpacity>
-                    <Text style={styles.cameraGuideTitle}>
-                      {capturandoTipoFoto === "placa"
-                        ? "📸 Foto 1 — Placa del vehículo"
-                        : capturandoTipoFoto === "contexto"
-                        ? "📸 Foto 2 — Contexto de la infracción"
-                        : "📸 Foto 3 — Garantía o Documento"}
-                    </Text>
+                    <View style={styles.cameraGuideTitleWrap}>
+                      <Ionicons name="camera" size={18} color="#ffffff" />
+                      <Text style={styles.cameraGuideTitle}>
+                        {capturandoTipoFoto === "placa"
+                          ? "Foto 1 — Placa del vehículo"
+                          : capturandoTipoFoto === "contexto"
+                          ? "Foto 2 — Contexto de la infracción"
+                          : "Foto 3 — Garantía o Documento"}
+                      </Text>
+                    </View>
                   </View>
 
                   <View style={styles.cameraFrameGuide}>
@@ -1719,6 +1722,7 @@ const styles = StyleSheet.create({
   cameraTopBar: { flexDirection: "row", alignItems: "center", padding: 16, gap: 12, backgroundColor: "rgba(0,0,0,0.5)" },
   closeCameraFullBtn: { padding: 4 },
   cameraGuideTitle: { flex: 1, color: "#ffffff", fontSize: 15, fontWeight: "700" },
+  cameraGuideTitleWrap: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
   cameraFrameGuide: { alignSelf: "center", width: 260, height: 180, position: "relative" },
   cameraCorner: { position: "absolute", width: 28, height: 28, borderColor: "#ffffff", borderWidth: 3 },
   cornerTL: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0, borderTopLeftRadius: 6 },

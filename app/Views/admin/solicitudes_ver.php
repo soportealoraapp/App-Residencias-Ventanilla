@@ -1,4 +1,33 @@
-<?php declare(strict_types=1); ?>
+<?php declare(strict_types=1);
+
+/**
+ * Variables inyectadas por Admin\SolicitudesController::ver() vía view(..., $data).
+ * Se leen desde get_defined_vars() para que Intelephense no las marque como
+ * "undefined" sin alterar el runtime (CI4 las define en el scope del view).
+ */
+$__view = get_defined_vars();
+
+/** @var \App\Entities\Solicitud|null $solicitud */
+$solicitud = $__view['solicitud'] ?? null;
+
+/** @var \App\Models\UserModel|null $ciudadano */
+$ciudadano = $__view['ciudadano'] ?? null;
+
+/** @var array<int, object> $documentos */
+$documentos = $__view['documentos'] ?? [];
+
+/** @var array<int, array{historial: object, usuario: \App\Models\UserModel|null}> $historial */
+$historial = $__view['historial'] ?? [];
+
+/** @var array<int, string> $estatusSiguientes */
+$estatusSiguientes = $__view['estatusSiguientes'] ?? [];
+
+/** @var array<string, mixed> $datosSolicitud */
+$datosSolicitud = $__view['datosSolicitud'] ?? [];
+
+/** @var \App\Models\VerificacionFisicaModel|null $verificacion */
+$verificacion = $__view['verificacion'] ?? null;
+?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('pageTitle') ?>Detalle solicitud <?= esc($solicitud->folio) ?><?= $this->endSection() ?>
 <?= $this->section('content') ?>
@@ -42,8 +71,14 @@ $claveEtiquetas = [
             <div class="card-body">
                 <div class="mb-3">
                     <label class="form-label small text-muted mb-1">Folio</label>
-                    <div class="fs-4 fw-bold font-monospace user-select-all border rounded p-2 bg-light">
-                        🔍 <?= esc($solicitud->folio) ?>
+                    <div class="d-flex align-items-center gap-2 fs-5 fw-bold font-monospace user-select-all border rounded p-2 bg-light">
+                        <i class="bi bi-barcode-fill text-primary" aria-hidden="true"></i>
+                        <span class="flex-grow-1 text-truncate"><?= esc($solicitud->folio) ?></span>
+                        <button type="button" class="btn-copy" data-bs-toggle="tooltip" data-bs-title="Copiar folio"
+                            onclick="copiarTexto('<?= esc($solicitud->folio) ?>', this)">
+                            <i class="bi bi-clipboard" aria-hidden="true"></i>
+                            <span class="d-none d-sm-inline">Copiar</span>
+                        </button>
                     </div>
                 </div>
                 <dl class="row mb-0">
@@ -91,7 +126,7 @@ $claveEtiquetas = [
             <div class="card-body">
                 <?php if (empty($estatusSiguientes)): ?>
                     <div class="text-center py-4">
-                        <div class="fs-1 text-muted mb-2">🔒</div>
+                        <i class="bi bi-lock-fill fs-1 text-muted d-block mb-2" aria-hidden="true"></i>
                         <p class="text-muted mb-0">Este estatus es terminal. No hay transiciones disponibles.</p>
                     </div>
                 <?php else: ?>
@@ -124,7 +159,7 @@ $claveEtiquetas = [
                         </div>
                         <div class="d-grid">
                             <button type="submit" class="btn btn-outline-primary btn-sm fw-bold">
-                                ✅ Cambiar estatus
+                                <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Cambiar estatus
                             </button>
                         </div>
                     </form>
@@ -315,19 +350,19 @@ $claveEtiquetas = [
                             </td>
                             <td>
                                 <?php if (!empty($doc->validado)): ?>
-                                    <span class="badge bg-success estatus-badge">✓ Validado</span>
+                                    <span class="badge bg-success estatus-badge"><i class="bi bi-check2" aria-hidden="true"></i> Validado</span>
                                 <?php else: ?>
                                     <span class="badge bg-secondary estatus-badge">Pendiente</span>
                                 <?php endif; ?>
                             </td>
                             <td class="text-nowrap">
-                                <a class="btn btn-outline-primary btn-sm"
+                                <a class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Descargar documento"
                                     href="<?= site_url('admin/solicitudes/descargar-documento/' . $doc->id) ?>">
-                                    ⬇ Descargar
+                                    <i class="bi bi-download me-1" aria-hidden="true"></i>Descargar
                                 </a>
                                 <button type="button" class="btn btn-outline-secondary btn-sm"
-                                    title="Marcar como validado (solo UI demo)">
-                                    ✓ Validar
+                                    data-bs-toggle="tooltip" data-bs-title="Marcar como validado (solo UI demo)">
+                                    <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Validar
                                 </button>
                             </td>
                         </tr>
@@ -377,15 +412,15 @@ $claveEtiquetas = [
                             </div>
                             <div class="small text-muted mt-1 mt-md-0">
                                 <?php if ($u): ?>
-                                    👤 <?= esc($u->nombre_completo ?? $u->username ?? 'Usuario') ?>
+                                    <i class="bi bi-person-circle me-1" aria-hidden="true"></i><?= esc($u->nombre_completo ?? $u->username ?? 'Usuario') ?>
                                 <?php else: ?>
-                                    👤 <span class="text-muted">Usuario desconocido</span>
+                                    <i class="bi bi-person-question me-1" aria-hidden="true"></i><span class="text-muted">Usuario desconocido</span>
                                 <?php endif; ?>
                             </div>
                         </div>
                         <?php if (!empty($h->comentario)): ?>
                             <div class="mt-2 p-2 bg-light rounded border-start border-3 border-primary small">
-                                💬 <?= esc($h->comentario) ?>
+                                <i class="bi bi-chat-left-text me-1 text-primary" aria-hidden="true"></i><?= esc($h->comentario) ?>
                             </div>
                         <?php endif; ?>
                     </div>

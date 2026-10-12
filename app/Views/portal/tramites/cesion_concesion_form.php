@@ -1,4 +1,15 @@
 <?php declare(strict_types=1);
+
+/**
+ * Variables inyectadas por Ciudadano\TramitesController::cesion() vía
+ * view(..., $data). Se leen desde get_defined_vars() para que Intelephense
+ * no las marque como "undefined" sin alterar el runtime de CI4.
+ */
+$__view = get_defined_vars();
+
+/** @var array<string, string> $tipos_cesion */
+$tipos_cesion = $__view['tipos_cesion'] ?? [];
+
 $validation = \Config\Services::validation();
 $oldNombre = old('solicitante_nombre', '');
 $oldDomicilio = old('solicitante_domicilio', '');
@@ -382,7 +393,7 @@ $oldNumSerie = old('vehiculo_num_serie', '');
                 numSerieInput.value = json.vehiculo_num_serie || '';
                 placasInput.readOnly = true;
                 numSerieInput.readOnly = true;
-                let html = '<div class="alert alert-success small py-2 mb-0" role="alert"><i class="bi bi-check-circle-fill me-1"></i><strong>Concesión VIGENTE ✔️</strong>';
+                let html = '<div class="alert alert-success small py-2 mb-0" role="alert"><i class="bi bi-check-circle-fill me-1"></i><strong>Concesión VIGENTE</strong>';
                 if (json.titular_actual) {
                     html += '<br><span class="opacity-75">Titular: ' + json.titular_actual + '</span>';
                 }

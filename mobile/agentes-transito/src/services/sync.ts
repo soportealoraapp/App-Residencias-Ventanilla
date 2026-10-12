@@ -4,7 +4,11 @@ import {
   obtenerInfraccionesLocales,
   registrarUltimaSincronizacion,
 } from "./storage";
-import { sincronizarBoleta, transformarInfraccionABoleta } from "./supabase";
+import {
+  sincronizarBoleta,
+  subirFotoEvidencia,
+  transformarInfraccionABoleta,
+} from "./supabase";
 
 export interface SyncResultado {
   exitosos: number;
@@ -40,11 +44,27 @@ export async function sincronizarInfraccionesLocales(): Promise<SyncResultado> {
     const item = actualizadas[i];
     if (item.estado === "pendiente") {
       try {
-        const boletaPayload = transformarInfraccionABoleta(item);
+        // Subir fotos locales de evidencia a Supabase Storage (bucket 'evidencias')
+        const [fotoPlaca, fotoContexto, fotoDocumento] = await Promise.all([
+          subirFotoEvidencia(item.folio, "placa", item.evidencias?.fotoPlaca),
+          subirFotoEvidencia(item.folio, "contexto", item.evidencias?.fotoContexto),
+          subirFotoEvidencia(item.folio, "documento", item.evidencias?.fotoDocumento),
+        ]);
+
+        const itemActualizado: Infraccion = {
+          ...item,
+          evidencias: {
+            fotoPlaca: fotoPlaca ?? null,
+            fotoContexto: fotoContexto ?? null,
+            fotoDocumento: fotoDocumento ?? null,
+          },
+        };
+
+        const boletaPayload = transformarInfraccionABoleta(itemActualizado);
         await sincronizarBoleta(boletaPayload);
 
         actualizadas[i] = {
-          ...item,
+          ...itemActualizado,
           estado: "sincronizada",
           sincronizadoEn: new Date().toISOString(),
         };

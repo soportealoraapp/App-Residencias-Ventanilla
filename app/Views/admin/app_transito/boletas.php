@@ -21,9 +21,21 @@
         </div>
     </div>
 
-    <!-- Barra de Filtros -->
+    <!-- Barra de Filtros y Accesos Rápidos -->
     <div class="card border-0 shadow-sm rounded-4 bg-white mb-4">
         <div class="card-body p-3">
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <a href="/admin/app-transito/boletas" class="btn btn-sm <?= empty($filtros['q']) && empty($filtros['placa']) && empty($filtros['fecha']) ? 'btn-primary' : 'btn-light border' ?>">
+                    <i class="bi bi-list-ul me-1"></i>Todas las boletas (<?= count($boletas) ?>)
+                </a>
+                <a href="/admin/app-transito/boletas?fecha=<?= date('Y-m-d') ?>" class="btn btn-sm <?= ($filtros['fecha'] ?? '') === date('Y-m-d') ? 'btn-primary' : 'btn-light border' ?>">
+                    <i class="bi bi-calendar-event me-1"></i>Boletas de hoy
+                </a>
+                <a href="/admin/app-transito/boletas?q=Conductor+Ausente" class="btn btn-sm <?= ($filtros['q'] ?? '') === 'Conductor Ausente' ? 'btn-primary' : 'btn-light border' ?>">
+                    <i class="bi bi-person-x me-1"></i>Conductor Ausente
+                </a>
+            </div>
+
             <form method="GET" action="/admin/app-transito/boletas" class="row g-2 align-items-center">
                 <div class="col-md-4">
                     <div class="input-group">
@@ -58,7 +70,7 @@
     <div class="card border-0 shadow-sm rounded-4 bg-white">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0 table-sticky-header">
                     <thead class="table-light small text-muted text-uppercase">
                         <tr>
                             <th class="ps-4">Folio / Fecha</th>
@@ -89,7 +101,12 @@
                                 ?>
                                 <tr>
                                     <td class="ps-4">
-                                        <div class="fw-bold font-monospace text-primary"><?= esc($b->folio) ?></div>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <span class="fw-bold font-monospace text-primary"><?= esc($b->folio) ?></span>
+                                            <button type="button" class="btn-copy" onclick="copiarFolio('<?= esc($b->folio) ?>', this)" title="Copiar Folio">
+                                                <i class="bi bi-clipboard"></i>
+                                            </button>
+                                        </div>
                                         <small class="text-muted"><?= esc($b->fecha_infraccion) ?> <?= esc(substr($b->hora_infraccion, 0, 5)) ?> hrs</small>
                                     </td>
                                     <td>
@@ -125,7 +142,7 @@
                                     <td class="text-end pe-4">
                                         <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3"
                                             data-bs-toggle="modal" data-bs-target="#modalBoleta<?= $b->id ?>">
-                                            Ver Detalle
+                                            <i class="bi bi-eye me-1"></i>Ver Detalle
                                         </button>
                                     </td>
                                 </tr>
@@ -230,7 +247,10 @@
                                                     <?php endif; ?>
                                                 </div>
                                             </div>
-                                            <div class="modal-footer border-0 pt-0">
+                                            <div class="modal-footer border-0 pt-0 d-flex justify-content-between">
+                                                <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                                                    <i class="bi bi-printer me-1"></i>Imprimir Boleta
+                                                </button>
                                                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cerrar</button>
                                             </div>
                                         </div>
@@ -244,5 +264,20 @@
         </div>
     </div>
 </div>
+
+<script>
+function copiarFolio(texto, btn) {
+    navigator.clipboard.writeText(texto).then(function() {
+        var icon = btn.querySelector('i');
+        var originalClass = icon.className;
+        icon.className = 'bi bi-check2';
+        btn.classList.add('copied');
+        setTimeout(function() {
+            icon.className = originalClass;
+            btn.classList.remove('copied');
+        }, 2000);
+    });
+}
+</script>
 
 <?= $this->endSection() ?>
