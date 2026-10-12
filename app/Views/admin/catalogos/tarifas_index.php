@@ -1,3 +1,21 @@
+<?php declare(strict_types=1);
+
+/**
+ * Variables inyectadas por Admin\Catalogos\TarifasController::index() vía
+ * view(..., $data). Se leen desde get_defined_vars() para que Intelephense
+ * no las marque como "undefined" sin alterar el runtime de CI4.
+ */
+$__view = get_defined_vars();
+
+/** @var array<int, string> $tramites */
+$tramites = $__view['tramites'] ?? [];
+
+/** @var array{tramite?: string} $filtros */
+$filtros = $__view['filtros'] ?? [];
+
+/** @var array<int, object> $tarifas */
+$tarifas = $__view['tarifas'] ?? [];
+?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('pageTitle') ?>Catálogo de Tarifas<?= $this->endSection() ?>
 <?= $this->section('content') ?>

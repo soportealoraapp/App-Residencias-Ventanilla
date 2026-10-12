@@ -1,4 +1,33 @@
-<?php declare(strict_types=1); ?>
+<?php declare(strict_types=1);
+
+/**
+ * Variables inyectadas por Admin\SolicitudesController::ver() vía view(..., $data).
+ * Se leen desde get_defined_vars() para que Intelephense no las marque como
+ * "undefined" sin alterar el runtime (CI4 las define en el scope del view).
+ */
+$__view = get_defined_vars();
+
+/** @var \App\Entities\Solicitud|null $solicitud */
+$solicitud = $__view['solicitud'] ?? null;
+
+/** @var \App\Models\User|null $ciudadano */
+$ciudadano = $__view['ciudadano'] ?? null;
+
+/** @var array<int, object> $documentos */
+$documentos = $__view['documentos'] ?? [];
+
+/** @var array<int, array{historial: object, usuario: \App\Models\User|null}> $historial */
+$historial = $__view['historial'] ?? [];
+
+/** @var array<int, string> $estatusSiguientes */
+$estatusSiguientes = $__view['estatusSiguientes'] ?? [];
+
+/** @var array<string, mixed> $datosSolicitud */
+$datosSolicitud = $__view['datosSolicitud'] ?? [];
+
+/** @var \App\Models\VerificacionFisica|null $verificacion */
+$verificacion = $__view['verificacion'] ?? null;
+?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('pageTitle') ?>Detalle solicitud <?= esc($solicitud->folio) ?><?= $this->endSection() ?>
 <?= $this->section('content') ?>
