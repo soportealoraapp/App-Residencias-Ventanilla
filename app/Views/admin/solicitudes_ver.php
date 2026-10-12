@@ -10,13 +10,13 @@ $__view = get_defined_vars();
 /** @var \App\Entities\Solicitud|null $solicitud */
 $solicitud = $__view['solicitud'] ?? null;
 
-/** @var \App\Models\User|null $ciudadano */
+/** @var \App\Models\UserModel|null $ciudadano */
 $ciudadano = $__view['ciudadano'] ?? null;
 
 /** @var array<int, object> $documentos */
 $documentos = $__view['documentos'] ?? [];
 
-/** @var array<int, array{historial: object, usuario: \App\Models\User|null}> $historial */
+/** @var array<int, array{historial: object, usuario: \App\Models\UserModel|null}> $historial */
 $historial = $__view['historial'] ?? [];
 
 /** @var array<int, string> $estatusSiguientes */
@@ -25,7 +25,7 @@ $estatusSiguientes = $__view['estatusSiguientes'] ?? [];
 /** @var array<string, mixed> $datosSolicitud */
 $datosSolicitud = $__view['datosSolicitud'] ?? [];
 
-/** @var \App\Models\VerificacionFisica|null $verificacion */
+/** @var \App\Models\VerificacionFisicaModel|null $verificacion */
 $verificacion = $__view['verificacion'] ?? null;
 ?>
 <?= $this->extend('layouts/admin') ?>
