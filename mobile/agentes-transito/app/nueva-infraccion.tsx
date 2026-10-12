@@ -32,6 +32,10 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 type TipoFoto = "placa" | "contexto" | "documento";
+type MensajeGuardado =
+  | { tipo: "error"; titulo: string; detalle: string }
+  | { tipo: "procesando"; titulo: string; detalle: string }
+  | { tipo: "exito"; titulo: string; detalle: string; folio: string };
 
 let folioSequence = 0;
 
@@ -47,9 +51,13 @@ function generarFolioUnico(agentePlaca: string): string {
 
 export default function NuevaInfraccionScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { guardarInfraccion, valorUma, catalogo } = useInfracciones();
   const { colors, isDark } = useTheme();
+
+  useEffect(() => {
+    if (!authLoading && !user) router.replace("/");
+  }, [authLoading, user, router]);
 
   // ── Folio único con placa del agente + timestamp ──────────────────────────────
   const [folio, setFolio] = useState(() => generarFolioUnico(user?.placa || "AGENTE"));
@@ -110,8 +118,9 @@ export default function NuevaInfraccionScreen() {
 
   // ── Estado de guardado ────────────────────────────────────────────────────────
   const [guardando, setGuardando] = useState(false);
-  const [boletaGuardada, setBoletaGuardada] = useState<string | null>(null);
+  const [mensajeGuardado, setMensajeGuardado] = useState<MensajeGuardado | null>(null);
   const mensajeExitoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const formScrollRef = useRef<ScrollView>(null);
 
   useEffect(
     () => () => {
@@ -122,6 +131,8 @@ export default function NuevaInfraccionScreen() {
 
   // ── Precargar fecha, hora y GPS al abrir ──────────────────────────────────────
   useEffect(() => {
+    if (authLoading || !user) return;
+
     const ahora = new Date();
     const yyyy = ahora.getFullYear();
     const mm = String(ahora.getMonth() + 1).padStart(2, "0");
@@ -132,7 +143,7 @@ export default function NuevaInfraccionScreen() {
     setFecha(`${yyyy}-${mm}-${dd}`);
     setHora(`${hh}:${min}`);
     obtenerUbicacionGps();
-  }, []);
+  }, [authLoading, user]);
 
   // ── Detectar datos capturados (excluye fecha y ubicación generadas) ────────────
   useEffect(() => {
@@ -407,36 +418,73 @@ export default function NuevaInfraccionScreen() {
   const handleGuardarBoleta = async () => {
     if (guardandoRef.current) return;
 
+    if (mensajeExitoTimer.current) {
+      clearTimeout(mensajeExitoTimer.current);
+      mensajeExitoTimer.current = null;
+    }
+    setMensajeGuardado(null);
+
     if (!lugar.trim()) {
-      Alert.alert("Falta Ubicación", "Debe registrar la ubicación o calle de la infracción.");
+      setMensajeGuardado({
+        tipo: "error",
+        titulo: "Falta ubicación",
+        detalle: "Registra la ubicación o calle de la infracción.",
+      });
       return;
     }
     if (!sinPlacas && !placas.trim()) {
-      Alert.alert("Falta Placa", "Ingrese la placa del vehículo o marque 'Vehículo Sin Placas'.");
+      setMensajeGuardado({
+        tipo: "error",
+        titulo: "Falta la placa",
+        detalle: "Ingresa la placa del vehículo o marca “Vehículo sin placas”.",
+      });
       return;
     }
     if (!marca.trim()) {
-      Alert.alert("Falta Marca", "Ingrese la marca del vehículo intervenido.");
+      setMensajeGuardado({
+        tipo: "error",
+        titulo: "Falta la marca",
+        detalle: "Ingresa la marca del vehículo intervenido.",
+      });
       return;
     }
     if (!conductorAusente && !nombreInfractor.trim()) {
-      Alert.alert("Falta Conductor", "Ingrese el nombre del conductor o active 'Conductor Ausente'.");
+      setMensajeGuardado({
+        tipo: "error",
+        titulo: "Falta el conductor",
+        detalle: "Ingresa su nombre o activa “Conductor ausente”.",
+      });
       return;
     }
     if (faltasSeleccionadas.length === 0) {
-      Alert.alert("Sin infracción", "Seleccione al menos una infracción del catálogo oficial.");
+      setMensajeGuardado({
+        tipo: "error",
+        titulo: "Falta seleccionar una infracción",
+        detalle: "Selecciona al menos una infracción del catálogo oficial.",
+      });
       return;
     }
     if (!fotoPlaca || !fotoContexto || !fotoDocumento) {
-      Alert.alert(
-        "Evidencias Incompletas",
-        "El reglamento exige las 3 fotos de evidencia:\n1. Placa\n2. Contexto de la falta\n3. Garantía o Documento\n\nPresione 'Cargar 3 fotos de prueba' si está evaluando la app en simulador."
-      );
+      const evidenciasFaltantes = [
+        !fotoPlaca && "placa",
+        !fotoContexto && "contexto de la falta",
+        !fotoDocumento && "garantía o documento",
+      ].filter(Boolean);
+      setMensajeGuardado({
+        tipo: "error",
+        titulo: "Faltan evidencias fotográficas",
+        detalle: `El reglamento requiere las tres fotografías. Falta(n): ${evidenciasFaltantes.join(", ")}.`,
+      });
       return;
     }
 
     guardandoRef.current = true;
     setGuardando(true);
+    setMensajeGuardado({
+      tipo: "procesando",
+      titulo: "Guardando boleta",
+      detalle: "Se está guardando en este dispositivo.",
+    });
     try {
       const nuevaBoleta: Infraccion = {
         id: `inf-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -478,20 +526,28 @@ export default function NuevaInfraccionScreen() {
       await guardarInfraccion(nuevaBoleta);
       const folioGuardado = nuevaBoleta.folio;
       resetFormularioBoleta();
+      formScrollRef.current?.scrollTo({ y: 0, animated: true });
       if (mensajeExitoTimer.current) clearTimeout(mensajeExitoTimer.current);
-      setBoletaGuardada(folioGuardado);
+      setMensajeGuardado({
+        tipo: "exito",
+        titulo: "Boleta guardada correctamente",
+        detalle: "Guardada en este dispositivo y pendiente de sincronización.",
+        folio: folioGuardado,
+      });
       mensajeExitoTimer.current = setTimeout(() => {
-        setBoletaGuardada(null);
+        setMensajeGuardado(null);
         mensajeExitoTimer.current = null;
       }, 5000);
     } catch (error) {
       console.error("Error guardando boleta localmente:", error);
-      Alert.alert(
-        "Error al guardar",
-        error instanceof Error
-          ? error.message
-          : "No se pudo guardar la boleta en el almacenamiento local."
-      );
+      setMensajeGuardado({
+        tipo: "error",
+        titulo: "No se pudo guardar la boleta",
+        detalle:
+          error instanceof Error && error.message
+            ? error.message
+            : "Ocurrió un error al guardar en este dispositivo. Tus datos siguen en el formulario.",
+      });
     } finally {
       guardandoRef.current = false;
       setGuardando(false);
@@ -566,6 +622,14 @@ export default function NuevaInfraccionScreen() {
   // ══════════════════════════════════════════════════════════════════════════════
   // RENDER
   // ══════════════════════════════════════════════════════════════════════════════
+  if (authLoading || !user) {
+    return (
+      <View style={[styles.keyboardContainer, { backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }]}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -591,27 +655,63 @@ export default function NuevaInfraccionScreen() {
           <ThemeToggle compact={true} />
         </View>
 
-        {boletaGuardada && (
+        {mensajeGuardado && (
           <View
             accessibilityRole="alert"
+            accessibilityLiveRegion="assertive"
             style={[
-              styles.successNotice,
-              { backgroundColor: colors.successBg, borderColor: colors.success },
+              styles.saveNotice,
+              {
+                backgroundColor:
+                  mensajeGuardado.tipo === "error"
+                    ? colors.dangerBg
+                    : mensajeGuardado.tipo === "procesando"
+                      ? colors.primaryBg
+                      : colors.successBg,
+                borderColor:
+                  mensajeGuardado.tipo === "error"
+                    ? colors.danger
+                    : mensajeGuardado.tipo === "procesando"
+                      ? colors.primary
+                      : colors.success,
+              },
             ]}
           >
-            <Ionicons name="checkmark-circle" size={24} color={colors.success} />
+            {mensajeGuardado.tipo === "procesando" ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Ionicons
+                name={mensajeGuardado.tipo === "error" ? "alert-circle" : "checkmark-circle"}
+                size={24}
+                color={mensajeGuardado.tipo === "error" ? colors.danger : colors.success}
+              />
+            )}
             <View style={styles.successNoticeContent}>
-              <Text style={[styles.successNoticeTitle, { color: colors.success }]}>
-                Boleta guardada correctamente
+              <Text
+                style={[
+                  styles.successNoticeTitle,
+                  {
+                    color:
+                      mensajeGuardado.tipo === "error"
+                        ? colors.danger
+                        : mensajeGuardado.tipo === "procesando"
+                          ? colors.primary
+                          : colors.success,
+                  },
+                ]}
+              >
+                {mensajeGuardado.titulo}
               </Text>
               <Text style={[styles.successNoticeFolio, { color: colors.text }]}>
-                Folio: {boletaGuardada}
+                {mensajeGuardado.detalle}
+                {mensajeGuardado.tipo === "exito" ? ` Folio: ${mensajeGuardado.folio}` : ""}
               </Text>
             </View>
           </View>
         )}
 
         <ScrollView
+          ref={formScrollRef}
           style={styles.formScroll}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
@@ -1450,7 +1550,7 @@ const styles = StyleSheet.create({
   headerTitleWrap: { flex: 1 },
   headerTitle: { fontSize: 14, fontWeight: "800", letterSpacing: 0.5 },
   headerSubtitle: { fontSize: 11, marginTop: 1 },
-  successNotice: { flexDirection: "row", alignItems: "center", gap: 12, marginHorizontal: 16, marginTop: 12, padding: 14, borderRadius: 14, borderWidth: 1 },
+  saveNotice: { flexDirection: "row", alignItems: "center", gap: 12, marginHorizontal: 16, marginTop: 12, padding: 14, borderRadius: 14, borderWidth: 1 },
   successNoticeContent: { flex: 1 },
   successNoticeTitle: { fontSize: 14, fontWeight: "800" },
   successNoticeFolio: { fontSize: 12, fontWeight: "600", marginTop: 3 },
