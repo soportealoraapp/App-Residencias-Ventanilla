@@ -382,7 +382,7 @@ $oldNumSerie = old('vehiculo_num_serie', '');
                 numSerieInput.value = json.vehiculo_num_serie || '';
                 placasInput.readOnly = true;
                 numSerieInput.readOnly = true;
-                let html = '<div class="alert alert-success small py-2 mb-0" role="alert"><i class="bi bi-check-circle-fill me-1"></i><strong>Concesión VIGENTE ✔️</strong>';
+                let html = '<div class="alert alert-success small py-2 mb-0" role="alert"><i class="bi bi-check-circle-fill me-1"></i><strong>Concesión VIGENTE</strong>';
                 if (json.titular_actual) {
                     html += '<br><span class="opacity-75">Titular: ' + json.titular_actual + '</span>';
                 }

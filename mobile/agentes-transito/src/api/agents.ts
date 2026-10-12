@@ -12,7 +12,7 @@ interface RegisterAgenteResponse {
 }
 
 export async function registerAgente(payload: RegisterAgentePayload): Promise<RegisterAgenteResponse> {
-  return apiRequest<RegisterAgenteResponse>("/agentes/registro", {
+  return apiRequest<RegisterAgenteResponse>("/api/agentes/registro", {
     method: "POST",
     auth: false,
     body: {

@@ -35,9 +35,9 @@ function AppNavigation() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
-    ...Ionicons.font,
-  });
+  const [fontsLoaded] = useFonts(
+    Platform.OS === "web" ? {} : { ...Ionicons.font }
+  );
 
   useEffect(() => {
     if (Platform.OS === "web" && typeof document !== "undefined") {
@@ -50,7 +50,8 @@ export default function RootLayout() {
           document.createTextNode(`
             @font-face {
               font-family: 'Ionicons';
-              src: url('https://cdn.jsdelivr.net/npm/react-native-vector-icons@10.2.0/Fonts/Ionicons.ttf') format('truetype');
+              src: url('/agentes/fonts/Ionicons.ttf') format('truetype'),
+                   url('https://cdn.jsdelivr.net/npm/react-native-vector-icons@10.2.0/Fonts/Ionicons.ttf') format('truetype');
               font-display: swap;
             }
           `)

@@ -166,6 +166,55 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- UI base: tooltips globales + helper de copiar al portapapeles -->
+<script>
+(function () {
+    function initTooltips(root) {
+        if (!window.bootstrap || !bootstrap.Tooltip) return;
+        var scope = root || document;
+        scope.querySelectorAll('[data-bs-toggle="tooltip"], [data-bs-toggle="popover"]').forEach(function (el) {
+            if (el.dataset.tooltipInitialized === '1') return;
+            new bootstrap.Tooltip(el, { container: 'body', trigger: 'hover focus' });
+            el.dataset.tooltipInitialized = '1';
+        });
+    }
+    window.iniciarTooltips = initTooltips;
+
+    window.copiarTexto = function (texto, btn) {
+        var finalizar = function (ok) {
+            if (!btn) return;
+            var original = btn.innerHTML;
+            btn.classList.add('copied');
+            btn.innerHTML = ok
+                ? '<i class="bi bi-check2" aria-hidden="true"></i> Copiado'
+                : '<i class="bi bi-x-lg" aria-hidden="true"></i> Error';
+            setTimeout(function () {
+                btn.classList.remove('copied');
+                btn.innerHTML = original;
+            }, 1600);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(texto).then(function () { finalizar(true); }, function () { finalizar(false); });
+        } else {
+            var ta = document.createElement('textarea');
+            ta.value = texto; document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); finalizar(true); } catch (e) { finalizar(false); }
+            document.body.removeChild(ta);
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', function () { initTooltips(document); });
+    // Re-inicializar en contenido inyectado dinámicamente
+    var MO = new MutationObserver(function (mutations) {
+        mutations.forEach(function (m) {
+            m.addedNodes && m.addedNodes.forEach && m.addedNodes.forEach(function (n) {
+                if (n && n.nodeType === 1) initTooltips(n);
+            });
+        });
+    });
+    document.addEventListener('DOMContentLoaded', function () { MO.observe(document.body, { childList: true, subtree: true }); });
+})();
+</script>
 <!-- Feedback de carga: spinner en botones de submit -->
 <script>
 document.addEventListener('submit', function (e) {

@@ -81,8 +81,8 @@
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-end text-nowrap">
-                                    <a href="/admin/tarifas/editar/<?= $tarifa->id ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i></a>
-                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmarEliminar(<?= $tarifa->id ?>)"><i class="bi bi-trash"></i></button>
+                                    <a href="/admin/tarifas/editar/<?= $tarifa->id ?>" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Editar tarifa" aria-label="Editar tarifa"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Eliminar tarifa" aria-label="Eliminar tarifa" onclick="confirmarEliminar(<?= $tarifa->id ?>)"><i class="bi bi-trash" aria-hidden="true"></i></button>
                                     <form id="form-eliminar-<?= $tarifa->id ?>" action="/admin/tarifas/eliminar/<?= $tarifa->id ?>" method="post" class="d-none"></form>
                                 </td>
                             </tr>
