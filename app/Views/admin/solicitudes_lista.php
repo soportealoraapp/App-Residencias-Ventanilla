@@ -24,8 +24,28 @@ $estatusLista = \App\Libraries\EstadoSolicitudService::ESTATUS_MAESTRO;
 ?>
 
 <div class="card mb-3 mb-md-4 border-0 shadow-sm">
-    <div class="card-header bg-white py-2">
+    <div class="card-header bg-white py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
         <h6 class="mb-0 small fw-bold"><i class="bi bi-funnel me-1 text-primary"></i>Filtros de búsqueda</h6>
+        <div class="d-flex flex-wrap gap-1">
+            <a href="<?= site_url('admin/solicitudes') ?>" class="badge text-decoration-none <?= empty($filtros['estatus']) ? 'bg-primary text-white' : 'bg-light text-dark border' ?> px-2 py-1">
+                Todos
+            </a>
+            <a href="<?= site_url('admin/solicitudes?estatus=' . urlencode('Recibido')) ?>" class="badge text-decoration-none <?= ($filtros['estatus'] === 'Recibido') ? 'bg-primary text-white' : 'bg-light text-dark border' ?> px-2 py-1">
+                Recibidos
+            </a>
+            <a href="<?= site_url('admin/solicitudes?estatus=' . urlencode('Pago pendiente')) ?>" class="badge text-decoration-none <?= ($filtros['estatus'] === 'Pago pendiente') ? 'bg-warning text-dark' : 'bg-light text-dark border' ?> px-2 py-1">
+                Pago pendiente
+            </a>
+            <a href="<?= site_url('admin/solicitudes?estatus=' . urlencode('En revisión')) ?>" class="badge text-decoration-none <?= ($filtros['estatus'] === 'En revisión') ? 'bg-info text-dark' : 'bg-light text-dark border' ?> px-2 py-1">
+                En revisión
+            </a>
+            <a href="<?= site_url('admin/solicitudes?estatus=' . urlencode('Concluido')) ?>" class="badge text-decoration-none <?= ($filtros['estatus'] === 'Concluido') ? 'bg-success text-white' : 'bg-light text-dark border' ?> px-2 py-1">
+                Concluidos
+            </a>
+            <a href="<?= site_url('admin/solicitudes?estatus=' . urlencode('Prevención')) ?>" class="badge text-decoration-none <?= ($filtros['estatus'] === 'Prevención') ? 'bg-danger text-white' : 'bg-light text-dark border' ?> px-2 py-1">
+                Prevención
+            </a>
+        </div>
     </div>
     <div class="card-body">
         <form method="get" action="<?= site_url('admin/solicitudes') ?>" class="row g-2 g-md-3 align-items-end">
@@ -52,9 +72,9 @@ $estatusLista = \App\Libraries\EstadoSolicitudService::ESTATUS_MAESTRO;
                 </select>
             </div>
             <div class="col-12 col-md-4">
-                <label for="q" class="form-label small fw-semibold">Búsqueda</label>
+                <label for="q" class="form-label small fw-semibold">Búsqueda rápida</label>
                 <input type="text" name="q" id="q" class="form-control form-control-sm"
-                    placeholder="folio, RFC, razón social o nombre"
+                    placeholder="folio, RFC, razón social o nombre..."
                     value="<?= esc($filtros['q']) ?>">
             </div>
             <div class="col-12 col-md-2 d-grid">

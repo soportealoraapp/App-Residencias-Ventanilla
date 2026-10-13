@@ -12,8 +12,10 @@ Plataforma gubernamental integral para la digitalización de trámites, gestión
 
 ## 📌 Enlaces Rápidos a la Documentación Oficial
 
-* 📘 [**DOCUMENTACION_GENERAL.md**](./DOCUMENTACION_GENERAL.md): Documentación técnica y operativa integral del sistema completo (Backend API, Portal/Panel Web, App Móvil en Expo, guía de instalación local, variables de entorno y comandos de despliegue en Vercel).
-* 🎓 [**DOC_METODOLOGIA_PORTAL_PANEL.md**](./DOC_METODOLOGIA_PORTAL_PANEL.md): Documento técnico exhaustivo y metodológico enfocado en el **Portal Ciudadano y Panel Administrativo Web** (Arquitectura MVC, esquema PostgreSQL, almacenamiento y firmas criptográficas SHA-256 en Supabase Storage, RBAC, persistencia serverless `ci_sessions`, 7 trámites y máquinas de estados), diseñado como base para reporte de Residencia Profesional.
+* 📘 [**DOCUMENTACION_GENERAL.md**](./DOCUMENTACION_GENERAL.md): Documentación técnica y operativa integral del sistema completo (Visión macro, separación del Portal/Panel Web y la App Móvil de Tránsitos, arquitectura de bases de datos, flujos normativos y guía de despliegue en Vercel).
+* ⚙️ [**DOCUMENTACION_BACKEND.md**](./DOCUMENTACION_BACKEND.md): Documentación técnica exhaustiva del **Backend en CodeIgniter 4 / PHP 8.2** (Controladores, Modelos, Servicios, Storage Supabase, Filtros RBAC, Seguridad y API REST).
+* 📱 [**DOCUMENTACION_APP_TRANSITO.md**](./DOCUMENTACION_APP_TRANSITO.md): Documentación técnica exhaustiva de la **App Móvil para Agentes de Tránsito en React Native / Expo** (Arquitectura Offline-First, Cámara, GPS, cálculo de sanciones en UMA y sincronización con Supabase).
+* 🎓 [**DOC_METODOLOGIA_PORTAL_PANEL.md**](./DOC_METODOLOGIA_PORTAL_PANEL.md): Documento metodológico y memoria de arquitectura enfocado en el **Portal Ciudadano y Panel Administrativo Web**, diseñado como base para reporte de Residencia Profesional.
 
 ---
 
