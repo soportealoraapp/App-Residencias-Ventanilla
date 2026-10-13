@@ -36,8 +36,8 @@ graph TD
     end
 
     subgraph CAPA_ESTADO_GLOBAL [Contextos y Lógica Global - src/contexts/]
-        AUTH_CTX[AuthContext.tsx\nSesión, Placa, Credenciales]
-        INFR_CTX[InfraccionesContext.tsx\nCatálogo, Cálculo UMA, Cola Offline]
+        AUTH_CTX[AuthContext.tsx\nSesión, Placa, Token Bearer]
+        INFR_CTX[InfraccionesContext.tsx\nCatálogo 80 Fracciones, Cálculo UMA, Cola Offline]
         THEM_CTX[ThemeContext.tsx\nTema Claro / Oscuro Alto Contraste]
     end
 
@@ -47,22 +47,35 @@ graph TD
         ASYNC[(AsyncStorage\nCola Local Offline)]
     end
 
-    subgraph COMUNICACION_Y_NUBE [Servicios en la Nube - Supabase]
-        SUPA_DB[(PostgreSQL Supabase\nTabla boletas_infracciones)]
+    subgraph BACKEND_MUNICIPAL_CI4 [Backend Institucional - CodeIgniter 4]
+        BACK_AUTH[POST /api/agentes/login\nPOST /api/agentes/registro]
+        BACK_CAT[GET /api/checklist-infracciones\nGET /api/parametros]
+        BACK_SYNC[POST /api/infracciones/sincronizar\nPOST /api/infracciones/evidencias]
+        CI4_DB[(Base de Datos Municipal\nboletas_infracciones / agentes_transito)]
+        CI4_UPLOADS[(Almacenamiento Local Servidor\npublic/uploads/evidencias_infracciones)]
+    end
+
+    subgraph NUBE_RESPALDO [Servicios Nube de Respaldo - Supabase]
+        SUPA_DB[(PostgreSQL Supabase\nRespaldo / Fallback)]
         SUPA_STG[(Supabase Storage\nBucket: evidencias)]
-        BACK_API[API REST CodeIgniter 4\n/api/agentes/registro]
     end
 
     IDX --> AUTH_CTX
     LOG --> AUTH_CTX
-    REG --> BACK_API
+    AUTH_CTX --> BACK_AUTH
+    REG --> BACK_AUTH
     DASH --> INFR_CTX
     NUEV --> CAM
     NUEV --> GPS
     NUEV --> INFR_CTX
     INFR_CTX --> ASYNC
-    INFR_CTX --> SUPA_DB
-    INFR_CTX --> SUPA_STG
+    INFR_CTX --> BACK_SYNC
+    INFR_CTX --> BACK_CAT
+    BACK_AUTH --> CI4_DB
+    BACK_SYNC --> CI4_DB
+    BACK_SYNC --> CI4_UPLOADS
+    INFR_CTX -.->|Respaldo si no hay backend| SUPA_DB
+    INFR_CTX -.->|Respaldo si no hay backend| SUPA_STG
 ```
 
 ---
@@ -119,18 +132,19 @@ mobile/agentes-transito/
 ### 4.2. `app/login.tsx` (Inicio de Turno)
 * **Propósito:** Identificación del agente en vía pública.
 * **Campos:**
-  * Número de Placa / Credencial (formato automático en mayúsculas, ej. `AGT-102`).
+  * Número de Placa / Credencial (formato automático en mayúsculas, ej. `AGT-102`, `AGT-204`).
   * Contraseña / PIN con botón para alternar visibilidad.
 * **Validación:**
   * Validación local previa de longitud y caracteres.
-  * Consulta contra `agentes_transito` en Supabase o API de backend.
-  * En éxito, persiste el estado de sesión en `AsyncStorage` y redirige a `dashboard.tsx`.
+  * Consulta prioritaria contra la API del backend institucional (`POST /api/agentes/login`) validando contra la tabla `agentes_transito` con hash BCrypt y entrega de Bearer token.
+  * En éxito, persiste el estado de sesión en `AsyncStorage` (`@agente_sesion_activa_v1`) y redirige a `dashboard.tsx`.
 
 ### 4.3. `app/registro.tsx` (Enrolamiento de Nuevos Agentes)
 * **Propósito:** Registro guiado de oficiales para su incorporación al padrón municipal.
 * **Características de UX:**
   * Campos: Placa / Credencial, Nombre Completo, Contraseña y Confirmación de Contraseña.
   * Indicadores visuales y toggles independientes para ver u ocultar ambas contraseñas.
+  * Validación contra `POST /api/agentes/registro`.
   * Mensajes de error claros e informativos (por ejemplo, placa duplicada, contraseñas no coincidentes, o error de conectividad).
   * En éxito, muestra banner de confirmación y redirige al login.
 
@@ -142,7 +156,7 @@ mobile/agentes-transito/
   * **Resumen de Turno:**
     * Infracciones levantadas en el turno actual.
     * Infracciones pendientes de sincronización (con badge de alerta amarilla/naranja si existen boletas en cola).
-  * **Botón de Sincronización Manual:** Permite forzar la subida a Supabase al conectarse a una red WiFi o tener cobertura estable.
+  * **Botón de Sincronización Manual:** Fuerza la transmisión inmediata al backend municipal (`/api/infracciones/sincronizar` y `/api/infracciones/evidencias`) al tener cobertura.
   * **Acceso a Historial:** Botón para navegar a la lista de boletas del turno.
 
 ### 4.5. `app/nueva-infraccion.tsx` (Formulario Integral de Infracción)
@@ -160,11 +174,24 @@ mobile/agentes-transito/
      * Toma 2: Fotografía del contexto o hecho vial (señal omitida, cajón prohibido, choque, etc.).
      * Toma 3: Fotografía de la garantía retenida o vehículo montado en plataforma de grúa.
      * Previsualización instantánea con opción de recaptura.
-  4. **Selección de Faltas del Reglamento (Catálogo Tipificado):**
-     * Buscador en vivo de motivos de infracción (ej. "Estacionarse en lugar prohibido", "Falta de casco", "Conducir bajo influjo de alcohol", "Pasarse alto de semáforo").
-     * Selección múltiple simultánea con cálculo automático del importe total:
-       * Sumatoria de rango mínimo en UMAs y en pesos mexicanos ($ MXN).
-       * Sumatoria de rango máximo en UMAs y en pesos mexicanos ($ MXN).
+  4. **Selección de Faltas del Reglamento (Catálogo Oficial de 80 Fracciones):**
+     * Catálogo completo extraído del Reglamento de Movilidad y Transporte del Municipio de Uriangato, dividido en 15 categorías:
+       * Licencias y Permisos para Conducir (1.1 - 1.4)
+       * Placas, Tarjeta de Circulación y Calcomanías (2.1 - 2.5)
+       * Cinturón de Seguridad y Sistemas de Retención (3.1 - 3.3)
+       * Dispositivos Móviles y Distractores (4.1 - 4.2)
+       * Casco Protector en Motocicletas y Ciclistas (5.1 - 5.5)
+       * Luces y Dispositivos de Seguridad en Vehículos (6.1 - 6.7)
+       * Estado Físico y Emocional del Conductor / Alcoholímetro (7.1 - 7.5)
+       * Límites de Velocidad (8.1 - 8.3)
+       * Preferencia de Paso y Maniobras de Conducción (9.1 - 9.10)
+       * Estacionamiento en Vía Pública (10.1 - 10.10)
+       * Normas Específicas para Motocicletas (11.1 - 11.5)
+       * Transporte Público de Pasajeros y Urbano (12.1 - 12.6)
+       * Transporte de Carga y Sustancias Peligrosas (13.1 - 13.5)
+       * Protección al Peatón, Discapacidad y Ciclistas (14.1 - 14.5)
+       * Orden, Seguridad Vial y Hechos de Tránsito (15.1 - 15.5)
+     * Selección múltiple simultánea con cálculo automático del importe total en UMA y en pesos mexicanos ($ MXN).
   5. **Garantías Retenidas:**
      * Selección de garantía asegurada: Placa vehicular, Licencia de conducir, Tarjeta de circulación o Vehículo remitido a pensión/corralón.
      * En caso de remisión con grúa, campos adicionales para Empresa de Grúa, Número de Grúa y Número de Inventario.
@@ -172,7 +199,7 @@ mobile/agentes-transito/
      * Campo de texto libre para asentar detalles relevantes del operativo.
   7. **Guardado y Transmisión:**
      * Guarda la boleta de manera inmediata en la cola local de `AsyncStorage` con estado `pendiente`.
-     * Si hay internet activo, inicia inmediatamente la subida de fotos al bucket `evidencias` y la inserción del registro en PostgreSQL Supabase, actualizando el estado local a `sincronizada`.
+     * Si hay internet activo, inicia inmediatamente la subida de evidencias (`POST /api/infracciones/evidencias`) y la sincronización con el backend municipal (`POST /api/infracciones/sincronizar`), actualizando el estado local a `sincronizada`.
 
 ### 4.6. `app/boletas.tsx` (Historial y Consulta de Infracciones)
 * **Propósito:** Auditoría y verificación de boletas emitidas por el oficial.
@@ -192,11 +219,11 @@ stateDiagram-v2
     [*] --> GuardadoLocal: Agente finaliza boleta
     GuardadoLocal --> ColaPendientes: Boleta almacenada en AsyncStorage (@infracciones_pendientes_v1)
     ColaPendientes --> EvaluandoRed: Inicia intento de transmisión
-    EvaluandoRed --> SubiendoFotos: Hay conexión estable (WiFi/4G)
-    EvaluandoRed --> ColaPendientes: Sin conexión (permanece en cola)
-    SubiendoFotos --> InsertandoPostgreSQL: Fotos cargadas en bucket 'evidencias'
-    InsertandoPostgreSQL --> Sincronizada: Registro exitoso en 'boletas_infracciones'
-    InsertandoPostgreSQL --> ErrorReintentable: Falla de red o timeout
+    EvaluandoRed --> SubiendoEvidencias: Hay conexión estable (WiFi/4G)
+    EvaluandoRed --> ColaPendientes: Sin conexión (permanece en cola local)
+    SubiendoEvidencias --> SincronizandoBackend: Evidencias subidas vía POST /api/infracciones/evidencias
+    SincronizandoBackend --> Sincronizada: Boleta registrada vía POST /api/infracciones/sincronizar
+    SincronizandoBackend --> ErrorReintentable: Falla de red o timeout
     ErrorReintentable --> ColaPendientes: Se reprograma para siguiente ciclo
     Sincronizada --> [*]
 ```
@@ -206,51 +233,23 @@ stateDiagram-v2
 * `@infracciones_historico_v1`: Registro histórico de las últimas 50 boletas sincronizadas para consulta rápida del oficial.
 * `@catalogo_infracciones_cache_v1`: Copia local del catálogo de infracciones tipificadas para permitir su búsqueda sin internet.
 * `@parametros_app_cache_v1`: Valor de la UMA vigente, versión de app y configuración de obligatoriedad de fotografías.
-* `@agente_sesion_activa_v1`: Datos de la sesión activa del oficial (placa, nombre, fecha de inicio de turno).
+* `@agente_sesion_activa_v1`: Datos de la sesión activa del oficial (placa, nombre, token y fecha de inicio de turno).
 
 ---
 
-## 6. Integración con Servicios en la Nube (Supabase)
+## 6. Sincronización con Backend Municipal y Soporte Híbrido
 
-### 6.1. Inserción Directa en PostgreSQL (`boletas_infracciones`)
-El servicio `src/services/supabase.ts` utiliza `@supabase/supabase-js` para persistir la boleta:
-```typescript
-const { data, error } = await supabase
-  .from('boletas_infracciones')
-  .insert([
-    {
-      folio: boleta.folio,
-      agente_placa: boleta.agentePlaca,
-      agente_nombre: boleta.agenteNombre,
-      conductor_nombre: boleta.conductorNombre,
-      vehiculo_placas: boleta.vehiculoPlacas,
-      vehiculo_marca: boleta.vehiculoMarca,
-      vehiculo_submarca: boleta.vehiculoSubmarca,
-      vehiculo_color: boleta.vehiculoColor,
-      vehiculo_tipo: boleta.vehiculoTipo,
-      vehiculo_serie: boleta.vehiculoSerie,
-      latitud: boleta.latitud,
-      longitud: boleta.longitud,
-      lugar_hechos: boleta.lugarHechos,
-      infracciones_articulos: JSON.stringify(boleta.infracciones),
-      total_uma_min: boleta.totalUmaMin,
-      total_uma_max: boleta.totalUmaMax,
-      monto_pesos_min: boleta.montoPesosMin,
-      monto_pesos_max: boleta.montoPesosMax,
-      garantia_retenida: boleta.garantiaRetenida,
-      grua_empresa: boleta.gruaEmpresa,
-      grua_numero_inventario: boleta.gruaNumeroInventario,
-      observaciones: boleta.observaciones,
-      fotos_urls: boleta.fotosUrls,
-      fecha_hora: boleta.fechaHora
-    }
-  ]);
-```
+### 6.1. Transmisión al Backend Municipal (CodeIgniter 4)
+El servicio `src/services/supabase.ts` (capa de sincronización) se comunica prioritariamente con el API REST municipal:
+1. **Envío de Boletas:** Ejecuta `POST /api/infracciones/sincronizar` enviando el payload JSON completo con folio, placa, infracciones cometidas, garantías retenidas y cálculo en UMA.
+2. **Subida de Evidencias:** Ejecuta `POST /api/infracciones/evidencias` mediante `FormData` (`multipart/form-data`) almacenando los archivos en el servidor de ventanilla única (`public/uploads/evidencias_infracciones/`).
+3. **Respaldo en la Nube:** Si el backend municipal no estuviese disponible y las llaves de Supabase se encuentran configuradas en el entorno, el servicio ejecuta de forma transparente el respaldo en la tabla `boletas_infracciones` y bucket `evidencias` de Supabase.
 
-### 6.2. Carga de Fotografías de Evidencia (`bucket: evidencias`)
-Las fotos capturadas con `CameraView` se convierten en un buffer binario y se cargan al bucket `evidencias` bajo una estructura organizada por fecha y folio:
-* Ruta en Storage: `evidencias/{AÑO}/{MES}/{FOLIO}_{TIPO_FOTO}_{TIMESTAMP}.jpg`
-* Las URLs generadas se asocian en el arreglo `fotos_urls` de la boleta.
+### 6.2. Carga y Almacenamiento de Fotografías de Evidencia
+Las fotos capturadas con `CameraView` se suben prioritariamente al endpoint `POST /api/infracciones/evidencias` del servidor municipal y se guardan localmente en:
+* Servidor CI4: `public/uploads/evidencias_infracciones/{FOLIO}_{TIPO_FOTO}_{TIMESTAMP}.jpg`
+* En caso de respaldo Supabase: bucket `evidencias/{AÑO}/{MES}/{FOLIO}_{TIPO_FOTO}_{TIMESTAMP}.jpg`
+* Las rutas de acceso o URLs generadas se asocian en el arreglo `fotos_urls` de la boleta.
 
 ---
 

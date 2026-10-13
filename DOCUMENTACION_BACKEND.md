@@ -70,30 +70,33 @@ graph TD
 
 ---
 
-## 2. Estructura de Directorios del Backend
-
-```
-app/
+## 2. Estructura de Directorios app/
 ├── Common.php                 # Funciones helper globales del sistema
 ├── Config/                    # Configuraciones de la aplicación
 │   ├── App.php                # Configuración base (baseURL, encoding, CSP)
 │   ├── Database.php           # Conexión a PostgreSQL (PgBouncer en 6543)
-│   ├── Filters.php            # Registro y alias de filtros de seguridad
+│   ├── Filters.php            # Registro y alias de filtros de seguridad (exención CSRF en api/*)
 │   ├── Routes.php             # Definición canónica de rutas Web y API
 │   ├── Security.php           # Configuración de tokens CSRF y cookies
 │   └── Session.php            # Configuración de sesiones en base de datos (ci_sessions)
-├── Controllers/               # Controladores MVC y API
-│   ├── AdminController.php    # Panel administrativo, bandeja de solicitudes, dictámenes
-│   ├── AgentesApiController.php # API REST para registro de agentes y catálogos
-│   ├── AuditoriaController.php# Bitácora de eventos y auditoría municipal
-│   ├── AuthController.php     # Autenticación, registro, recuperación y cierre de sesión
-│   ├── CatalogosController.php# Administración de tarifas y catálogos
-│   ├── ConvocatoriasController.php # Convocatorias y avisos oficiales
-│   ├── FormatosController.php # Formatos oficiales descargables
-│   ├── PortalController.php   # Portal ciudadano, mis solicitudes, seguimiento, pagos
-│   └── TramitesController.php # Control de captura de los 7 trámites oficiales
+├── Controllers/               # Controladores MVC y API REST
+│   ├── Admin/                 # Panel administrativo, bandeja de solicitudes, dictámenes
+│   │   ├── AdminController.php
+│   │   └── CatalogoTarifasController.php
+│   ├── Api/                   # Endpoints REST para la App Móvil de Tránsito
+│   │   ├── AgentesTransitoApiController.php # Login seguro (BCrypt/Bearer) y registro de agentes
+│   │   └── InfraccionesApiController.php    # Parámetros, checklist 80 fracciones, sincronización y evidencias
+│   ├── Ciudadano/             # Portal ciudadano, mis solicitudes, seguimiento, pagos
+│   │   ├── PortalController.php
+│   │   └── Tramite*.php       # Controladores de trámites individuales
+│   ├── Home.php               # Portada de ventanilla única
+│   └── AuthController.php     # Autenticación, registro, recuperación y cierre de sesión web
 ├── Database/                  # Migraciones y semillas de datos
-│   └── Migrations/            # Migraciones Spark para estructura relacional
+│   ├── Migrations/            # Migraciones Spark para estructura relacional
+│   │   └── 2026-09-26-000021_CreateAppTransitoTables.php # Tablas: agentes, boletas, catálogos y parámetros
+│   └── Seeds/                 # Semillas de inicialización
+│       ├── AgentesTransitoSeeder.php # Oficiales demo (AGT-204, AGT-107, JEF-001)
+│       └── DatabaseSeeder.php # Orquestador general de seeds
 ├── Filters/                   # Middlewares y filtros de seguridad
 │   ├── AdminRedirectFilter.php# Redirección contextual según el rol autenticado
 │   ├── AuthFilter.php         # Barrera de acceso para usuarios sin sesión activa
@@ -114,6 +117,10 @@ app/
 │   ├── BoletaInfraccionModel.php # Boletas levantadas por agentes
 │   ├── CatalogoInfraccionModel.php # Catálogo de infracciones del reglamento
 │   ├── ParametrosAppModel.php # Parámetros globales (UMA, fotos obligatorias)
+│   ├── SolicitudDatoModel.php # Datos específicos de trámite (almacenamiento EAV)
+│   ├── SolicitudDocumentoModel.php # Metadatos de expedientes y hash SHA-256
+│   ├── SolicitudHistorialModel.php # Historial inmutable de estados de trámite
+│   └── SolicitudModel.php     # Maestro de solicitudes y generación de foliosos globales (UMA, fotos obligatorias)
 │   ├── SolicitudDatoModel.php # Datos específicos de trámite (almacenamiento EAV)
 │   ├── SolicitudDocumentoModel.php # Metadatos de expedientes y hash SHA-256
 │   ├── SolicitudHistorialModel.php # Historial inmutable de estados de trámite
@@ -265,17 +272,21 @@ En arquitecturas serverless como Vercel, el sistema de archivos del servidor es 
 
 | Método | Ruta | Controlador / Acción | Filtros | Descripción |
 |---|---|---|---|---|
-| **POST** | `/api/agentes/registro` | `AgentesApiController::registro` | Ninguno | Enrolamiento de agentes de tránsito desde la app móvil. |
-| **GET** | `/api/checklist-infracciones`| `AgentesApiController::checklist` | Ninguno | Descarga del catálogo tipificado de infracciones y UMA. |
-| **GET** | `/portal/dashboard` | `PortalController::dashboard` | `auth` | Dashboard ciudadano. |
-| **GET** | `/portal/mis-solicitudes` | `PortalController::misSolicitudes`| `auth` | Listado y búsqueda de trámites del ciudadano. |
-| **GET** | `/portal/solicitud/{folio}`| `PortalController::verSolicitud` | `auth` | Expediente y evolución del trámite. |
-| **POST** | `/portal/tramites/{tipo}/guardar`| `TramitesController::guardar` | `auth, csrf` | Recepción y procesamiento de solicitud. |
-| **GET** | `/admin/dashboard` | `AdminController::dashboard` | `auth, role:admin` | Dashboard general de supervisión municipal. |
-| **GET** | `/admin/solicitudes` | `AdminController::solicitudes` | `auth, role:admin` | Bandeja maestra de expedientes con filtros. |
-| **POST** | `/admin/solicitudes/cambiar-estatus`| `AdminController::cambiarEstatus`| `auth, role:admin, csrf`| Cambio regulado de estatus con observaciones. |
-| **GET** | `/admin/infracciones` | `AdminController::infracciones`| `auth, role:admin` | Monitoreo de boletas levantadas en campo. |
-| **GET** | `/admin/auditoria` | `AuditoriaController::index` | `auth, role:superadmin` | Bitácora de eventos y auditoría. |
+| **POST** | `/api/agentes/registro` | `Api\AgentesTransitoApiController::registrar` | Ninguno | Enrolamiento de agentes de tránsito desde la app móvil. |
+| **POST** | `/api/agentes/login` | `Api\AgentesTransitoApiController::login` | Ninguno | Autenticación de oficiales con validación BCrypt y token Bearer. |
+| **GET** | `/api/checklist-infracciones`| `Api\InfraccionesApiController::checklist` | Ninguno | Descarga del catálogo normativo de 80 infracciones clasificadas y valor UMA. |
+| **GET** | `/api/parametros` | `Api\InfraccionesApiController::parametros` | Ninguno | Parámetros operativos (valor UMA, mínimo de fotos obligatorias). |
+| **POST** | `/api/infracciones/sincronizar` | `Api\InfraccionesApiController::sincronizar` | Ninguno | Recepción y almacenamiento de boletas levantadas en campo en `boletas_infracciones`. |
+| **POST** | `/api/infracciones/evidencias` | `Api\InfraccionesApiController::subirEvidencia` | Ninguno | Recepción multipart (`FormData`) de fotografías de evidencia asociadas al folio. |
+| **GET** | `/portal/dashboard` | `Ciudadano\PortalController::dashboard` | `auth` | Dashboard ciudadano. |
+| **GET** | `/portal/mis-solicitudes` | `Ciudadano\PortalController::misSolicitudes`| `auth` | Listado y búsqueda de trámites del ciudadano. |
+| **GET** | `/portal/solicitud/{folio}`| `Ciudadano\PortalController::verSolicitud` | `auth` | Expediente y evolución del trámite. |
+| **POST** | `/portal/tramites/{tipo}/guardar`| `Ciudadano\TramitesController::guardar` | `auth, csrf` | Recepción y procesamiento de solicitud. |
+| **GET** | `/admin/dashboard` | `Admin\AdminController::dashboard` | `auth, role:admin` | Dashboard general de supervisión municipal. |
+| **GET** | `/admin/solicitudes` | `Admin\AdminController::solicitudes` | `auth, role:admin` | Bandeja maestra de expedientes con filtros. |
+| **POST** | `/admin/solicitudes/cambiar-estatus`| `Admin\AdminController::cambiarEstatus`| `auth, role:admin, csrf`| Cambio regulado de estatus con observaciones. |
+| **GET** | `/admin/infracciones` | `Admin\AdminController::infracciones`| `auth, role:admin` | Monitoreo de boletas levantadas en campo. |
+| **GET** | `/admin/auditoria` | `Admin\AdminController::auditoria` | `auth, role:superadmin` | Bitácora de eventos y auditoría. |
 
 ---
 
@@ -289,7 +300,20 @@ En arquitecturas serverless como Vercel, el sistema de archivos del servidor es 
    ```bash
    php spark serve --port 8080
    ```
-3. **Verificación de Rutas:**
+3. **Verificación de Rutas Registradas:**
    ```bash
    php spark routes
+   ```
+4. **Ejecución de Migraciones y Semillas de Tránsito:**
+   ```bash
+   php spark migrate
+   php spark db:seed DatabaseSeeder
+   ```
+5. **Ejecución de Pruebas Unitarias Automatizadas (PHPUnit):**
+   ```bash
+   # Suite completa (57 tests passing)
+   vendor/bin/phpunit
+   
+   # Pruebas exclusivas de la API de Tránsito y Sincronización de Boletas
+   vendor/bin/phpunit tests/app/Controllers/Api/ApiAgentesTransitoYBoletasTest.php
    ```

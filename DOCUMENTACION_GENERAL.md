@@ -128,7 +128,7 @@ stateDiagram-v2
   * `InfraccionesContext`: Motor de persistencia local, cálculo de multas, cola de sincronización y catálogo.
   * `ThemeContext`: Conmutación de tema Claro / Oscuro de alto contraste optimizado para uso nocturno o bajo luz solar intensa.
 * **Almacenamiento Local (Offline-First):** `AsyncStorage` como base de datos embebida en el dispositivo móvil.
-* **Conectividad:** `@supabase/supabase-js` para interacción directa con PostgreSQL y Supabase Storage.
+* **Conectividad:** Sincronización REST prioritaria con el **Backend Municipal en CodeIgniter 4** (`/api/infracciones/*` y `/api/agentes/*`), con compatibilidad de respaldo en Supabase.
 
 ---
 
@@ -142,10 +142,12 @@ sequenceDiagram
     participant Local as AsyncStorage (Offline)
     participant GPS as Hardware GPS
     participant Cam as Hardware Cámara
-    participant Supa as Supabase (PostgreSQL & Storage)
+    participant Backend as Backend Municipal CI4
+    participant Supa as Respaldo Nube (Supabase)
 
     Agente->>App: Inicia turno con Placa y PIN
-    App->>Local: Valida sesión / Carga catálogo de infracciones
+    App->>Backend: POST /api/agentes/login (Valida credenciales y obtiene Bearer)
+    App->>Local: Guarda sesión / Carga catálogo de 80 infracciones
     Note over Agente,App: Detecta falta al reglamento en vía pública
     Agente->>App: Clic en "Nueva Infracción"
     App->>GPS: Obtiene coordenadas (lat, lng) y geocodificación
@@ -153,19 +155,19 @@ sequenceDiagram
     Agente->>Cam: Captura Foto 1 (Placa vehicular)
     Agente->>Cam: Captura Foto 2 (Contexto / Hechos)
     Agente->>Cam: Captura Foto 3 (Documento / Garantía)
-    Agente->>App: Selecciona faltas cometidas del catálogo
+    Agente->>App: Selecciona faltas del catálogo normativo
     App->>App: Calcula montos mínimo y máximo en UMA
     Agente->>App: Registra garantías retenidas (placa, licencia, grúa)
     Agente->>App: Presiona "Guardar Boleta"
     App->>Local: Guarda boleta con estado 'pendiente'
-    alt Dispositivo con conexión a Internet
-        App->>Supa: Sube fotos a Storage bucket 'evidencias'
-        App->>Supa: Inserta registro en 'boletas_infracciones'
+    alt Dispositivo con conexión activa al Backend
+        App->>Backend: POST /api/infracciones/evidencias (Sube fotos multipart)
+        App->>Backend: POST /api/infracciones/sincronizar (Inserta en boletas_infracciones)
         App->>Local: Actualiza estado a 'sincronizada'
         App-->>Agente: Notifica "Infracción guardada y sincronizada"
     else Sin conexión (Offline en campo)
         App-->>Agente: Notifica "Guardada localmente (pendiente de sincronización)"
-        Note over App,Supa: Al detectar red, la cola sincroniza automáticamente
+        Note over App,Backend: Al detectar red, la cola sincroniza automáticamente
     end
 ```
 

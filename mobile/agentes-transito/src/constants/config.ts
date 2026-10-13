@@ -17,4 +17,3 @@ const resolveApiBaseUrl = (): string => {
 
 export const API_BASE_URL = resolveApiBaseUrl();
 export const APP_ENV = process.env.EXPO_PUBLIC_APP_ENV ?? "development";
-

@@ -15,5 +15,6 @@ class DatabaseSeeder extends Seeder
         $this->call('TarifasSeeder');
         $this->call('CatalogoInfraccionesSeeder');
         $this->call('BoletaChecklistSeeder');
+        $this->call('AgentesTransitoSeeder');
     }
 }

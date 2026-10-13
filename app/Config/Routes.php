@@ -24,10 +24,26 @@ $routes->post('auth/reset/(:any)', 'AuthController::reset/$1');
 $routes->get('auth/terminos', 'AuthController::terminos');
 $routes->get('auth/privacidad', 'AuthController::privacidad');
 
-// API Móvil - Infracciones y Checklist
+// API Móvil - Infracciones, Agentes y Checklist
 $routes->get('api/checklist-infracciones', 'Api\InfraccionesApiController::checklist');
 $routes->options('api/agentes/registro', 'Api\AgentesTransitoApiController::registrar');
 $routes->post('api/agentes/registro', 'Api\AgentesTransitoApiController::registrar');
+
+$routes->options('api/agentes/login', 'Api\AgentesTransitoApiController::login');
+$routes->post('api/agentes/login', 'Api\AgentesTransitoApiController::login');
+$routes->options('api/auth/login', 'Api\AgentesTransitoApiController::login');
+$routes->post('api/auth/login', 'Api\AgentesTransitoApiController::login');
+
+$routes->get('api/parametros', 'Api\InfraccionesApiController::parametros');
+$routes->options('api/parametros', 'Api\InfraccionesApiController::parametros');
+
+$routes->options('api/infracciones/sincronizar', 'Api\InfraccionesApiController::sincronizar');
+$routes->post('api/infracciones/sincronizar', 'Api\InfraccionesApiController::sincronizar');
+$routes->options('api/boletas/sincronizar', 'Api\InfraccionesApiController::sincronizar');
+$routes->post('api/boletas/sincronizar', 'Api\InfraccionesApiController::sincronizar');
+
+$routes->options('api/infracciones/evidencias', 'Api\InfraccionesApiController::subirEvidencia');
+$routes->post('api/infracciones/evidencias', 'Api\InfraccionesApiController::subirEvidencia');
 
 $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->group('', ['filter' => 'role:administrador,operador_ventanilla'], function($routes) {

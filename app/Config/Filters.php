@@ -29,7 +29,7 @@ class Filters extends BaseConfig
     public array $globals = [
         'before' => [
             'cors',
-            'csrf' => ['except' => ['api/agentes/registro']],
+            'csrf' => ['except' => ['api/*']],
             'invalidchars',
         ],
         'after' => [
@@ -42,10 +42,7 @@ class Filters extends BaseConfig
     {
         parent::__construct();
         if (ENVIRONMENT === 'testing') {
-            $this->globals['before'] = array_values(array_filter(
-                $this->globals['before'],
-                static fn ($filter): bool => $filter !== 'csrf'
-            ));
+            unset($this->globals['before']['csrf']);
         }
     }
 

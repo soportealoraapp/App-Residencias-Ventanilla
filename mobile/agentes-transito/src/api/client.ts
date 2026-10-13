@@ -27,13 +27,15 @@ type RequestOptions = Omit<RequestInit, "body"> & {
   auth?: boolean; // adjunta el Bearer token, true por default
 };
 
+
 export async function apiRequest<T>(
   path: string,
   { auth = true, body, headers, ...options }: RequestOptions = {}
 ): Promise<T> {
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
   const finalHeaders: Record<string, string> = {
     Accept: "application/json",
-    ...(body ? { "Content-Type": "application/json" } : {}),
+    ...(body && !isFormData ? { "Content-Type": "application/json" } : {}),
     ...(headers as Record<string, string>),
   };
 
@@ -51,7 +53,7 @@ export async function apiRequest<T>(
   const response = await fetch(fullUrl, {
     ...options,
     headers: finalHeaders,
-    body: body ? JSON.stringify(body) : undefined,
+    body: body ? (isFormData ? (body as any) : JSON.stringify(body)) : undefined,
   });
 
   const contentType = response.headers.get("content-type") ?? "";

@@ -1,18 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Infraccion } from "../types/infraccion";
+import { apiRequest, setToken } from "../api/client";
 
-// Las credenciales DEBEN estar en .env (EXPO_PUBLIC_*)
-// Nunca deben quedar hardcodeadas en el código fuente.
-if (!process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
-  console.warn(
-    "[supabase] Variables de entorno EXPO_PUBLIC_SUPABASE_URL y EXPO_PUBLIC_SUPABASE_ANON_KEY " +
-    "no están definidas. Asegúrate de tener un archivo .env en la raíz de la app."
-  );
-}
-
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "";
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
+// Las credenciales de Supabase pueden estar en .env (EXPO_PUBLIC_*) si se usa como réplica secundaria
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "https://placeholder.supabase.co";
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "placeholder";
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -142,10 +135,33 @@ export function transformarInfraccionABoleta(inf: Infraccion): BoletaInsert {
 
 // ─── API helpers ────────────────────────────────────────────────────────────────
 
-/** Autenticar agente por placa + password con Supabase (y fallback offline) */
+/** Autenticar agente por placa + password con el backend de CI4 (con fallback local/offline) */
 export async function loginAgente(placa: string, password: string): Promise<AgenteRow> {
   const placaLimpia = placa.toUpperCase().trim();
 
+  // 1. Intento primario: Backend municipal CodeIgniter 4
+  try {
+    const res = await apiRequest<{
+      success: boolean;
+      token?: string;
+      agente: AgenteRow;
+    }>("/api/agentes/login", {
+      method: "POST",
+      body: { placa: placaLimpia, password },
+      auth: false,
+    });
+
+    if (res?.agente) {
+      if (res.token) {
+        await setToken(res.token);
+      }
+      return res.agente;
+    }
+  } catch (ci4Err) {
+    console.warn("[auth] CI4 login no disponible o credencial local, verificando alternativas:", ci4Err);
+  }
+
+  // 2. Intento secundario: Supabase (si está configurado)
   try {
     const { data, error } = await supabase
       .from("agentes_transito")
@@ -161,7 +177,7 @@ export async function loginAgente(placa: string, password: string): Promise<Agen
     console.warn("Supabase auth offline fallback:", netErr);
   }
 
-  // Fallback offline: permite operar a oficiales en campo aunque no haya conexión a Supabase
+  // 3. Fallback offline: permite operar a oficiales en campo aunque no haya red momentáneamente
   if (password.length >= 3) {
     return {
       id: 104,
@@ -178,8 +194,45 @@ export async function loginAgente(placa: string, password: string): Promise<Agen
   throw new Error("Credenciales inválidas o agente no encontrado.");
 }
 
-/** Cargar catálogo de infracciones desde Supabase */
+/** Cargar catálogo oficial de infracciones desde CodeIgniter 4 (o caché local) */
 export async function fetchCatalogoInfracciones(): Promise<CatalogoInfraccionRow[]> {
+  // 1. Intento primario: CI4 checklist oficial (15 categorías, 64 casillas de Uriangato)
+  try {
+    const res = await apiRequest<{
+      success: boolean;
+      categorias: Record<string, any[]>;
+    }>("/api/checklist-infracciones", {
+      auth: false,
+    });
+
+    if (res?.success && res.categorias) {
+      const faltas: CatalogoInfraccionRow[] = [];
+      let orden = 1;
+      for (const [catName, items] of Object.entries(res.categorias)) {
+        for (const item of items) {
+          faltas.push({
+            id: item.checklist_item_id || orden,
+            fundamento_legal: item.fundamento_legal || item.etiqueta_casilla,
+            descripcion: item.descripcion_oficial || item.etiqueta_casilla,
+            categoria: catName,
+            monto_min_uma: item.monto_min_uma ?? 2.0,
+            monto_max_uma: item.monto_max_uma ?? 5.0,
+            activo: 1,
+            orden: orden++,
+          });
+        }
+      }
+
+      if (faltas.length > 0) {
+        await AsyncStorage.setItem("@catalogo_infracciones_cache_v1", JSON.stringify(faltas));
+        return faltas;
+      }
+    }
+  } catch (ci4Err) {
+    console.warn("[catalogo] Error al consultar /api/checklist-infracciones, probando alternativas:", ci4Err);
+  }
+
+  // 2. Intento secundario: Supabase
   try {
     const { data, error } = await supabase
       .from("catalogo_infracciones_app")
@@ -195,7 +248,7 @@ export async function fetchCatalogoInfracciones(): Promise<CatalogoInfraccionRow
     console.warn("Error cargando catálogo desde Supabase, usando cache:", err);
   }
 
-  // Cache fallback
+  // 3. Fallback de caché local en el dispositivo
   try {
     const cached = await AsyncStorage.getItem("@catalogo_infracciones_cache_v1");
     if (cached) return JSON.parse(cached);
@@ -204,8 +257,22 @@ export async function fetchCatalogoInfracciones(): Promise<CatalogoInfraccionRow
   return [];
 }
 
-/** Cargar parámetros del sistema (UMA vigente, versión, fotos) */
+/** Cargar parámetros del sistema (UMA vigente, versión, fotos) desde CI4 */
 export async function fetchParametros(): Promise<Record<string, string>> {
+  // 1. Intento primario: CI4 /api/parametros
+  try {
+    const res = await apiRequest<{ success: boolean; parametros: Record<string, string> }>("/api/parametros", {
+      auth: false,
+    });
+    if (res?.success && res.parametros) {
+      await AsyncStorage.setItem("@parametros_app_cache_v1", JSON.stringify(res.parametros));
+      return res.parametros;
+    }
+  } catch (ci4Err) {
+    console.warn("[params] Error CI4 /api/parametros, probando alternativas:", ci4Err);
+  }
+
+  // 2. Intento secundario: Supabase
   try {
     const { data, error } = await supabase
       .from("parametros_app")
@@ -221,6 +288,7 @@ export async function fetchParametros(): Promise<Record<string, string>> {
     console.warn("Error cargando parámetros desde Supabase, usando cache:", err);
   }
 
+  // 3. Fallback de caché local en el dispositivo
   try {
     const cached = await AsyncStorage.getItem("@parametros_app_cache_v1");
     if (cached) return JSON.parse(cached);
@@ -233,8 +301,23 @@ export async function fetchParametros(): Promise<Record<string, string>> {
   };
 }
 
-/** Sincronizar una boleta pendiente directamente a Supabase */
+/** Sincronizar una boleta pendiente al servidor municipal CodeIgniter 4 */
 export async function sincronizarBoleta(boleta: BoletaInsert): Promise<void> {
+  // 1. Intento primario: Enviar a CI4 /api/infracciones/sincronizar
+  try {
+    const res = await apiRequest<{ success: boolean; message?: string }>("/api/infracciones/sincronizar", {
+      method: "POST",
+      body: boleta,
+      auth: true,
+    });
+    if (res?.success) {
+      return;
+    }
+  } catch (ci4Err) {
+    console.warn("[sync] Error enviando boleta a CI4, probando Supabase como respaldo:", ci4Err);
+  }
+
+  // 2. Respaldo secundario si CI4 no respondió
   const { error } = await supabase
     .from("boletas_infracciones")
     .upsert(boleta, { onConflict: "folio" });
@@ -245,7 +328,7 @@ export async function sincronizarBoleta(boleta: BoletaInsert): Promise<void> {
   }
 }
 
-/** Subir foto de evidencia al bucket público 'evidencias' de Supabase Storage */
+/** Subir foto de evidencia al servidor municipal (o Supabase si aplica) */
 export async function subirFotoEvidencia(
   folio: string,
   tipo: "placa" | "contexto" | "documento",
@@ -253,11 +336,37 @@ export async function subirFotoEvidencia(
 ): Promise<string | null> {
   if (!uri) return null;
 
-  // Si ya es una URL remota de Supabase o HTTP pública válida, la conservamos
+  // Si ya es una URL remota HTTP pública válida, la conservamos
   if (uri.startsWith("http://") || uri.startsWith("https://")) {
     return uri;
   }
 
+  // 1. Intento primario: Subida a CodeIgniter 4 servidor local
+  try {
+    const formData = new FormData();
+    formData.append("folio", folio);
+    formData.append("tipo", tipo);
+    const filename = `${tipo}_${Date.now()}.jpg`;
+    formData.append("foto", {
+      uri,
+      name: filename,
+      type: "image/jpeg",
+    } as any);
+
+    const res = await apiRequest<{ success: boolean; url: string }>("/api/infracciones/evidencias", {
+      method: "POST",
+      body: formData,
+      auth: true,
+    });
+
+    if (res?.success && res.url) {
+      return res.url;
+    }
+  } catch (ci4Err) {
+    console.warn(`[storage] Error subiendo evidencia a CI4, probando Supabase:`, ci4Err);
+  }
+
+  // 2. Respaldo secundario: Supabase Storage
   try {
     const res = await fetch(uri);
     const blob = await res.blob();
@@ -273,16 +382,14 @@ export async function subirFotoEvidencia(
         upsert: true,
       });
 
-    if (uploadError) {
-      console.warn(`[storage] Error subiendo evidencia ${tipo}:`, uploadError);
-      return uri;
+    if (!uploadError) {
+      const { data } = supabase.storage.from("evidencias").getPublicUrl(filePath);
+      return data.publicUrl;
     }
-
-    const { data } = supabase.storage.from("evidencias").getPublicUrl(filePath);
-    return data.publicUrl;
   } catch (err) {
     console.warn(`[storage] Excepción subiendo evidencia ${tipo}:`, err);
-    return uri;
   }
+
+  return uri;
 }
 
