@@ -7,7 +7,6 @@ import {
   FlatList,
   Alert,
   ActivityIndicator,
-  TextInput,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../src/contexts/AuthContext";
@@ -43,8 +42,6 @@ export default function DashboardScreen() {
   const { user, isLoading: authLoading, logout } = useAuth();
   const {
     infracciones,
-    pendientes,
-    sincronizadas,
     totalPendientes,
     totalSincronizadas,
     isSyncing,
@@ -65,8 +62,6 @@ export default function DashboardScreen() {
   const saludo =
     horaActual < 12 ? "BUENOS DÍAS" : horaActual < 19 ? "BUENAS TARDES" : "BUENAS NOCHES";
 
-  const [filtro, setFiltro] = useState<"todas" | "pendientes" | "sincronizadas">("todas");
-  const [busqueda, setBusqueda] = useState("");
   const [infraccionSeleccionada, setInfraccionSeleccionada] = useState<Infraccion | null>(null);
   const [logoutConfirmacionVisible, setLogoutConfirmacionVisible] = useState(false);
 
@@ -82,25 +77,6 @@ export default function DashboardScreen() {
     if (!authLoading && !user) router.replace("/");
   }, [authLoading, user, router]);
 
-  const infraccionesPorPestana =
-    filtro === "pendientes"
-      ? pendientes
-      : filtro === "sincronizadas"
-      ? sincronizadas
-      : infracciones;
-
-  const terminoBusqueda = busqueda.trim().toLocaleLowerCase();
-  const infraccionesFiltradas = infraccionesPorPestana.filter((item) =>
-    !terminoBusqueda ||
-    [
-      item.vehiculo?.placas,
-      item.folio,
-      item.infractor?.nombre,
-      item.vehiculo?.marca,
-      item.generales?.lugar,
-    ].some((valor) => valor?.toLocaleLowerCase().includes(terminoBusqueda))
-  );
-
   const obtenerFechaCreacion = (item: Infraccion) => {
     const fechaCreacion = Date.parse(item.creadoEn);
     return Number.isNaN(fechaCreacion)
@@ -108,7 +84,7 @@ export default function DashboardScreen() {
       : fechaCreacion;
   };
 
-  const infraccionesRecientes = [...infraccionesFiltradas]
+  const infraccionesRecientes = [...infracciones]
     .sort((a, b) => obtenerFechaCreacion(b) - obtenerFechaCreacion(a))
     .slice(0, 5);
   const emitidasHoy = infracciones.filter(
@@ -384,33 +360,17 @@ export default function DashboardScreen() {
                   )}
                 </TouchableOpacity>
               </View>
+            </View>
 
+            <View style={styles.activitySection}>
               <View style={styles.activityHeading}>
                 <View>
                   <Text style={[styles.sectionHeadingTitle, { color: colors.text }]}>Actividad reciente</Text>
                   <Text style={[styles.activityCaption, { color: colors.textSecondary }]}>
-                    Últimas {Math.min(5, infraccionesFiltradas.length)} boletas
+                    Últimas {Math.min(5, infracciones.length)} boletas
                   </Text>
                 </View>
               </View>
-            </View>
-
-            {/* 7. Barra de Búsqueda Rápida */}
-            <View style={[styles.searchBarWrapper, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Ionicons name="search-outline" size={18} color={colors.textMuted} style={{ marginRight: 8 }} />
-              <TextInput
-                style={[styles.searchInput, { color: colors.text }]}
-                placeholder="Buscar por placa, folio, conductor, marca o lugar..."
-                placeholderTextColor={colors.textMuted}
-                value={busqueda}
-                onChangeText={setBusqueda}
-                autoCorrect={false}
-              />
-              {busqueda.length > 0 && (
-                <TouchableOpacity onPress={() => setBusqueda("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-                </TouchableOpacity>
-              )}
             </View>
           </>
         }
@@ -418,26 +378,8 @@ export default function DashboardScreen() {
           <View style={[styles.emptyRecent, { borderColor: colors.border }]}>
             <Ionicons name="document-text-outline" size={22} color={colors.textMuted} />
             <Text style={[styles.emptyRecentText, { color: colors.textSecondary }]}>
-              {busqueda.trim()
-                ? `No se encontró ninguna boleta para “${busqueda.trim()}”.`
-                : filtro === "pendientes"
-                  ? "No hay boletas pendientes de sincronización."
-                  : filtro === "sincronizadas"
-                    ? "No hay boletas sincronizadas disponibles."
-                    : "Aún no hay boletas registradas."}
+              Aún no hay boletas registradas.
             </Text>
-            {!!busqueda.trim() && (
-              <TouchableOpacity
-                onPress={() => setBusqueda("")}
-                style={[styles.emptyClearBtn, { backgroundColor: colors.primaryBg }]}
-                accessibilityRole="button"
-                accessibilityLabel="Limpiar búsqueda"
-              >
-                <Text style={[styles.emptyClearBtnText, { color: colors.primary }]}>
-                  Limpiar búsqueda
-                </Text>
-              </TouchableOpacity>
-            )}
           </View>
         }
       />
@@ -620,6 +562,11 @@ const styles = StyleSheet.create({
   activityHeading: {
     paddingTop: 4,
     paddingBottom: 12,
+  },
+  activitySection: {
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
   },
   activityCaption: {
     fontSize: 11,
@@ -1156,29 +1103,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
 
-  searchBarWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44,
-    marginBottom: 12,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: "500",
-    paddingVertical: 0,
-  },
-  emptyClearBtn: {
-    marginTop: 10,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  emptyClearBtnText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
 });
