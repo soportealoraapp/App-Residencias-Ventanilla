@@ -42,7 +42,7 @@ $tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa', 'fisica' =>
 <?= $this->extend('layouts/portal') ?>
 <?= $this->section('content') ?>
 <div class="row mb-4">
-    <div class="col">
+    <div class="col-12 col-md-8">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb small">
                 <li class="breadcrumb-item"><a href="<?= site_url('/portal/dashboard') ?>">Inicio</a></li>
@@ -51,7 +51,114 @@ $tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa', 'fisica' =>
             </ol>
         </nav>
     </div>
+    <div class="col-12 col-md-4 text-md-end mb-2 mb-md-0 d-flex gap-2 justify-content-md-end">
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i>Imprimir
+        </button>
+        <a href="<?= site_url('/portal/mis-solicitudes') ?>" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-arrow-left me-1"></i>Volver
+        </a>
+    </div>
 </div>
+
+<!-- STEPPER VISUAL DE PROGRESO DEL TRÁMITE -->
+<?php
+    $estatusActual = mb_strtolower((string)$solicitud->estatus);
+    $pasoActual = 1;
+    if (str_contains($estatusActual, 'pago') || (float)$solicitud->monto > 0 && empty($solicitud->fecha_pago)) {
+        $pasoActual = 2;
+    } elseif (str_contains($estatusActual, 'revis') || str_contains($estatusActual, 'cit') || str_contains($estatusActual, 'inspec')) {
+        $pasoActual = 3;
+    } elseif (str_contains($estatusActual, 'aprob') || str_contains($estatusActual, 'concluid') || str_contains($estatusActual, 'vigent')) {
+        $pasoActual = 4;
+    } elseif (str_contains($estatusActual, 'prevenc') || str_contains($estatusActual, 'rechaz')) {
+        $pasoActual = 3;
+    } elseif (!empty($solicitud->fecha_pago)) {
+        $pasoActual = 3;
+    }
+?>
+<div class="card shadow-sm border-0 mb-4 bg-white">
+    <div class="card-body p-3 p-md-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-diagram-3 text-primary me-2"></i>Evolución del trámite</h6>
+            <span class="badge estatus-badge <?= estatus_badge($solicitud->estatus) ?> fs-6"><?= esc($solicitud->estatus) ?></span>
+        </div>
+        <div class="row text-center g-2 position-relative">
+            <!-- Paso 1 -->
+            <div class="col-3">
+                <div class="p-2 rounded <?= $pasoActual >= 1 ? 'bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25' : 'bg-light text-muted' ?>">
+                    <i class="bi <?= $pasoActual > 1 ? 'bi-check-circle-fill text-success' : 'bi-1-circle-fill' ?> fs-4 d-block mb-1"></i>
+                    <div class="fw-bold small d-none d-sm-block">Radicación</div>
+                    <div class="text-muted" style="font-size: 0.72rem;">Registrada</div>
+                </div>
+            </div>
+            <!-- Paso 2 -->
+            <div class="col-3">
+                <div class="p-2 rounded <?= $pasoActual >= 2 ? 'bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25' : 'bg-light text-muted' ?>">
+                    <i class="bi <?= $pasoActual > 2 ? 'bi-check-circle-fill text-success' : ($pasoActual === 2 ? 'bi-cash-coin text-warning' : 'bi-2-circle') ?> fs-4 d-block mb-1"></i>
+                    <div class="fw-bold small d-none d-sm-block">Pago / Derechos</div>
+                    <div class="text-muted" style="font-size: 0.72rem;"><?= !empty($solicitud->fecha_pago) ? 'Liquidado' : ((float)$solicitud->monto > 0 ? 'Pendiente' : 'Exento') ?></div>
+                </div>
+            </div>
+            <!-- Paso 3 -->
+            <div class="col-3">
+                <div class="p-2 rounded <?= $pasoActual >= 3 ? 'bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25' : 'bg-light text-muted' ?>">
+                    <i class="bi <?= $pasoActual > 3 ? 'bi-check-circle-fill text-success' : ($pasoActual === 3 ? 'bi-hourglass-split text-info' : 'bi-3-circle') ?> fs-4 d-block mb-1"></i>
+                    <div class="fw-bold small d-none d-sm-block">Inspección / Revisión</div>
+                    <div class="text-muted" style="font-size: 0.72rem;"><?= $pasoActual > 3 ? 'Validado' : ($pasoActual === 3 ? 'En Proceso' : 'Por evaluar') ?></div>
+                </div>
+            </div>
+            <!-- Paso 4 -->
+            <div class="col-3">
+                <div class="p-2 rounded <?= $pasoActual >= 4 ? 'bg-success bg-opacity-10 text-success border border-success border-opacity-25' : 'bg-light text-muted' ?>">
+                    <i class="bi <?= $pasoActual >= 4 ? 'bi-patch-check-fill text-success' : 'bi-4-circle' ?> fs-4 d-block mb-1"></i>
+                    <div class="fw-bold small d-none d-sm-block">Dictamen Final</div>
+                    <div class="text-muted" style="font-size: 0.72rem;"><?= $pasoActual >= 4 ? 'Aprobado' : 'Por emitir' ?></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ALERTAS CONTEXTUALES DE ESTATUS -->
+<?php if ($solicitud->estatus === 'Pago pendiente'): ?>
+    <div class="alert alert-warning border-warning d-flex align-items-center gap-3 p-3 mb-4 shadow-sm" role="alert">
+        <i class="bi bi-cash-stack fs-1 text-warning flex-shrink-0"></i>
+        <div class="flex-grow-1">
+            <h5 class="alert-heading h6 fw-bold mb-1">Pago pendiente de derechos municipales</h5>
+            <p class="small mb-0">Esta solicitud requiere cubrir el pago de derechos por <strong><?= formatear_dinero((float)$solicitud->monto) ?></strong> para ser turnada a revisión técnica por la Dirección de Movilidad.</p>
+        </div>
+        <?php
+            $pagoUrl = match($solicitud->tramite) {
+                'UR-TT-T-07' => site_url('/portal/tramites/carga-descarga/resumen/' . $solicitud->folio),
+                'UR-TT-T-04' => site_url('/portal/tramites/permiso-eventual/resumen/' . $solicitud->folio),
+                'UR-TT-T-05' => site_url('/portal/tramites/cierre-calle/resumen/' . $solicitud->folio),
+                default      => '#',
+            };
+        ?>
+        <?php if ($pagoUrl !== '#'): ?>
+            <a href="<?= $pagoUrl ?>" class="btn btn-warning btn-sm fw-semibold flex-shrink-0">
+                <i class="bi bi-credit-card me-1"></i>Pagar en línea
+            </a>
+        <?php endif; ?>
+    </div>
+<?php elseif (in_array($solicitud->estatus, ['Concluido', 'Aprobado'], true)): ?>
+    <div class="alert alert-success border-success d-flex align-items-center gap-3 p-3 mb-4 shadow-sm" role="alert">
+        <i class="bi bi-shield-check fs-1 text-success flex-shrink-0"></i>
+        <div class="flex-grow-1">
+            <h5 class="alert-heading h6 fw-bold mb-1">¡Trámite concluido favorablemente!</h5>
+            <p class="small mb-0">Tu solicitud cuenta con autorización y validez oficial emitida por la Dirección de Movilidad y Transporte de Uriangato.</p>
+        </div>
+    </div>
+<?php elseif (str_contains($estatusActual, 'prevenc')): ?>
+    <div class="alert alert-danger border-danger d-flex align-items-center gap-3 p-3 mb-4 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle fs-1 text-danger flex-shrink-0"></i>
+        <div class="flex-grow-1">
+            <h5 class="alert-heading h6 fw-bold mb-1">Prevención / Aclaración Requerida</h5>
+            <p class="small mb-0">El evaluador técnico ha emitido observaciones. Revisa el comentario en el historial y acude o remite la documentación complementaria solicitada.</p>
+        </div>
+    </div>
+<?php endif; ?>
 
 <div class="row mb-4">
     <div class="col-lg-8">
@@ -59,7 +166,12 @@ $tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa', 'fisica' =>
             <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-3 py-3">
                 <div>
                     <div class="small text-muted mb-1"><?= esc(tramite_nombre($solicitud->tramite)) ?></div>
-                    <h2 class="h4 mb-0"><i class="bi bi-receipt text-primary me-2"></i>Folio: <code><?= esc($solicitud->folio) ?></code></h2>
+                    <div class="d-flex align-items-center gap-2">
+                        <h2 class="h4 mb-0"><i class="bi bi-receipt text-primary me-2"></i>Folio: <code><?= esc($solicitud->folio) ?></code></h2>
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" id="btnCopiarFolioDetalle" title="Copiar folio al portapapeles">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
                 </div>
                 <span class="badge estatus-badge <?= estatus_badge($solicitud->estatus) ?> fs-6"><?= esc($solicitud->estatus) ?></span>
             </div>
@@ -278,4 +390,26 @@ $tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa', 'fisica' =>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const btnCopiar = document.getElementById('btnCopiarFolioDetalle');
+    if (btnCopiar) {
+        btnCopiar.addEventListener('click', function() {
+            const folio = '<?= esc($solicitud->folio) ?>';
+            if (navigator.clipboard && folio) {
+                navigator.clipboard.writeText(folio).then(() => {
+                    const icon = this.querySelector('i');
+                    if (icon) {
+                        icon.className = 'bi bi-check-lg text-success';
+                        setTimeout(() => {
+                            icon.className = 'bi bi-clipboard';
+                        }, 2000);
+                    }
+                });
+            }
+        });
+    }
+});
+</script>
 <?= $this->endSection() ?>

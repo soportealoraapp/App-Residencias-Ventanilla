@@ -24,6 +24,8 @@ export default function RegistroScreen() {
   const [nombre, setNombre] = useState("");
   const [password, setPassword] = useState("");
   const [confirmarPassword, setConfirmarPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmarPassword, setShowConfirmarPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [registroExitoso, setRegistroExitoso] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -206,16 +208,28 @@ export default function RegistroScreen() {
               />
               <TextInput
                 style={[styles.input, { color: colors.text }]}
-                placeholder="Ingresa una contraseña"
+                placeholder="Mínimo 3 caracteres"
                 placeholderTextColor={colors.textMuted}
                 value={password}
                 onChangeText={(value) => {
                   setPassword(value);
                   limpiarMensajes();
                 }}
-                secureTextEntry
+                secureTextEntry={!showPassword}
                 autoCapitalize="none"
               />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.passwordToggle}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+              >
+                <Ionicons
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
+                  size={19}
+                  color={colors.textMuted}
+                />
+              </TouchableOpacity>
             </View>
 
             <Text style={[styles.label, { color: colors.textSecondary }]}>
@@ -235,16 +249,28 @@ export default function RegistroScreen() {
               />
               <TextInput
                 style={[styles.input, { color: colors.text }]}
-                placeholder="Vuelve a ingresar la contraseña"
+                placeholder="Repite la contraseña"
                 placeholderTextColor={colors.textMuted}
                 value={confirmarPassword}
                 onChangeText={(value) => {
                   setConfirmarPassword(value);
                   limpiarMensajes();
                 }}
-                secureTextEntry
+                secureTextEntry={!showConfirmarPassword}
                 autoCapitalize="none"
               />
+              <TouchableOpacity
+                onPress={() => setShowConfirmarPassword(!showConfirmarPassword)}
+                style={styles.passwordToggle}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel={showConfirmarPassword ? "Ocultar contraseña" : "Ver contraseña"}
+              >
+                <Ionicons
+                  name={showConfirmarPassword ? "eye-off-outline" : "eye-outline"}
+                  size={19}
+                  color={colors.textMuted}
+                />
+              </TouchableOpacity>
             </View>
 
             {(errorMsg || registroExitoso) && (
@@ -391,4 +417,5 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.7 },
   createButtonText: { color: "#ffffff", fontSize: 14, fontWeight: "800" },
+  passwordToggle: { padding: 4 },
 });

@@ -4,232 +4,277 @@
 **Gobierno Municipal de Uriangato, Guanajuato**  
 **Dirección de Movilidad y Transporte**  
 **Versión del Sistema:** 2.5.0 (Producción / Vercel Serverless + Supabase PostgreSQL)  
-**Clasificación:** Documento Técnico Maestro de Arquitectura, Conectividad y Despliegue  
+**Clasificación:** Documento Maestro de Arquitectura, División de Módulos y Operación  
 **Fecha de Actualización:** Octubre 2026  
 
 ---
 
-## 1. Identificación y Ficha Técnica del Proyecto
+## 1. Identificación y Propósito del Proyecto
 
-* **Nombre Oficial:** Sistema Integral de Ventanilla Única de Movilidad y Transporte de Uriangato.
-* **Institución Responsable:** H. Ayuntamiento de Uriangato, Gto. — Dirección de Movilidad y Transporte.
-* **Propósito Central:** Digitalizar de extremo a extremo la tramitología de transporte público, permisos de carga y cierres viales, centralizar la supervisión y resolución de expedientes administrativos y dotar al cuerpo de agentes de tránsito de una herramienta móvil para el levantamiento y sincronización de infracciones viales en tiempo real.
-* **Público Objetivo:**
-  1. **Ciudadanos y Transportistas:** Solicitud de trámites, carga de documentación probatoria, consulta de expedientes en tiempo real y pago digital.
-  2. **Personal Administrativo Municipal:** Operadores de ventanilla y directores que validan documentos, agendan inspecciones físicas, emiten dictámenes y dictaminan trámites.
-  3. **Agentes de Tránsito:** Oficiales en campo que operan la aplicación móvil para levantar boletas de infracción, capturar evidencia fotográfica georreferenciada y operar tanto conectados como fuera de línea.
-* **Marco Jurídico de Referencia:**
-  * Ley de Movilidad del Estado de Guanajuato y sus Municipios.
-  * Reglamento de Tránsito y Transporte Municipal de Uriangato, Gto.
-  * Ley de Ingresos para el Municipio de Uriangato, Gto. (ejercicio fiscal vigente).
+El **Sistema Integral de Ventanilla Única de Movilidad y Transporte de Uriangato** es una plataforma gubernamental de nivel municipal diseñada para modernizar, digitalizar y transparentar la gestión de la movilidad urbana.
+
+El sistema unifica en una sola solución tecnológica:
+1. **La atención ciudadana y transportista (Portal Web):** Radicación 100% digital de solicitudes, carga de expedientes, cálculo automatizado de tarifas y pago en línea.
+2. **La dictaminación municipal (Panel Administrativo Web):** Ventanilla única de revisión documental, agenda de inspecciones físicas vehiculares, prevención, requerimientos y expedición de resoluciones oficiales con validez jurídica.
+3. **La operatividad en vía pública (App Móvil para Agentes de Tránsito):** Levantamiento digital de boletas de infracción, captura georreferenciada de evidencia fotográfica con cámara y GPS, cálculo automático en UMAs y sincronización offline-first hacia la base de datos municipal.
 
 ---
 
-## 2. Visión Integral del Sistema y Arquitectura de las 3 Ramas
+## 2. Visión Integral y Arquitectura de las Tres Ramas
 
-El sistema se compone de tres componentes principales que operan de forma desacoplada pero sincronizada a través de un núcleo de datos común en **Supabase (PostgreSQL + Storage)**:
+El ecosistema está concebido bajo una arquitectura desacoplada y escalable, comunicada a través de un núcleo de datos de alta disponibilidad en **PostgreSQL (Supabase)** y almacenamiento seguro en la nube.
 
 ```mermaid
-graph TD
-    subgraph CIUDADANIA_Y_ADMINISTRACION [Portal & Panel Web]
-        C[Portal Ciudadano Web\nPHP / Bootstrap 5] -->|Sesiones ci_sessions| CI4[Backend Monolítico MVC\nCodeIgniter 4.5.8]
-        A[Panel Administrativo\nPHP / Bootstrap 5] -->|RBAC Filter| CI4
+graph TB
+    subgraph RAMA_WEB [RAMA 1 & 2: PORTAL Y PANEL WEB]
+        CZ[Ciudadano / Concesionario\nNavegador Web Desktop o Móvil] -->|HTTPS| PW[Portal Ciudadano Web\n/portal/*]
+        ADM[Personal de Movilidad\nRevisores / Directores] -->|HTTPS + RBAC| PA[Panel Administrativo\n/admin/*]
+        PW --> CI4[Backend Monolítico MVC\nCodeIgniter 4.5.8 - PHP 8.2]
+        PA --> CI4
     end
 
-    subgraph NUCLEO_CENTRAL [Servicios Centrales & Persistencia]
-        CI4 -->|PgBouncer Pooler :6543| DB[(PostgreSQL 15+\nSupabase)]
-        CI4 -->|cURL / Storage API REST| STG[Supabase Storage\nBucket: documentos, evidencias]
+    subgraph RAMA_MOVIL [RAMA 3: APP MÓVIL DE TRÁNSITOS]
+        AGT[Agente Vial en Vía Pública\nSmartphone Android / iOS] --> RN[App Tránsitos Uriangato\nReact Native / Expo SDK 57]
+        RN -->|Cache Local| AS[(AsyncStorage\nOffline-First Queue)]
+        RN -->|Expo Camera & GPS| HW[Cámara + Geolocalización]
     end
 
-    subgraph CAMPO_OPERATIVO [Módulo Móvil Operativo]
-        M[App Agentes de Tránsito\nExpo SDK 57 / React Native] -->|Supabase JS SDK\nAnon Key| DB
-        M -->|Storage Upload\nMultipart| STG
-        M -->|HTTP Fetch POST / JSON| CI4_API[API REST CodeIgniter 4\n/api/agentes/registro\n/api/checklist-infracciones]
+    subgraph NUCLEO_PERSISTENCIA [NÚCLEO CENTRAL DE PERSISTENCIA Y SERVICIOS]
+        CI4 -->|PgBouncer Pooler :6543\nPDO PostgreSQL| PG[(PostgreSQL Supabase\n15+ ACID)]
+        CI4 -->|cURL / Storage API REST| STG[(Supabase Storage\nBuckets: documentos, evidencias)]
+        CI4 -->|Sessions Handler| SESS[(Tabla ci_sessions)]
+        RN -->|Supabase JS Client\nUpsert Boletas| PG
+        RN -->|Upload Multipart| STG
+        RN -->|HTTP REST Fallback\n/api/agentes/registro| CI4
     end
-
-    CI4_API --> CI4
 ```
 
-### 2.1. Rama 1: Backend Centralizado (API & Core)
-* **Framework:** CodeIgniter 4.5.8 ejecutándose sobre PHP 8.2 en arquitectura Serverless.
-* **Funciones:**
-  * Gestión del ciclo de vida de los 7 trámites municipales.
-  * Control de acceso basado en roles (**RBAC** con filtros `AuthFilter`, `RoleFilter`, `AdminRedirectFilter`).
-  * Endpoints REST para registro seguro de agentes (`/api/agentes/registro`) y entrega de catálogos (`/api/checklist-infracciones`).
-  * Integración con **Supabase Storage** para la subida, hash SHA-256 y descarga segura de expedientes documentales.
-  * Persistencia de sesiones en base de datos (`ci_sessions`) para entornos serverless.
+---
 
-### 2.2. Rama 2: Portal Ciudadano y Panel Administrativo Web
-* **Tecnología:** PHP Templates (Views), Bootstrap 5.3.2, Bootstrap Icons, CSS personalizado (`custom.css`), JavaScript nativo.
-* **Funciones:**
-  * **Portal Ciudadano:** Catálogo de 7 trámites municipales, formularios asistidos, cálculo automático de tarifas/UMA, mock de pasarela de pago bancario, visor de expedientes y módulo "Mi Perfil".
-  * **Panel Administrativo:** Dashboard de analítica municipal con KPIs en tiempo real, bandeja de solicitudes con transiciones de estatus reguladas, requerimiento obligatorio de observaciones para prevenciones y rechazos, administración de catálogos (tarifas, concesiones), convocatorias, formatos oficiales y módulo de monitoreo de infracciones de tránsito.
+## PARTE I: PORTAL CIUDADANO Y PANEL ADMINISTRATIVO WEB
 
-### 2.3. Rama 3: App Móvil para Agentes de Tránsito
-* **Tecnología:** React Native 0.86 / Expo SDK 57 / TypeScript, exportada a build nativo y a bundle Web servido en `/agentes/`.
-* **Funciones:**
-  * Levantamiento de boletas digitales de infracción con cálculo automático de montos según tabulador de UMA vigente.
-  * Captura de hasta 3 fotografías obligatorias (placa, contexto, garantía/documento) geolocalizadas mediante GPS.
-  * Soporte *Offline-First* con almacenamiento local en `AsyncStorage` y cola de sincronización automática al recuperar conectividad.
-  * Registro y autenticación de agentes contra la base de datos centralizada de Supabase.
+### 1. Arquitectura y Tecnologías Web
+* **Framework Backend:** CodeIgniter 4.5.8 (PHP 8.2) con arquitectura Modelo-Vista-Controlador (MVC).
+* **Motor de Plantillas:** Vistas PHP nativas con layouts desacoplados (`layouts/portal.php`, `layouts/admin.php`, `layouts/auth.php`).
+* **Frontend:** Bootstrap 5.3.2, Bootstrap Icons 1.11.1, CSS modular (`custom.css`) con variables personalizadas y JavaScript modular nativo (sin dependencias pesadas).
+* **Autenticación y Sesiones:** Sesiones persistentes basadas en base de datos (`ci_sessions`) que garantizan tolerancia a fallos en la infraestructura serverless de Vercel.
+* **Seguridad:** Control de Acceso Basado en Roles (**RBAC** con filtros `AuthFilter`, `RoleFilter`, `AdminRedirectFilter`), protección estricta contra CSRF con tokens regenerados, sanitización XSS y consultas preparadas con PDO.
 
 ---
 
-## 3. Pila Tecnológica Exhaustiva (Tech Stack)
+### 2. Catálogo Oficial de Trámites Digitalizados
 
-| Capa / Módulo | Tecnología | Versión | Propósito en el Proyecto |
-|---|---|---|---|
-| **Lenguaje Backend** | **PHP** | `8.2.25+` | Lenguaje de tipado estricto (`declare(strict_types=1)`), seguridad y procesamiento del núcleo. |
-| **Framework Web** | **CodeIgniter** | `4.5.8` | Framework MVC ligero de alto desempeño, enrutamiento, validación y filtros de seguridad. |
-| **Base de Datos** | **PostgreSQL (Supabase)** | `15+` | Base de datos relacional ACID conectada vía Connection Pooler (PgBouncer en puerto `6543`). |
-| **Almacenamiento de Archivos** | **Supabase Storage** | `v1` | Buckets privados (`documentos`, `evidencias`) para almacenamiento de PDFs y fotos. |
-| **Sesiones Serverless** | **CodeIgniter DatabaseHandler** | Nativo | Persistencia de sesiones en la tabla relacional `ci_sessions`. |
-| **Framework Móvil** | **React Native / Expo** | `SDK 57` | Desarrollo de la app móvil y compilación cruzada a Web SPA (`/public/agentes/`). |
-| **Librería Móvil Supabase** | **@supabase/supabase-js** | `2.117.2` | Conexión directa desde la app móvil para consultas y subida de evidencia fotográfica. |
-| **Estilos Web** | **Bootstrap 5 & Vanilla CSS** | `5.3.2` | Maquetación responsiva, componentes de interfaz y diseño personalizado en `custom.css`. |
-| **Iconografía** | **Bootstrap Icons / Ionicons** | `1.11.1 / 15.1` | Iconografía web (`bi bi-*`) e iconografía móvil/web (`@expo/vector-icons`). |
-| **Criptografía** | **SHA-256 (PHP `hash_file`)** | Nativo | Huella digital de inmutabilidad y autenticidad para cada archivo subido al expediente. |
-| **Plataforma de Despliegue** | **Vercel Serverless** | `v2` | Runtime PHP (`vercel-php@0.7.4`) y distribución global de assets estáticos vía CDN. |
+El Portal Ciudadano implementa el flujo normativo para los 7 trámites oficiales de la Dirección de Movilidad:
+
+| Clave | Trámite Oficial | Fundamento / Descripción | Documentación Requerida | Costo / Tarifa |
+|---|---|---|---|---|
+| **UR-TT-T-01** | **Concesión de Transporte Público** | Alta o renovación de concesión para modalidades taxi, colectivo y mixto. | Identificación oficial, RFC, acreditación de concesión, póliza de seguro y tarjeta de circulación. | Conforme a Ley de Ingresos del ejercicio vigente. |
+| **UR-TT-T-02** | **Constancia de Despintado** | Desincorporación y baja de unidad del servicio público; requiere inspección física en patio municipal. | Baja de placas del Estado, factura de la unidad, identificación oficial y tarjeta anterior. | Gratuito / Derechos de inspección. |
+| **UR-TT-T-03** | **Orden de Plaqueo** | Emisión de oficio municipal para gestión de placas de servicio público ante SATEG Guanajuato. | Título de concesión, pago de refrendo, revista mecánica aprobada e identificación. | Cuota fija de derechos municipales. |
+| **UR-TT-T-04** | **Permiso Eventual de Transporte** | Autorización temporal de viaje fuera de ruta o servicio especial fuera de itinerario ordinario. | Póliza de seguro vigente, datos de itinerario, fecha de salida/regreso y lista de pasajeros. | Calculado según días de vigencia y tipo de vehículo. |
+| **UR-TT-T-05** | **Permiso para Cierre de Calle** | Cierre temporal de vialidad por eventos sociales, religiosos, cívicos o de obra civil. | Croquis de ubicación, anuencia vecinal, plan de vías alternas y Vo.Bo. de Tránsito. | Tarifa tabulada por horas/días y categoría vial. |
+| **UR-TT-T-06** | **Cesión de Concesión** | Traspaso legal de derechos concesionados (regulado por FeatureFlag de administración). | Comparecencia de cedente y cesionario, anuencia del H. Ayuntamiento y constancia de no adeudo. | Dictamen especial y derechos de transferencia. |
+| **UR-TT-T-07** | **Permiso de Carga y Descarga** | Maniobras de carga pesada en zonas comerciales y primer cuadro urbano en horarios restringidos. | Tarjeta de circulación, póliza vehicular, comprobante de domicilio de entrega y horarios. | Tarifa calculada según toneladas y periodo (evento/semanal/mensual). |
 
 ---
 
-## 4. Guía de Instalación y Configuración Local
+### 3. Flujo Operativo y Ciclo de Vida de las Solicitudes
 
-### 4.1. Prerrequisitos del Entorno de Desarrollo
-1. **PHP 8.2 o superior** con las siguientes extensiones habilitadas en `php.ini`:
-   * `pdo_pgsql` / `pgsql` (Conexión a PostgreSQL Supabase)
-   * `curl` (Llamadas a Storage y APIs externas)
-   * `mbstring`, `intl`, `fileinfo`, `gd`, `openssl`
-2. **Composer 2.x** para dependencias de PHP.
-3. **Node.js 18+ (o 20 LTS)** y `npm` para la app móvil en Expo.
-4. **Git** para control de versiones.
+El ciclo de dictamen sigue una máquina de estados determinista gobernada por la clase `EstadoSolicitudService`:
 
-### 4.2. Instalación Paso a Paso
+```mermaid
+stateDiagram-v2
+    [*] --> Recibido: Ciudadano radica trámite digital
+    Recibido --> PagoPendiente: Sistema determina tarifa por derechos
+    Recibido --> EnRevision: Trámite exento de pago
+    PagoPendiente --> EnRevision: Ciudadano liquida derechos (en línea o ventanilla)
+    EnRevision --> CitaInspeccion: Trámite requiere validación física (ej. T-02)
+    CitaInspeccion --> EnRevision: Inspector emite dictamen físico
+    EnRevision --> Prevencion: Documento ilegible o requisito faltante (Observación obligatoria)
+    Prevencion --> EnRevision: Ciudadano subsana requerimiento
+    EnRevision --> Aprobado: Dictamen técnico favorable
+    EnRevision --> Rechazado: Causal jurídica o incumplimiento normativo
+    Aprobado --> Concluido: Firma y emisión de resolución digitalizada con hash SHA-256
+    Rechazado --> [*]
+    Concluido --> [*]
+```
 
-#### Paso 1: Clonar el Repositorio
+#### Reglas de Validación y Dictamen en el Panel Administrativo:
+1. **Observaciones Obligatorias:** Ningún revisor puede cambiar un estatus a `Prevención` o `Rechazado` sin registrar formalmente el motivo legal o deficiencia técnica detectada.
+2. **Historial Inmutable:** Cada cambio de estado queda asentado en la tabla `solicitudes_historial` con usuario responsable, fecha y comentario.
+3. **Generación de Expediente Oficial:** Al concluirse un trámite, el sistema genera automáticamente un documento con código de validación, firma del director y hash SHA-256 del expediente, almacenado en el bucket `documentos` de Supabase Storage.
+
+---
+
+### 4. Módulos del Panel Administrativo Web
+
+1. **Dashboard General de Métricas:** KPIs en tiempo real de solicitudes recibidas, en revisión, prevenidas, concluidas y montos recaudados.
+2. **Bandeja Maestra de Solicitudes:** Búsqueda avanzada por folio, RFC, solicitante y filtros rápidos por estatus ("Recibidos", "Pago pendiente", "En revisión", "Concluidos", "Prevención").
+3. **Detalle del Expediente y Dictamen:** Visor de documentos PDF e imágenes, formulario de cambio de estado con validaciones y registro de observaciones.
+4. **Módulo de Inspección de Despintado (T-02):** Agenda de citas para revisión en patio y dictamen técnico de despintado con cotejo vehicular.
+5. **Monitoreo de Infracciones de Tránsito:** Visor centralizado de boletas levantadas en campo por los agentes viales, con consulta de infractor, placas, coordenadas y fotografías de evidencia.
+6. **Administración de Catálogos y Parámetros:** Gestión de valor de la UMA, tarifas municipales, convocatorias y formatos oficiales.
+7. **Bitácora de Auditoría Municipal:** Registro de todas las operaciones administrativas críticas (altas, modificaciones, cancelaciones) con IP y usuario.
+
+---
+
+## PARTE II: APP MÓVIL PARA AGENTES DE TRÁNSITO
+
+### 1. Arquitectura y Tecnologías Móviles
+* **Framework:** React Native 0.86 / Expo SDK 57 con tipado estricto en TypeScript.
+* **Enrutamiento:** Expo Router (File-based routing en carpeta `/app`).
+* **Estado y Contextos:**
+  * `AuthContext`: Gestión de credenciales del agente, placa, rol y persistencia de sesión en dispositivo.
+  * `InfraccionesContext`: Motor de persistencia local, cálculo de multas, cola de sincronización y catálogo.
+  * `ThemeContext`: Conmutación de tema Claro / Oscuro de alto contraste optimizado para uso nocturno o bajo luz solar intensa.
+* **Almacenamiento Local (Offline-First):** `AsyncStorage` como base de datos embebida en el dispositivo móvil.
+* **Conectividad:** `@supabase/supabase-js` para interacción directa con PostgreSQL y Supabase Storage.
+
+---
+
+### 2. Flujo Operativo del Agente Vial en Campo
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Agente as Agente de Tránsito
+    participant App as App Móvil (Expo)
+    participant Local as AsyncStorage (Offline)
+    participant GPS as Hardware GPS
+    participant Cam as Hardware Cámara
+    participant Supa as Supabase (PostgreSQL & Storage)
+
+    Agente->>App: Inicia turno con Placa y PIN
+    App->>Local: Valida sesión / Carga catálogo de infracciones
+    Note over Agente,App: Detecta falta al reglamento en vía pública
+    Agente->>App: Clic en "Nueva Infracción"
+    App->>GPS: Obtiene coordenadas (lat, lng) y geocodificación
+    App->>App: Asigna folio único (BOLETA-URI-YYYY-PLACA-TS)
+    Agente->>Cam: Captura Foto 1 (Placa vehicular)
+    Agente->>Cam: Captura Foto 2 (Contexto / Hechos)
+    Agente->>Cam: Captura Foto 3 (Documento / Garantía)
+    Agente->>App: Selecciona faltas cometidas del catálogo
+    App->>App: Calcula montos mínimo y máximo en UMA
+    Agente->>App: Registra garantías retenidas (placa, licencia, grúa)
+    Agente->>App: Presiona "Guardar Boleta"
+    App->>Local: Guarda boleta con estado 'pendiente'
+    alt Dispositivo con conexión a Internet
+        App->>Supa: Sube fotos a Storage bucket 'evidencias'
+        App->>Supa: Inserta registro en 'boletas_infracciones'
+        App->>Local: Actualiza estado a 'sincronizada'
+        App-->>Agente: Notifica "Infracción guardada y sincronizada"
+    else Sin conexión (Offline en campo)
+        App-->>Agente: Notifica "Guardada localmente (pendiente de sincronización)"
+        Note over App,Supa: Al detectar red, la cola sincroniza automáticamente
+    end
+```
+
+---
+
+### 3. Características Clave de la App Móvil
+
+1. **Autonomía Fuera de Línea (Offline-First):**
+   * El agente puede trabajar sin señal en carreteras o colonias sin cobertura.
+   * Las infracciones quedan en cola local (`@infracciones_pendientes_v1`).
+   * Al regresar a base o tener cobertura 4G/WiFi, el botón de sincronización o el proceso en segundo plano sube todas las boletas pendientes.
+
+2. **Captura Georreferenciada con Cámara y GPS:**
+   * Uso de `expo-camera` (`CameraView`) para captura instantánea sin depender de apps externas.
+   * Geoposicionamiento de alta precisión (`expo-location`) que registra latitud, longitud y dirección aproximada, blindando legalmente la infracción contra impugnaciones.
+
+3. **Cálculo Automático de Sanciones en UMA:**
+   * La app utiliza el valor vigente de la Unidad de Medida y Actualización (UMA) configurado centralmente.
+   * Permite seleccionar múltiples faltas simultáneas, calculando la sumatoria total del rango mínimo y máximo en pesos mexicanos ($ MXN).
+
+4. **Gestión de Garantías Retenidas:**
+   * Selección de garantías: Licencia de conducir, tarjeta de circulación, placa vehicular o vehículo remitido al corralón.
+   * En caso de arrastre con grúa, solicita el número de inventario de grúa y corralón correspondiente.
+
+5. **Historial y Detalle de Boletas:**
+   * Pestaña de historial con filtros por estado: Sincronizadas, Pendientes y Errores.
+   * Modal de detalle completo con visualización de evidencias fotográficas, desglose de faltas y estatus de sincronización.
+
+---
+
+## PARTE III: BASE DE DATOS UNIFICADA Y ESQUEMA DE SEGURIDAD
+
+### 1. Modelo de Entidad-Relación y Tablas Principales
+
+La persistencia unificada reside en PostgreSQL alojado en Supabase:
+
+| Tabla | Módulo Principal | Propósito / Contenido |
+|---|---|---|
+| `users` | Portal / Admin | Cuentas de ciudadanos, transportistas y administradores con contraseña encriptada (Argon2id/bcrypt) y rol (`ciudadano`, `admin`, `superadmin`). |
+| `ci_sessions` | Backend CI4 | Manejador de sesiones persistentes en base de datos para entornos serverless en Vercel. |
+| `solicitudes` | Portal / Admin | Registro maestro de trámites ciudadanos con folio único, estatus, monto, fechas de radicación y pago. |
+| `solicitudes_datos` | Portal / Admin | Almacenamiento tipo EAV (Entity-Attribute-Value) de campos específicos según el tipo de trámite (vehículos, rutas, placas, motivos). |
+| `solicitudes_documentos`| Portal / Admin | Metadatos de archivos adjuntos: nombre original, tipo, tamaño en bytes, ruta en Supabase Storage y hash SHA-256 de integridad. |
+| `solicitudes_historial` | Portal / Admin | Trazabilidad inmutable de cambios de estado, funcionario que autorizó y observaciones técnicas. |
+| `verificaciones_despintado`| Admin (T-02) | Agenda de citas de inspección física en patio municipal, dictamen de despintado y observaciones del perito. |
+| `agentes_transito` | Móvil / Admin | Padrón de oficiales de tránsito activos: número de placa/credencial, nombre completo, contraseña encriptada y sector asignado. |
+| `boletas_infracciones` | Móvil / Admin | Boletas levantadas en campo por los agentes: folio, agente, conductor, vehículo, coordenadas GPS, faltas en JSON, garantías y URLs de fotos. |
+| `catalogo_infracciones_app`| Móvil / Admin | Catálogo tipificado del reglamento de tránsito municipal: fundamento legal, descripción, categoría y rangos de UMA. |
+| `parametros_app` | Global | Parámetros dinámicos del sistema: valor vigente de UMA, fotos obligatorias, versión mínima requerida. |
+| `auditoria` | Admin | Registro de eventos sensibles: inicios de sesión, cambios de permisos, resoluciones de trámites e IP de origen. |
+
+---
+
+### 2. Infraestructura de Archivos y Supabase Storage
+
+El sistema utiliza dos buckets en Supabase Storage:
+1. `documentos`: Almacena las identificaciones, pólizas, facturas y expedientes generados del portal web.
+2. `evidencias`: Almacena las fotografías de placas, vehículos y garantías capturadas por los agentes de tránsito desde la app móvil.
+
+**Garantía de Inmutabilidad con SHA-256:**
+Cada vez que un ciudadano o funcionario sube un documento al portal, el backend calcula su hash criptográfico SHA-256 (`hash_file('sha256', $rutaTmp)`). Este hash se almacena en la tabla `solicitudes_documentos` y previene cualquier alteración o sustitución indebida del archivo en el expediente.
+
+---
+
+## PARTE IV: GUÍA DE INSTALACIÓN, CONFIGURACIÓN Y DESPLIEGUE
+
+### 1. Requisitos Previos del Sistema
+* **PHP:** Versión 8.2 o superior con extensiones `pdo_pgsql`, `curl`, `mbstring`, `fileinfo`, `gd`, `intl`.
+* **Composer:** Versión 2.x para dependencias de PHP.
+* **Node.js:** Versión 18+ o 20 LTS con `npm`.
+* **Git:** Para control de versiones.
+
+### 2. Instalación Local
+
 ```bash
+# 1. Clonar el repositorio
 git clone https://github.com/soportealoraapp/App-Residencias.git
 cd App-Residencias
-```
 
-#### Paso 2: Instalar Dependencias del Backend PHP
-```bash
+# 2. Instalar dependencias del backend PHP
 composer install --no-interaction --prefer-dist
-```
 
-#### Paso 3: Configurar Variables de Entorno del Backend
-Copia el archivo de ejemplo a la raíz como `.env`:
-```bash
+# 3. Configurar variables de entorno
 cp env .env
-```
-Edita `.env` con las credenciales de tu proyecto Supabase (ver Sección 5).
+# Configurar POSTGRES_URL, SUPABASE_URL, SUPABASE_ANON_KEY en .env
 
-#### Paso 4: Ejecutar Migraciones de Base de Datos
-Para aplicar las tablas relacionales y el soporte de sesiones:
-```bash
-php spark migrate
-```
-*(Opcional: Si estás inicializando una instancia vacía en Supabase, ejecuta los scripts de la carpeta `supabase/migrations/` en el SQL Editor de Supabase en orden numérico).*
-
-#### Paso 5: Instalar y Compilar la App Móvil (Expo Web)
-```bash
+# 4. Instalar y compilar la App Móvil (versión Web para /agentes/)
 cd mobile/agentes-transito
 npm install --legacy-peer-deps
 npx expo export --platform web --output-dir ../../public/agentes --clear
 cd ../..
-```
 
-#### Paso 6: Iniciar el Servidor de Desarrollo
-Para el backend y portal web:
-```bash
+# 5. Iniciar servidor de desarrollo
 php spark serve --port 8080
 ```
-La aplicación estará disponible en `http://localhost:8080`:
-* Portal Ciudadano: `http://localhost:8080/portal/dashboard`
-* Panel Administrativo: `http://localhost:8080/admin/dashboard`
-* App de Agentes Web: `http://localhost:8080/agentes/`
 
-Para desarrollar la app móvil con recarga en vivo (Metro):
-```bash
-cd mobile/agentes-transito
-npx expo start
-```
+* **Portal Ciudadano:** `http://localhost:8080/portal/dashboard`
+* **Panel Administrativo:** `http://localhost:8080/admin/dashboard`
+* **App de Tránsito Web:** `http://localhost:8080/agentes/`
+
+### 3. Despliegue en Producción (Vercel CI/CD)
+El proyecto está configurado para despliegue continuo en Vercel Serverless mediante `vercel.json` y `scripts/vercel-install.sh`:
+* Cualquier push a la rama `main` dispara automáticamente la instalación de Composer, la compilación de la app móvil en Expo y el despliegue del runtime PHP sin intervención manual.
 
 ---
 
-## 5. Diccionario de Variables de Entorno (`.env`)
+## 5. Documentos Complementarios Específicos
 
-### 5.1. Variables del Backend (Raíz `.env`)
-
-| Variable | Tipo | Ejemplo / Valor | Descripción |
-|---|---|---|---|
-| `CI_ENVIRONMENT` | String | `production` / `development` | Controla la visualización de errores y el modo de ejecución. |
-| `app.baseURL` | URL | `https://app-residencias.vercel.app/` | URL canónica base del sistema (debe terminar en diagonal `/`). |
-| `app.sessionDriver` | Clase | `CodeIgniter\Session\Handlers\DatabaseHandler` | Manejador de sesiones persistentes en base de datos. |
-| `app.sessionSavePath` | String | `ci_sessions` | Nombre de la tabla en PostgreSQL donde se guardan las sesiones. |
-| `app.sessionExpiration` | Entero | `7200` | Tiempo de vida de la sesión en segundos (2 horas). |
-| `POSTGRES_URL` | DSN | `postgres://postgres.[ref]:[pass]@aws-0-[region].pooler.supabase.com:6543/postgres?sslmode=require` | Conexión PgBouncer para entornos serverless (puerto 6543). |
-| `POSTGRES_HOST` | String | `aws-0-[region].pooler.supabase.com` | Host del connection pooler de Supabase. |
-| `POSTGRES_PORT` | Entero | `6543` | Puerto de conexión (6543 para pooler, 5432 para directo). |
-| `POSTGRES_DATABASE` | String | `postgres` | Nombre de la base de datos en Supabase. |
-| `POSTGRES_USER` | String | `postgres.[ref_proyecto]` | Usuario de conexión. |
-| `POSTGRES_PASSWORD` | String | `[contraseña_secreta]` | Contraseña de la base de datos Supabase. |
-| `SUPABASE_URL` | URL | `https://[ref].supabase.co` | URL base de la instancia del proyecto Supabase. |
-| `SUPABASE_ANON_KEY` | JWT | `eyJhbGciOi...` | Clave pública anónima de Supabase. |
-| `SUPABASE_SERVICE_ROLE_KEY` | JWT | `eyJhbGciOi...` | Clave privada con permisos de servicio (para backend cURL Storage). |
-| `TRAMITE_CESION_CONCESION_ENABLED`| Bool | `false` | Feature flag para activar o desactivar el trámite UR-TT-T-06. |
-
-### 5.2. Variables de la App Móvil (`mobile/agentes-transito/.env`)
-
-| Variable | Tipo | Ejemplo / Valor | Descripción |
-|---|---|---|---|
-| `EXPO_PUBLIC_API_BASE_URL` | URL | `https://app-residencias.vercel.app` | URL base del backend CodeIgniter 4 para peticiones de API. |
-| `EXPO_PUBLIC_SUPABASE_URL` | URL | `https://[ref].supabase.co` | URL del proyecto Supabase para conexión directa del cliente JS. |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY`| JWT | `eyJhbGciOi...` | Llave anónima pública de Supabase. |
-| `EXPO_PUBLIC_APP_ENV` | String | `production` | Entorno de ejecución de la app móvil. |
-
----
-
-## 6. Procedimientos de Despliegue (Vercel + CI/CD)
-
-### 6.1. Configuración de `vercel.json`
-El archivo `vercel.json` en la raíz del repositorio orquesta el despliegue serverless dividiendo el tráfico entre el runtime PHP y los activos estáticos:
-
-```json
-{
-  "version": 2,
-  "installCommand": "bash scripts/vercel-install.sh",
-  "functions": {
-    "api/*.php": {
-      "runtime": "vercel-php@0.7.4"
-    }
-  },
-  "routes": [
-    { "src": "/assets/(.*)", "dest": "/public/assets/$1" },
-    { "src": "/(css|js|img)/(.*)", "dest": "/public/$1/$2" },
-    { "src": "/(favicon\\.ico|robots\\.txt|logo-uri\\.webp)", "dest": "/public/$1" },
-    { "src": "/agentes/_expo/(.*)", "dest": "/public/agentes/_expo/$1" },
-    { "src": "/agentes/assets/(.*)", "dest": "/public/agentes/assets/$1" },
-    { "src": "/agentes/fonts/(.*)", "dest": "/public/agentes/fonts/$1" },
-    { "src": "/agentes/favicon\\.ico", "dest": "/public/agentes/favicon.ico" },
-    { "src": "/agentes(/.*)?", "dest": "/public/agentes/index.html" },
-    { "src": "/(.*)", "dest": "/api/index.php" }
-  ]
-}
-```
-
-### 6.2. Script de Instalación Automatizado (`scripts/vercel-install.sh`)
-Durante el proceso de build en Vercel, este script ejecuta:
-1. Instalación de **Composer** y descarga de dependencias PHP optimizadas (`--no-dev --optimize-autoloader`).
-2. Instalación de dependencias de Node.js en `mobile/agentes-transito`.
-3. Exportación estática del bundle de Expo hacia `public/agentes/`.
-4. Extracción y respaldo de las fuentes tipográficas de iconos en `public/agentes/fonts/`.
-
-### 6.3. Despliegue a Producción
-Para desplegar un cambio en producción:
-```bash
-git add -A
-git commit -m "feat/fix: descripcion del cambio"
-git push origin main
-```
-Vercel detecta automáticamente el commit en la rama `main`, ejecuta `scripts/vercel-install.sh`, genera la compilación y publica el sistema de forma atómica en menos de 3 minutos.
+Para una inmersión técnica profunda en cada componente, consulta los manuales especializados:
+* [DOCUMENTACION_BACKEND.md](file:///c:/Users/Alejandro/Downloads/App%20Residencias/DOCUMENTACION_BACKEND.md): Arquitectura completa del Backend CodeIgniter 4, controladores, modelos, servicios, filtros de seguridad y API REST.
+* [DOCUMENTACION_APP_TRANSITO.md](file:///c:/Users/Alejandro/Downloads/App%20Residencias/DOCUMENTACION_APP_TRANSITO.md): Manual técnico exhaustivo de la App Móvil en React Native/Expo, modo offline-first, cámara, GPS y sincronización con Supabase.
+* [DOC_METODOLOGIA_PORTAL_PANEL.md](file:///c:/Users/Alejandro/Downloads/App%20Residencias/DOC_METODOLOGIA_PORTAL_PANEL.md): Metodología de desarrollo, especificación de formularios y flujos normativos de ventanilla única.

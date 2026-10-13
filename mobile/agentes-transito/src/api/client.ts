@@ -42,7 +42,13 @@ export async function apiRequest<T>(
     if (token) finalHeaders.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const baseUrl = (API_BASE_URL || "").replace(/\/+$/, "");
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const fullUrl = baseUrl.endsWith("/api") && normalizedPath.startsWith("/api/")
+    ? `${baseUrl}${normalizedPath.slice(4)}`
+    : `${baseUrl}${normalizedPath}`;
+
+  const response = await fetch(fullUrl, {
     ...options,
     headers: finalHeaders,
     body: body ? JSON.stringify(body) : undefined,

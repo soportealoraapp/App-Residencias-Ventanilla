@@ -11,8 +11,72 @@
                 <li class="breadcrumb-item active" aria-current="page">Trámites</li>
             </ol>
         </nav>
-        <h1 class="h3 mb-1"><i class="bi bi-folder2-open text-primary me-2"></i>Trámites Disponibles</h1>
-        <p class="text-muted small mb-0">Selecciona el trámite de movilidad que deseas gestionar en línea.</p>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <h1 class="h3 mb-1"><i class="bi bi-folder2-open text-primary me-2"></i>Catálogo Oficial de Trámites</h1>
+                <p class="text-muted small mb-0">Selecciona el trámite de movilidad que deseas gestionar digitalmente ante el municipio.</p>
+            </div>
+            <div>
+                <a href="<?= site_url('/portal/mis-solicitudes') ?>" class="btn btn-outline-primary btn-sm shadow-sm">
+                    <i class="bi bi-list-check me-1"></i>Ver mis solicitudes en curso
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- GUÍA RÁPIDA DE REQUISITOS GENERALES -->
+<div class="card border-0 shadow-sm mb-4 bg-primary bg-opacity-10 border-start border-4 border-primary">
+    <div class="card-body p-3 p-md-4">
+        <div class="d-flex align-items-start gap-3">
+            <div class="bg-primary text-white p-2 rounded-circle flex-shrink-0">
+                <i class="bi bi-lightbulb fs-5"></i>
+            </div>
+            <div class="flex-grow-1">
+                <h6 class="fw-bold text-primary mb-1">Requisitos generales para agilizar tu trámite</h6>
+                <p class="small text-muted mb-2">Para una resolución rápida y sin prevenciones, te recomendamos tener listos los siguientes archivos en formato PDF o fotografía legible (máximo 10 MB por archivo):</p>
+                <div class="row g-2 small text-secondary">
+                    <div class="col-12 col-md-4"><i class="bi bi-check2-circle text-primary me-1"></i><strong>Identificación oficial:</strong> INE o Pasaporte vigente.</div>
+                    <div class="col-12 col-md-4"><i class="bi bi-check2-circle text-primary me-1"></i><strong>Comprobante de domicilio:</strong> No mayor a 3 meses.</div>
+                    <div class="col-12 col-md-4"><i class="bi bi-check2-circle text-primary me-1"></i><strong>Documentación vehicular:</strong> Factura, póliza o concesión.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- BARRA DE BÚSQUEDA Y FILTROS POR CATEGORÍA -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-3">
+        <div class="row g-3 align-items-center">
+            <div class="col-12 col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                    <input type="text" id="filtroTextoTramites" class="form-control border-start-0" 
+                        placeholder="Buscar por nombre, palabra clave o código (ej. UR-01, placas, carga)..." 
+                        aria-label="Buscar trámite">
+                    <button class="btn btn-outline-secondary" type="button" id="btnLimpiarFiltro" title="Limpiar búsqueda">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="d-flex flex-wrap gap-1 justify-content-md-end" id="filtrosCategorias">
+                    <button type="button" class="btn btn-sm btn-primary active btn-categoria-filter" data-cat="todas">
+                        Todos
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-categoria-filter" data-cat="concesiones">
+                        <i class="bi bi-bus-front me-1"></i>Transporte
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-categoria-filter" data-cat="vialidad">
+                        <i class="bi bi-cone-striped me-1"></i>Cierre y Vialidad
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-categoria-filter" data-cat="carga">
+                        <i class="bi bi-truck me-1"></i>Carga y Descarga
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
