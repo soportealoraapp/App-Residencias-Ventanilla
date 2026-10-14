@@ -138,6 +138,7 @@ export function transformarInfraccionABoleta(inf: Infraccion): BoletaInsert {
 /** Autenticar agente por placa + password con el backend de CI4 (con fallback local/offline) */
 export async function loginAgente(placa: string, password: string): Promise<AgenteRow> {
   const placaLimpia = placa.toUpperCase().trim();
+  const timeoutMs = 2500;
 
   // 1. Intento primario: Backend municipal CodeIgniter 4
   try {
@@ -149,6 +150,7 @@ export async function loginAgente(placa: string, password: string): Promise<Agen
       method: "POST",
       body: { placa: placaLimpia, password },
       auth: false,
+      timeoutMs,
     });
 
     if (res?.agente) {
@@ -162,12 +164,15 @@ export async function loginAgente(placa: string, password: string): Promise<Agen
   }
 
   // 2. Intento secundario: Supabase (si está configurado)
+  const supabaseController = new AbortController();
+  const supabaseTimeout = setTimeout(() => supabaseController.abort(), timeoutMs);
   try {
     const { data, error } = await supabase
       .from("agentes_transito")
       .select("id, placa, nombre_completo, rol, sector, activo")
       .eq("placa", placaLimpia)
       .eq("activo", 1)
+      .abortSignal(supabaseController.signal)
       .single();
 
     if (!error && data) {
@@ -175,6 +180,8 @@ export async function loginAgente(placa: string, password: string): Promise<Agen
     }
   } catch (netErr) {
     console.warn("Supabase auth offline fallback:", netErr);
+  } finally {
+    clearTimeout(supabaseTimeout);
   }
 
   // 3. Fallback offline: permite operar a oficiales en campo aunque no haya red momentáneamente
@@ -392,4 +399,3 @@ export async function subirFotoEvidencia(
 
   return uri;
 }
-

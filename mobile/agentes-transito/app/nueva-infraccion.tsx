@@ -17,6 +17,7 @@ import {
   BackHandler,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useAuth } from "../src/contexts/AuthContext";
@@ -54,6 +55,7 @@ export default function NuevaInfraccionScreen() {
   const { user, isLoading: authLoading } = useAuth();
   const { guardarInfraccion, valorUma, catalogo } = useInfracciones();
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/");
@@ -1372,10 +1374,26 @@ export default function NuevaInfraccionScreen() {
                   return (
                     <TouchableOpacity
                       key={cat}
-                      style={[styles.catFilterPill, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }, activa && { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                      style={[
+                        styles.catFilterPill,
+                        { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
+                        activa && { backgroundColor: colors.primary, borderColor: colors.primary },
+                      ]}
                       onPress={() => setCategoriaFiltro(cat)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: activa }}
                     >
-                      <Text style={[styles.catFilterPillText, { color: activa ? "#ffffff" : colors.textSecondary }, activa && { fontWeight: "800" }]}>
+                      {activa && (
+                        <Ionicons name="checkmark-circle" size={14} color="#ffffff" />
+                      )}
+                      <Text
+                        numberOfLines={1}
+                        style={[
+                          styles.catFilterPillText,
+                          { color: activa ? "#ffffff" : colors.textSecondary },
+                          activa && { fontWeight: "800" },
+                        ]}
+                      >
                         {cat === "todas" ? "Todas las faltas" : cat}
                       </Text>
                     </TouchableOpacity>
@@ -1437,7 +1455,15 @@ export default function NuevaInfraccionScreen() {
               >
                 {/* Overlay con guía */}
                 <View style={styles.cameraOverlayGuide}>
-                  <View style={styles.cameraTopBar}>
+                  <View
+                    style={[
+                      styles.cameraTopBar,
+                      {
+                        paddingTop:
+                          Platform.OS === "web" ? 16 : Math.max(insets.top, 16),
+                      },
+                    ]}
+                  >
                     <TouchableOpacity
                       style={styles.closeCameraFullBtn}
                       onPress={() => setModalCamaraVisible(false)}
@@ -1471,7 +1497,15 @@ export default function NuevaInfraccionScreen() {
                       : "Enfoque la licencia, placa retenida o documento"}
                   </Text>
 
-                  <View style={styles.cameraBottomBar}>
+                  <View
+                    style={[
+                      styles.cameraBottomBar,
+                      {
+                        paddingBottom:
+                          Platform.OS === "web" ? 50 : Math.max(insets.bottom, 24),
+                      },
+                    ]}
+                  >
                     {/* Botón simulador (si no hay cámara real disponible) */}
                     <TouchableOpacity
                       style={styles.cameraSimBtn}
@@ -1694,10 +1728,10 @@ const styles = StyleSheet.create({
   multiSelectHintText: { fontSize: 12, fontWeight: "600", flex: 1 },
   searchBarWrap: { flexDirection: "row", alignItems: "center", marginHorizontal: 16, marginTop: 10, marginBottom: 10, height: 46, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, gap: 8 },
   searchBarInput: { flex: 1, fontSize: 13, fontWeight: "500" },
-  categoryChipsScroll: { maxHeight: 40, marginBottom: 10 },
-  categoryChipsContent: { paddingHorizontal: 16, gap: 8 },
-  catFilterPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1 },
-  catFilterPillText: { fontSize: 11, fontWeight: "600" },
+  categoryChipsScroll: { height: 40, marginBottom: 10 },
+  categoryChipsContent: { paddingHorizontal: 16, gap: 8, alignItems: "center" },
+  catFilterPill: { minHeight: 32, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1 },
+  catFilterPillText: { fontSize: 11, fontWeight: "600", includeFontPadding: false },
   catalogListContent: { paddingHorizontal: 16, paddingBottom: 16, paddingTop: 4 },
   catalogItemCard: { padding: 14, borderRadius: 14, borderWidth: 1, marginBottom: 10 },
   catItemTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
@@ -1719,7 +1753,7 @@ const styles = StyleSheet.create({
   cameraFullScreen: { flex: 1 },
   cameraView: { flex: 1 },
   cameraOverlayGuide: { flex: 1, justifyContent: "space-between" },
-  cameraTopBar: { flexDirection: "row", alignItems: "center", padding: 16, gap: 12, backgroundColor: "rgba(0,0,0,0.5)" },
+  cameraTopBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 16, gap: 12, backgroundColor: "rgba(0,0,0,0.5)" },
   closeCameraFullBtn: { padding: 4 },
   cameraGuideTitle: { flex: 1, color: "#ffffff", fontSize: 15, fontWeight: "700" },
   cameraGuideTitleWrap: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
@@ -1730,7 +1764,7 @@ const styles = StyleSheet.create({
   cornerBL: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0, borderBottomLeftRadius: 6 },
   cornerBR: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0, borderBottomRightRadius: 6 },
   cameraHintText: { color: "rgba(255,255,255,0.9)", fontSize: 13, textAlign: "center", paddingHorizontal: 30, backgroundColor: "rgba(0,0,0,0.4)", paddingVertical: 10 },
-  cameraBottomBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 30, paddingBottom: 50, paddingTop: 20, backgroundColor: "rgba(0,0,0,0.6)" },
+  cameraBottomBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 30, paddingTop: 20, backgroundColor: "rgba(0,0,0,0.6)" },
   cameraSimBtn: { width: 60, alignItems: "center", gap: 4 },
   cameraSimBtnText: { color: "rgba(255,255,255,0.7)", fontSize: 11 },
   shutterBtnReal: { width: 72, height: 72, borderRadius: 36, backgroundColor: "#ffffff", alignItems: "center", justifyContent: "center", borderWidth: 4, borderColor: "rgba(255,255,255,0.5)" },

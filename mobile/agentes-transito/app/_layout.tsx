@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Platform } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useFonts } from "expo-font";
 import { Ionicons } from "@expo/vector-icons";
 import { AuthProvider } from "../src/contexts/AuthContext";
@@ -15,23 +15,28 @@ function AppNavigation() {
   return (
     <>
       <StatusBar style={isDark ? "light" : "dark"} />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          animation: "slide_from_right",
-          contentStyle: {
-            backgroundColor: colors.background,
-          },
-        }}
+      <SafeAreaView
+        edges={Platform.OS === "web" ? [] : ["top", "left", "right"]}
+        style={{ flex: 1, backgroundColor: colors.background }}
       >
-        <Stack.Screen name="index" options={{ title: "Acceso Agentes" }} />
-        <Stack.Screen name="login" options={{ title: "Iniciar sesión" }} />
-        <Stack.Screen name="registro" options={{ title: "Crear una cuenta" }} />
-        <Stack.Screen name="dashboard" options={{ title: "Panel de Control" }} />
-        <Stack.Screen name="boletas" options={{ title: "Historial de Boletas" }} />
-        <Stack.Screen name="perfil" options={{ title: "Perfil del Agente" }} />
-        <Stack.Screen name="nueva-infraccion" options={{ title: "Nueva Boleta de Infracción" }} />
-      </Stack>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: "slide_from_right",
+            contentStyle: {
+              backgroundColor: colors.background,
+            },
+          }}
+        >
+          <Stack.Screen name="index" options={{ title: "Acceso Agentes" }} />
+          <Stack.Screen name="login" options={{ title: "Iniciar sesión" }} />
+          <Stack.Screen name="registro" options={{ title: "Crear una cuenta" }} />
+          <Stack.Screen name="dashboard" options={{ title: "Panel de Control" }} />
+          <Stack.Screen name="boletas" options={{ title: "Historial de Boletas" }} />
+          <Stack.Screen name="perfil" options={{ title: "Perfil del Agente" }} />
+          <Stack.Screen name="nueva-infraccion" options={{ title: "Nueva Boleta de Infracción" }} />
+        </Stack>
+      </SafeAreaView>
     </>
   );
 }
