@@ -1,4 +1,5 @@
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 import { API_BASE_URL } from "../constants/config";
 
 const AUTH_TOKEN_KEY = "auth_token";
@@ -11,15 +12,18 @@ export class ApiError extends Error {
 }
 
 async function getToken(): Promise<string | null> {
+  if (Platform.OS === "web") return null;
   return SecureStore.getItemAsync(AUTH_TOKEN_KEY);
 }
 
-export async function setToken(token: string | null): Promise<void> {
-  if (token) {
-    await SecureStore.setItemAsync(AUTH_TOKEN_KEY, token);
-  } else {
-    await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
+export async function clearObsoleteAgentToken(): Promise<void> {
+  if (Platform.OS === "web") {
+    if (typeof localStorage !== "undefined") {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+    }
+    return;
   }
+  await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
 }
 
 type RequestOptions = Omit<RequestInit, "body"> & {

@@ -26,13 +26,9 @@ $routes->get('auth/privacidad', 'AuthController::privacidad');
 
 // API Móvil - Infracciones, Agentes y Checklist
 $routes->get('api/checklist-infracciones', 'Api\InfraccionesApiController::checklist');
-$routes->options('api/agentes/registro', 'Api\AgentesTransitoApiController::registrar');
-$routes->post('api/agentes/registro', 'Api\AgentesTransitoApiController::registrar');
 
 $routes->options('api/agentes/login', 'Api\AgentesTransitoApiController::login');
 $routes->post('api/agentes/login', 'Api\AgentesTransitoApiController::login');
-$routes->options('api/auth/login', 'Api\AgentesTransitoApiController::login');
-$routes->post('api/auth/login', 'Api\AgentesTransitoApiController::login');
 
 $routes->get('api/parametros', 'Api\InfraccionesApiController::parametros');
 $routes->options('api/parametros', 'Api\InfraccionesApiController::parametros');

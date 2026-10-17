@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -19,13 +18,13 @@ import { Ionicons } from "@expo/vector-icons";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { signIn, isLoading, isAuthenticated, user } = useAuth();
+  const { signIn, isLoading, isAuthenticated, user, sessionError } = useAuth();
   const { colors, isDark } = useTheme();
 
   const [placa, setPlaca] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(sessionError);
 
   // Redirigir al dashboard si ya hay sesión activa
   useEffect(() => {
@@ -33,6 +32,10 @@ export default function LoginScreen() {
       router.replace("/dashboard");
     }
   }, [isAuthenticated, user]);
+
+  useEffect(() => {
+    if (sessionError) setErrorMsg(sessionError);
+  }, [sessionError]);
 
   const handleLogin = async () => {
     setErrorMsg(null);
@@ -49,16 +52,9 @@ export default function LoginScreen() {
       await signIn(placa.trim(), password);
       router.replace("/dashboard");
     } catch (err: any) {
-      const msg = err?.message || "Credenciales incorrectas o error en el sistema.";
+      const msg = err?.message || "No fue posible validar las credenciales.";
       setErrorMsg(msg);
-      Alert.alert("Error de Acceso", msg);
     }
-  };
-
-  const handleAutoFillDemo = () => {
-    setPlaca("AGT-204");
-    setPassword("transito2026");
-    setErrorMsg(null);
   };
 
   return (
@@ -174,54 +170,15 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
-          {/* Selector de Agentes de Prueba Rápidos */}
-          <View style={styles.demoSection}>
-            <Text style={[styles.demoSectionLabel, { color: colors.textMuted }]}>
-              ACCESO RÁPIDO PARA EVALUACIÓN:
-            </Text>
-            <View style={styles.demoChipsRow}>
-              <TouchableOpacity
-                style={[
-                  styles.demoChip,
-                  { backgroundColor: colors.surfaceElevated, borderColor: placa === "AGT-204" ? colors.primary : colors.border },
-                ]}
-                onPress={() => {
-                  setPlaca("AGT-204");
-                  setPassword("transito2026");
-                  setErrorMsg(null);
-                }}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="shield" size={13} color={colors.primary} />
-                <Text style={[styles.demoChipText, { color: colors.text }]}>AGT-204 · Carlos M.</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.demoChip,
-                  { backgroundColor: colors.surfaceElevated, borderColor: placa === "AGT-107" ? colors.primary : colors.border },
-                ]}
-                onPress={() => {
-                  setPlaca("AGT-107");
-                  setPassword("transito2026");
-                  setErrorMsg(null);
-                }}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="shield" size={13} color={colors.info || colors.primary} />
-                <Text style={[styles.demoChipText, { color: colors.text }]}>AGT-107 · María H.</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
         </View>
 
         {/* Indicador de Respaldo Offline */}
         <View style={[styles.offlineNotice, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Ionicons name="cloud-offline-outline" size={22} color={colors.success} />
+          <Ionicons name="cloud-offline-outline" size={22} color={colors.info || colors.primary} />
           <View style={styles.offlineNoticeTextWrap}>
-            <Text style={[styles.offlineNoticeTitle, { color: colors.text }]}>Operación Offline Garantizada</Text>
+            <Text style={[styles.offlineNoticeTitle, { color: colors.text }]}>Acceso con conexión requerida</Text>
             <Text style={[styles.offlineNoticeDesc, { color: colors.textSecondary }]}>
-              Las boletas se almacenan localmente y se sincronizan con Supabase al contar con cobertura.
+              Para iniciar o validar una sesión necesita conexión. Las boletas ya capturadas se conservan localmente.
             </Text>
           </View>
         </View>
@@ -377,36 +334,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
     letterSpacing: 0.5,
-  },
-  demoSection: {
-    marginTop: 16,
-  },
-  demoSectionLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-    marginBottom: 8,
-  },
-  demoChipsRow: {
-    flexDirection: "row",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  demoChip: {
-    flex: 1,
-    minWidth: 130,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    gap: 6,
-  },
-  demoChipText: {
-    fontSize: 12,
-    fontWeight: "600",
   },
   offlineNotice: {
     flexDirection: "row",

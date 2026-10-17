@@ -15,11 +15,10 @@ import { Ionicons } from "@expo/vector-icons";
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const { isLoading, user } = useAuth();
+  const { isLoading, user, sessionError } = useAuth();
   const { colors } = useTheme();
 
   React.useEffect(() => {
-    console.log("[INDEX] isLoading:", isLoading, "user:", user);
     if (!isLoading && user) {
       router.replace("/dashboard");
     }
@@ -76,9 +75,22 @@ export default function WelcomeScreen() {
           </Text>
         </View>
         <Text style={[styles.description, { color: colors.textSecondary }]}>
-          Ingrese al sistema con sus credenciales o consulte la opción de creación
-          de cuenta.
+          Ingrese con la placa y contraseña que le asignó el administrador.
         </Text>
+
+        {sessionError && (
+          <View
+            style={[
+              styles.sessionErrorBox,
+              { backgroundColor: colors.dangerBg, borderColor: colors.danger },
+            ]}
+          >
+            <Ionicons name="alert-circle" size={18} color={colors.danger} />
+            <Text style={[styles.sessionErrorText, { color: colors.danger }]}>
+              {sessionError}
+            </Text>
+          </View>
+        )}
 
         <View
           style={[
@@ -94,21 +106,6 @@ export default function WelcomeScreen() {
             <Ionicons name="log-in-outline" size={22} color="#ffffff" />
             <Text style={styles.primaryButtonText}>Iniciar sesión</Text>
             <Ionicons name="chevron-forward" size={19} color="#ffffff" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.secondaryButton,
-              { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
-            ]}
-            onPress={() => router.push("/registro")}
-            activeOpacity={0.78}
-          >
-            <Ionicons name="person-add-outline" size={21} color={colors.primary} />
-            <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>
-              Crear una cuenta
-            </Text>
-            <Ionicons name="chevron-forward" size={19} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
@@ -179,6 +176,19 @@ const styles = StyleSheet.create({
     marginBottom: 22,
     paddingHorizontal: 8,
   },
+  sessionErrorBox: {
+    width: "100%",
+    maxWidth: 460,
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  sessionErrorText: { fontSize: 13, fontWeight: "600", flex: 1 },
   actionsCard: {
     width: "100%",
     padding: 16,
@@ -201,17 +211,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     flex: 1,
   },
-  secondaryButton: {
-    minHeight: 54,
-    borderRadius: 13,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  secondaryButtonText: { fontSize: 15, fontWeight: "800", flex: 1 },
   offlineNotice: {
     width: "100%",
     marginTop: 18,

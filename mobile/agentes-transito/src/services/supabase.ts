@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Infraccion } from "../types/infraccion";
-import { apiRequest, setToken } from "../api/client";
+import { ApiError, apiRequest } from "../api/client";
 
 // Las credenciales de Supabase pueden estar en .env (EXPO_PUBLIC_*) si se usa como réplica secundaria
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "https://placeholder.supabase.co";
@@ -135,70 +135,36 @@ export function transformarInfraccionABoleta(inf: Infraccion): BoletaInsert {
 
 // ─── API helpers ────────────────────────────────────────────────────────────────
 
-/** Autenticar agente por placa + password con el backend de CI4 (con fallback local/offline) */
+/** Autentica al agente únicamente mediante el backend municipal. */
 export async function loginAgente(placa: string, password: string): Promise<AgenteRow> {
   const placaLimpia = placa.toUpperCase().trim();
-  const timeoutMs = 2500;
-
-  // 1. Intento primario: Backend municipal CodeIgniter 4
   try {
     const res = await apiRequest<{
       success: boolean;
-      token?: string;
       agente: AgenteRow;
     }>("/api/agentes/login", {
       method: "POST",
       body: { placa: placaLimpia, password },
       auth: false,
-      timeoutMs,
+      timeoutMs: 10000,
     });
 
-    if (res?.agente) {
-      if (res.token) {
-        await setToken(res.token);
-      }
-      return res.agente;
+    if (!res?.success || !res.agente) {
+      throw new Error("El servidor devolvió una respuesta de autenticación incompleta.");
     }
-  } catch (ci4Err) {
-    console.warn("[auth] CI4 login no disponible o credencial local, verificando alternativas:", ci4Err);
-  }
-
-  // 2. Intento secundario: Supabase (si está configurado)
-  const supabaseController = new AbortController();
-  const supabaseTimeout = setTimeout(() => supabaseController.abort(), timeoutMs);
-  try {
-    const { data, error } = await supabase
-      .from("agentes_transito")
-      .select("id, placa, nombre_completo, rol, sector, activo")
-      .eq("placa", placaLimpia)
-      .eq("activo", 1)
-      .abortSignal(supabaseController.signal)
-      .single();
-
-    if (!error && data) {
-      return data as AgenteRow;
+    return res.agente;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      throw new Error("Credenciales incorrectas o agente inactivo.");
     }
-  } catch (netErr) {
-    console.warn("Supabase auth offline fallback:", netErr);
-  } finally {
-    clearTimeout(supabaseTimeout);
+    if (error instanceof ApiError && error.status === 422) {
+      throw new Error("Ingrese una placa y contraseña válidas.");
+    }
+    if (error instanceof ApiError) {
+      throw new Error("El servicio de autenticación no está disponible. Inténtelo más tarde.");
+    }
+    throw new Error("No se pudo conectar con el servidor. Revise su conexión e inténtelo de nuevo.");
   }
-
-  // 3. Fallback offline: permite operar a oficiales en campo aunque no haya red momentáneamente
-  if (password.length >= 3) {
-    return {
-      id: 104,
-      placa: placaLimpia,
-      nombre_completo: placaLimpia.includes("204")
-        ? "Oficial Carlos Mendoza Ruiz"
-        : `Oficial ${placaLimpia}`,
-      rol: "operativo",
-      sector: "Sector Centro - Uriangato, Gto.",
-      activo: 1,
-    };
-  }
-
-  throw new Error("Credenciales inválidas o agente no encontrado.");
 }
 
 /** Cargar catálogo oficial de infracciones desde CodeIgniter 4 (o caché local) */

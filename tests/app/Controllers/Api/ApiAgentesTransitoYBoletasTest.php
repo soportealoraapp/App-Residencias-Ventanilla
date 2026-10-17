@@ -4,6 +4,7 @@ namespace Tests\Controllers\Api;
 
 use App\Models\AgenteTransitoModel;
 use App\Models\BoletaInfraccionModel;
+use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Test\FeatureTestTrait;
 use Tests\Support\DatabaseTestCase;
 
@@ -27,7 +28,7 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
         ]);
     }
 
-    public function testLoginAgente_ConCredencialesCorrectas_Retorna200YToken(): void
+    public function testLoginAgente_ConCredencialesCorrectas_RetornaPerfilSinSesionServidor(): void
     {
         $response = $this->post('api/agentes/login', [
             'placa'    => 'AGT-TEST-1',
@@ -38,7 +39,7 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
         $json = json_decode($response->getJSON(), true);
 
         $this->assertTrue($json['success']);
-        $this->assertNotEmpty($json['token']);
+        $this->assertArrayNotHasKey('token', $json);
         $this->assertEquals('AGT-TEST-1', $json['agente']['placa']);
         $this->assertEquals('Oficial de Prueba', $json['agente']['nombre_completo']);
     }
@@ -53,6 +54,39 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
         $response->assertStatus(401);
         $json = json_decode($response->getJSON(), true);
         $this->assertFalse($json['success']);
+    }
+
+    public function testLoginAgente_PlacaInexistenteORetirada_Retorna401(): void
+    {
+        $response = $this->post('api/agentes/login', [
+            'placa' => 'AGT-NO-EXISTE',
+            'password' => 'secreto123',
+        ]);
+        $response->assertStatus(401);
+
+        $agenteModel = new AgenteTransitoModel();
+        $agente = $agenteModel->getPorPlaca('AGT-TEST-1');
+        $agenteModel->update($agente->id, ['activo' => 0]);
+
+        $response = $this->post('api/agentes/login', [
+            'placa' => 'AGT-TEST-1',
+            'password' => 'secreto123',
+        ]);
+        $response->assertStatus(401);
+    }
+
+    public function testAutorregistroMovilNoTieneRutaPublica(): void
+    {
+        try {
+            $this->post('api/agentes/registro', [
+                'placa' => 'AGT-UNAUTHORIZED',
+                'nombre_completo' => 'Cuenta No Autorizada',
+                'password' => 'secreto123',
+            ]);
+            $this->fail('El endpoint público de autorregistro no debe tener una ruta disponible.');
+        } catch (PageNotFoundException) {
+            $this->assertNull((new AgenteTransitoModel())->getPorPlaca('AGT-UNAUTHORIZED'));
+        }
     }
 
     public function testGetParametros_RetornaValoresValidos(): void

@@ -4,16 +4,19 @@ Aplicación móvil/web del MVP de boletas de infracción, dentro del monorepo de
 
 ## Estado actual
 
-La app permite probar una interfaz de agente y un flujo de captura **local/offline**. No debe considerarse todavía una integración de producción con autenticación, cámara ni recepción de boletas en el servidor.
+La app admite captura local de boletas. Un inicio de sesión nuevo requiere conexión con el backend municipal; el perfil local puede restaurar la interfaz sin conexión, pero no comprueba la identidad ante el servidor. Las boletas guardadas permanecen disponibles localmente.
 
-- El inicio de sesión es una simulación local: acepta cualquier placa no vacía y contraseña de al menos 3 caracteres; no valida credenciales en el backend.
-- La sesión y las boletas se guardan en AsyncStorage del dispositivo/navegador. Al iniciar por primera vez se cargan dos boletas de demostración.
+- El inicio de sesión valida placa, contraseña y estado activo contra `POST /api/agentes/login`. No existen accesos alternativos locales ni autorregistro móvil.
+- Después de que el backend acepta las credenciales, la app guarda solo el perfil necesario en AsyncStorage. La nueva clave de perfil evita restaurar los perfiles antiguos creados por el login simulado.
+- Al reabrir la app, el perfil local restaura la interfaz sin conexión. Esto no acredita autorización ante el servidor ni permite detectar offline que un agente fue desactivado.
+- El cierre de sesión elimina el perfil local y las credenciales obsoletas del flujo de agentes; las boletas permanecen en su almacenamiento independiente.
+- Los agentes se crean desde la administración municipal existente; el acceso a la aplicación no crea cuentas.
 - La captura incluye datos del agente, fecha/hora, ubicación, infractor, vehículo, falta, hechos, garantías y tres evidencias requeridas.
 - El GPS real intenta obtener permiso y ubicación; si no están disponibles, usa coordenadas de ejemplo de Uriangato.
 - Las opciones de foto de este MVP son simuladas con imágenes de muestra; aún no equivalen a capturar y subir fotos reales con la cámara.
 - El botón de sincronización intenta hacer POST a `/api/infracciones/sincronizar`, pero el backend actual no expone esa ruta. Como la URL base suele terminar en `/api`, el cliente además puede solicitar `/api/api/infracciones/sincronizar`. El manejador actual puede marcar una boleta como sincronizada cuando falla la petición. No usar ese estado como confirmación de recepción del servidor.
 - El backend sí expone `GET /api/checklist-infracciones`; la app todavía no consume ese catálogo desde el servidor y usa su catálogo local.
-- `src/api/auth.ts` y `src/api/client.ts` son una base de cliente HTTP, pero el login visible no los utiliza. El backend web actual tampoco ofrece el endpoint móvil de login por token que espera ese cliente.
+- La sincronización de boletas y carga de evidencias no forman parte de la autenticación corregida. Sus endpoints aún requieren validación de identidad/autorización del lado del servidor; que el cliente adjunte un token no implica que esos controladores lo validen.
 
 ## Qué implementaron los últimos cambios
 
@@ -88,18 +91,18 @@ npm run android
 
 En Windows, `npm run ios` no puede compilar ni iniciar el simulador de iOS; para ese caso se requiere macOS/Xcode o Expo Go en un iPhone.
 
-### Recorrido de prueba del MVP local
+### Recorrido de prueba
 
-1. En el acceso, pulsa **Autocompletar Agente de Prueba**. Es una demostración, no una cuenta real.
-2. En el dashboard, revisa las dos boletas iniciales y cambia entre todas, pendientes y sincronizadas.
+1. Para iniciar sesión, usa las credenciales de un agente activo creado desde la administración y asegúrate de que el backend sea accesible.
+2. En el dashboard, revisa las boletas locales existentes.
 3. Abre **Levantar nueva infracción**, completa los campos obligatorios, elige las tres imágenes de muestra y guarda.
 4. Confirma que la boleta aparece como pendiente. En móvil, permite ubicación para probar GPS; sin permiso se usa una coordenada de demostración.
-5. Reinicia la app para comprobar persistencia local. Para empezar de cero en web, limpia los datos del sitio/almacenamiento local del navegador; en móvil, borra los datos de la app o reinstálala.
+5. Reinicia la app para comprobar que se restaura el perfil local y las boletas. La restauración del perfil no confirma ante el servidor que la cuenta siga activa.
 6. No tomes el contador “sincronizadas” ni el botón de sincronización como prueba de recepción backend mientras no exista y se valide el endpoint de envío.
 
 ## Configuración opcional del backend
 
-La app puede explorarse sin API. Si necesitas iniciar también CodeIgniter, desde otra terminal en la raíz:
+Para probar la autenticación, inicia CodeIgniter desde otra terminal en la raíz:
 
 ```powershell
 .\iniciar-servidor.ps1
@@ -112,7 +115,7 @@ EXPO_PUBLIC_API_BASE_URL=http://192.168.1.25:8080/api
 EXPO_PUBLIC_APP_ENV=development
 ```
 
-Desde `mobile/agentes-transito`, puedes copiar la plantilla con `Copy-Item .env.example .env` y editarla con `notepad .env`. Sustituye la IP del ejemplo por la IP real de tu PC. Después de cambiar variables `EXPO_PUBLIC_*`, reinicia Expo. La API actual solo incluye el checklist `GET /api/checklist-infracciones`; el inicio de sesión móvil y la recepción/sincronización de boletas requieren trabajo de backend y alineación de rutas antes de probarse de extremo a extremo.
+Desde `mobile/agentes-transito`, puedes copiar la plantilla con `Copy-Item .env.example .env` y editarla con `notepad .env`. Sustituye la IP del ejemplo por la IP real de tu PC. Después de cambiar variables `EXPO_PUBLIC_*`, reinicia Expo. Para probar un login nuevo, el backend debe estar accesible y las credenciales deben corresponder a un agente activo creado desde el panel administrativo.
 
 El `.env` de la raíz es independiente del `.env` de Expo. En esta copia solo declara `CI_ENVIRONMENT`; CodeIgniter toma la conexión de sus valores predeterminados de `app/Config/Database.php` (SQLite). Revisa esa configuración si vas a probar con otra base. No copies credenciales reales a archivos versionados.
 
