@@ -14,7 +14,23 @@ import { useRouter } from "expo-router";
 import { useAuth } from "../src/contexts/AuthContext";
 import { useTheme } from "../src/contexts/ThemeContext";
 import { ThemeToggle } from "../src/components/ThemeToggle";
+import { APP_ENV } from "../src/constants/config";
 import { Ionicons } from "@expo/vector-icons";
+
+/**
+ * Agentes del AgentesTransitoSeeder para entrar rápido durante las pruebas.
+ * Solo se muestran con EXPO_PUBLIC_APP_ENV=development y siempre se validan
+ * contra el backend: si el agente no existe o está inactivo, el acceso falla.
+ */
+const AGENTES_PRUEBA =
+  APP_ENV === "development"
+    ? [
+        { placa: "AGT-204", etiqueta: "AGT-204 · Carlos M.", icono: "shield" as const },
+        { placa: "AGT-107", etiqueta: "AGT-107 · María H.", icono: "shield" as const },
+        { placa: "JEF-001", etiqueta: "JEF-001 · Javier R.", icono: "star" as const },
+      ]
+    : [];
+const PASSWORD_PRUEBA = "transito2026";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -37,19 +53,19 @@ export default function LoginScreen() {
     if (sessionError) setErrorMsg(sessionError);
   }, [sessionError]);
 
-  const handleLogin = async () => {
+  const handleLogin = async (placaIngreso = placa, passwordIngreso = password) => {
     setErrorMsg(null);
-    if (!placa.trim()) {
+    if (!placaIngreso.trim()) {
       setErrorMsg("Ingrese su número de placa o credencial oficial.");
       return;
     }
-    if (!password) {
+    if (!passwordIngreso) {
       setErrorMsg("Ingrese su contraseña de acceso.");
       return;
     }
 
     try {
-      await signIn(placa.trim(), password);
+      await signIn(placaIngreso.trim(), passwordIngreso);
       router.replace("/dashboard");
     } catch (err: any) {
       const msg = err?.message || "No fue posible validar las credenciales.";
@@ -111,7 +127,7 @@ export default function LoginScreen() {
               <TextInput
                 style={[styles.input, { color: colors.text }]}
                 placeholder="Ej. AGT-204"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={colors.placeholder}
                 value={placa}
                 onChangeText={(val) => {
                   setPlaca(val.toUpperCase());
@@ -131,7 +147,7 @@ export default function LoginScreen() {
               <TextInput
                 style={[styles.input, { color: colors.text }]}
                 placeholder="••••••••"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={colors.placeholder}
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={(val) => {
@@ -156,7 +172,7 @@ export default function LoginScreen() {
           {/* Botón de Entrada Principal */}
           <TouchableOpacity
             style={[styles.primaryButton, { backgroundColor: colors.primary }, isLoading && styles.buttonDisabled]}
-            onPress={handleLogin}
+            onPress={() => handleLogin()}
             disabled={isLoading}
             activeOpacity={0.85}
           >
@@ -170,6 +186,39 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
+          {AGENTES_PRUEBA.length > 0 && (
+            <View style={styles.demoSection}>
+              <Text style={[styles.demoSectionLabel, { color: colors.textMuted }]}>
+                ACCESO RÁPIDO DE PRUEBA (SOLO DESARROLLO)
+              </Text>
+              <View style={styles.demoChipsRow}>
+                {AGENTES_PRUEBA.map((agente) => (
+                  <TouchableOpacity
+                    key={agente.placa}
+                    style={[
+                      styles.demoChip,
+                      {
+                        backgroundColor: colors.surfaceElevated,
+                        borderColor: placa === agente.placa ? colors.primary : colors.border,
+                      },
+                      isLoading && styles.buttonDisabled,
+                    ]}
+                    onPress={() => {
+                      setPlaca(agente.placa);
+                      setPassword(PASSWORD_PRUEBA);
+                      handleLogin(agente.placa, PASSWORD_PRUEBA);
+                    }}
+                    disabled={isLoading}
+                    activeOpacity={0.7}
+                    accessibilityLabel={`Entrar como ${agente.etiqueta}`}
+                  >
+                    <Ionicons name={agente.icono} size={13} color={colors.primary} />
+                    <Text style={[styles.demoChipText, { color: colors.text }]}>{agente.etiqueta}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Indicador de Respaldo Offline */}
@@ -334,6 +383,35 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
     letterSpacing: 0.5,
+  },
+  demoSection: {
+    marginTop: 18,
+  },
+  demoSectionLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  demoChipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 8,
+  },
+  demoChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  demoChipText: {
+    fontSize: 12,
+    fontWeight: "700",
   },
   offlineNotice: {
     flexDirection: "row",

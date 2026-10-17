@@ -76,7 +76,7 @@ $files = [
                             <label for="rfc" class="form-label fw-semibold">
                                 RFC <span class="text-danger">*</span>
                             </label>
-                            <input id="rfc" class="form-control text-uppercase" name="rfc" maxlength="13" value="<?= esc(old('rfc')) ?>" placeholder="ABCD123456XYZ" required>
+                            <input id="rfc" class="form-control text-uppercase" name="rfc" minlength="12" maxlength="13" pattern="[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}" title="12 caracteres (persona moral) o 13 (persona física)" value="<?= esc(old('rfc')) ?>" placeholder="Ej. GODE561231GR8" required>
                             <?= validation_show_error('rfc') ?>
                         </div>
                         <div class="col-md-8">

@@ -285,7 +285,7 @@ export default function BoletasScreen() {
                 value={busqueda}
                 onChangeText={setBusqueda}
                 placeholder="Buscar por folio..."
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={colors.placeholder}
                 autoCapitalize="none"
                 returnKeyType="search"
                 accessibilityLabel="Buscar boletas por folio"
@@ -422,7 +422,7 @@ export default function BoletasScreen() {
                       setFechaDesde(value);
                     }}
                     placeholder="AAAA-MM-DD"
-                    placeholderTextColor={colors.textMuted}
+                    placeholderTextColor={colors.placeholder}
                     accessibilityLabel="Fecha Desde"
                     maxLength={10}
                     keyboardType="numbers-and-punctuation"
@@ -445,7 +445,7 @@ export default function BoletasScreen() {
                       setFechaHasta(value);
                     }}
                     placeholder="AAAA-MM-DD"
-                    placeholderTextColor={colors.textMuted}
+                    placeholderTextColor={colors.placeholder}
                     accessibilityLabel="Fecha Hasta"
                     maxLength={10}
                     keyboardType="numbers-and-punctuation"

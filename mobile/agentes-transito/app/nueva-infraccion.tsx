@@ -40,6 +40,21 @@ type MensajeGuardado =
 
 let folioSequence = 0;
 
+const ETIQUETAS_VEHICULO: Record<TipoVehiculo, string> = {
+  particular: "Particular",
+  transporte_publico: "Transporte público",
+  carga: "Carga pesada",
+  motocicleta: "Motocicleta",
+  otro: "Otro",
+};
+
+const ETIQUETAS_GARANTIA: Record<GarantiaRetenida, string> = {
+  licencia: "Licencia de conducir",
+  placa: "Placa",
+  tarjeta_circulacion: "Tarjeta de circulación",
+  vehiculo: "Vehículo remitido (grúa)",
+};
+
 /** Genera un folio único por agente + timestamp para evitar colisiones */
 function generarFolioUnico(agentePlaca: string): string {
   const ahora = new Date();
@@ -100,6 +115,7 @@ export default function NuevaInfraccionScreen() {
   const [busquedaCatalogo, setBusquedaCatalogo] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>("todas");
   const [salirConfirmacionVisible, setSalirConfirmacionVisible] = useState(false);
+  const [resumenVisible, setResumenVisible] = useState(false);
 
   // ── Hechos ────────────────────────────────────────────────────────────────────
   const [hechos, setHechos] = useState("");
@@ -416,8 +432,8 @@ export default function NuevaInfraccionScreen() {
     setSalirConfirmacionVisible(false);
   };
 
-  // ── Guardar boleta ─────────────────────────────────────────────────────────────
-  const handleGuardarBoleta = async () => {
+  // ── Revisar boleta: valida y muestra el resumen antes de emitir ────────────────
+  const handleRevisarBoleta = () => {
     if (guardandoRef.current) return;
 
     if (mensajeExitoTimer.current) {
@@ -480,6 +496,14 @@ export default function NuevaInfraccionScreen() {
       return;
     }
 
+    setResumenVisible(true);
+  };
+
+  // ── Guardar boleta (solo después de confirmar el resumen) ──────────────────────
+  const confirmarGuardadoBoleta = async () => {
+    if (guardandoRef.current || !fotoPlaca || !fotoContexto || !fotoDocumento) return;
+    setResumenVisible(false);
+
     guardandoRef.current = true;
     setGuardando(true);
     setMensajeGuardado({
@@ -492,6 +516,7 @@ export default function NuevaInfraccionScreen() {
         id: `inf-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         folio,
         agente: {
+          id: user?.id,
           placa: user?.placa || "AGT-XXX",
           nombre: user?.nombre || "Oficial de Tránsito",
           rol: user?.rol || "Agente Vial",
@@ -799,7 +824,7 @@ export default function NuevaInfraccionScreen() {
                 <TextInput
                   style={[styles.textInput, { color: colors.text }]}
                   placeholder="Ej. Av. Hidalgo esq. Morelos, Centro"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor={colors.placeholder}
                   value={lugar}
                   onChangeText={(value) => {
                     ubicacionGeneradaPorGps.current = "";
@@ -840,8 +865,8 @@ export default function NuevaInfraccionScreen() {
                 </View>
                 <TextInput
                   style={[styles.plateInput, { color: sinPlacas ? colors.textMuted : colors.text }, sinPlacas && { opacity: 0.4 }]}
-                  placeholder="GTC-000-A"
-                  placeholderTextColor={colors.textMuted}
+                  placeholder="Ej. GTC-000-A"
+                  placeholderTextColor={colors.placeholder}
                   value={sinPlacas ? "SIN PLACAS" : placas}
                   onChangeText={(v) => setPlacas(v.toUpperCase())}
                   autoCapitalize="characters"
@@ -894,13 +919,13 @@ export default function NuevaInfraccionScreen() {
               <View style={[styles.fieldCol, { marginRight: 8 }]}>
                 <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>MARCA *</Text>
                 <View style={[styles.textInputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
-                  <TextInput style={[styles.textInput, { color: colors.text }]} placeholder="Ej. Nissan, VW..." placeholderTextColor={colors.textMuted} value={marca} onChangeText={setMarca} />
+                  <TextInput style={[styles.textInput, { color: colors.text }]} placeholder="Ej. Nissan, VW..." placeholderTextColor={colors.placeholder} value={marca} onChangeText={setMarca} />
                 </View>
               </View>
               <View style={[styles.fieldCol, { marginLeft: 8 }]}>
                 <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>LÍNEA / MODELO</Text>
                 <View style={[styles.textInputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
-                  <TextInput style={[styles.textInput, { color: colors.text }]} placeholder="Ej. Versa 2022" placeholderTextColor={colors.textMuted} value={lineaModelo} onChangeText={setLineaModelo} />
+                  <TextInput style={[styles.textInput, { color: colors.text }]} placeholder="Ej. Versa 2022" placeholderTextColor={colors.placeholder} value={lineaModelo} onChangeText={setLineaModelo} />
                 </View>
               </View>
             </View>
@@ -908,7 +933,7 @@ export default function NuevaInfraccionScreen() {
               <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>COLOR PREDOMINANTE</Text>
               <View style={[styles.textInputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
                 <Ionicons name="color-palette-outline" size={18} color={colors.textMuted} style={styles.textInputIcon} />
-                <TextInput style={[styles.textInput, { color: colors.text }]} placeholder="Ej. Blanco, Rojo Tinto..." placeholderTextColor={colors.textMuted} value={color} onChangeText={setColor} />
+                <TextInput style={[styles.textInput, { color: colors.text }]} placeholder="Ej. Blanco, Rojo Tinto..." placeholderTextColor={colors.placeholder} value={color} onChangeText={setColor} />
               </View>
             </View>
           </View>
@@ -955,7 +980,7 @@ export default function NuevaInfraccionScreen() {
                   <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>NOMBRE COMPLETO DEL CONDUCTOR *</Text>
                   <View style={[styles.textInputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
                     <Ionicons name="person-outline" size={18} color={colors.textMuted} style={styles.textInputIcon} />
-                    <TextInput style={[styles.textInput, { color: colors.text }]} placeholder="Nombre y Apellidos" placeholderTextColor={colors.textMuted} value={nombreInfractor} onChangeText={setNombreInfractor} />
+                    <TextInput style={[styles.textInput, { color: colors.text }]} placeholder="Nombre y Apellidos" placeholderTextColor={colors.placeholder} value={nombreInfractor} onChangeText={setNombreInfractor} />
                   </View>
                 </View>
                 <View style={styles.twoColRow}>
@@ -963,14 +988,14 @@ export default function NuevaInfraccionScreen() {
                     <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>NO. DE LICENCIA</Text>
                     <View style={[styles.textInputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
                       <Ionicons name="card-outline" size={18} color={colors.textMuted} style={styles.textInputIcon} />
-                      <TextInput style={[styles.textInput, { color: colors.text }]} placeholder="GTO-LIC-00000" placeholderTextColor={colors.textMuted} value={licenciaInfractor} onChangeText={setLicenciaInfractor} autoCapitalize="characters" />
+                      <TextInput style={[styles.textInput, { color: colors.text }]} placeholder="Ej. GTO-LIC-00000" placeholderTextColor={colors.placeholder} value={licenciaInfractor} onChangeText={setLicenciaInfractor} autoCapitalize="characters" />
                     </View>
                   </View>
                   <View style={[styles.fieldCol, { marginLeft: 8 }]}>
                     <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>DOMICILIO / CIUDAD</Text>
                     <View style={[styles.textInputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
                       <Ionicons name="home-outline" size={18} color={colors.textMuted} style={styles.textInputIcon} />
-                      <TextInput style={[styles.textInput, { color: colors.text }]} placeholder="Calle, Col, Uriangato" placeholderTextColor={colors.textMuted} value={domicilioInfractor} onChangeText={setDomicilioInfractor} />
+                      <TextInput style={[styles.textInput, { color: colors.text }]} placeholder="Calle, Col, Uriangato" placeholderTextColor={colors.placeholder} value={domicilioInfractor} onChangeText={setDomicilioInfractor} />
                     </View>
                   </View>
                 </View>
@@ -1059,7 +1084,7 @@ export default function NuevaInfraccionScreen() {
               <TextInput
                 style={[styles.textAreaInput, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.text }]}
                 placeholder="Describa brevemente las circunstancias de tiempo, modo y lugar..."
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={colors.placeholder}
                 multiline
                 numberOfLines={3}
                 value={hechos}
@@ -1113,7 +1138,7 @@ export default function NuevaInfraccionScreen() {
                 </Text>
                 <View style={[styles.textInputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
                   <Ionicons name="document-attach-outline" size={18} color={colors.textMuted} style={styles.textInputIcon} />
-                  <TextInput style={[styles.textInput, { color: colors.text }]} placeholder="Ej. Grúas Uriangato - Inventario #045" placeholderTextColor={colors.textMuted} value={inventarioGrua} onChangeText={setInventarioGrua} />
+                  <TextInput style={[styles.textInput, { color: colors.text }]} placeholder="Ej. Grúas Uriangato - Inventario #045" placeholderTextColor={colors.placeholder} value={inventarioGrua} onChangeText={setInventarioGrua} />
                 </View>
               </View>
             )}
@@ -1236,7 +1261,7 @@ export default function NuevaInfraccionScreen() {
 
             <TouchableOpacity
               style={[styles.saveBigButton, { backgroundColor: colors.primary }, guardando && styles.buttonDisabled]}
-              onPress={handleGuardarBoleta}
+              onPress={handleRevisarBoleta}
               disabled={guardando}
               activeOpacity={0.75}
             >
@@ -1248,7 +1273,7 @@ export default function NuevaInfraccionScreen() {
               ) : (
                 <>
                   <Ionicons name="checkmark-done-circle" size={24} color="#ffffff" />
-                  <Text style={styles.saveBigButtonText}>EMITIR Y GUARDAR BOLETA OFICIAL</Text>
+                  <Text style={styles.saveBigButtonText}>REVISAR Y EMITIR BOLETA</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -1303,6 +1328,153 @@ export default function NuevaInfraccionScreen() {
           </View>
         </Modal>
 
+        {/* ══ MODAL: Resumen de la boleta antes de emitir ═══════════════════════ */}
+        <Modal
+          visible={resumenVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setResumenVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View
+              style={[
+                styles.modalCatalogContent,
+                { backgroundColor: colors.surface, borderColor: colors.border, paddingBottom: Math.max(insets.bottom, 16) },
+              ]}
+            >
+              <View style={[styles.modalCatalogHeader, { borderBottomColor: colors.border }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.modalCatSubtitle, { color: colors.textMuted }]}>VERIFICA ANTES DE EMITIR</Text>
+                  <Text style={[styles.modalCatTitle, { color: colors.text }]}>Resumen de la boleta</Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.closeCatalogBtn, { backgroundColor: colors.surfaceElevated }]}
+                  onPress={() => setResumenVisible(false)}
+                  accessibilityLabel="Cerrar resumen y seguir editando"
+                >
+                  <Ionicons name="close" size={20} color={colors.text} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView contentContainerStyle={styles.resumenScroll}>
+                {[
+                  {
+                    titulo: "Datos generales",
+                    filas: [
+                      ["Folio", folio],
+                      ["Fecha y hora", `${fecha} ${hora}`],
+                      ["Lugar", lugar.trim()],
+                      ...(coordenadas
+                        ? [["GPS", `${coordenadas.latitud.toFixed(5)}, ${coordenadas.longitud.toFixed(5)}`]]
+                        : []),
+                    ],
+                  },
+                  {
+                    titulo: "Infractor",
+                    filas: conductorAusente
+                      ? [["Conductor", "Ausente"]]
+                      : [
+                          ["Nombre", nombreInfractor.trim()],
+                          ["Licencia", licenciaInfractor.trim() || "No capturada"],
+                          ["Domicilio", domicilioInfractor.trim() || "No capturado"],
+                        ],
+                  },
+                  {
+                    titulo: "Vehículo",
+                    filas: [
+                      ["Placas", sinPlacas ? "Sin placas" : placas.toUpperCase().trim()],
+                      ["Marca / línea", `${marca.trim()} ${lineaModelo.trim()}`.trim()],
+                      ["Color", color.trim() || "No especificado"],
+                      ["Tipo", ETIQUETAS_VEHICULO[tipoVehiculo]],
+                    ],
+                  },
+                  {
+                    titulo: "Garantías retenidas",
+                    filas: [
+                      [
+                        "Retenido",
+                        garantias.length > 0 ? garantias.map((g) => ETIQUETAS_GARANTIA[g]).join(", ") : "Ninguna",
+                      ],
+                      ...(inventarioGrua.trim() ? [["Inventario grúa", inventarioGrua.trim()]] : []),
+                    ],
+                  },
+                ].map((seccion) => (
+                  <View key={seccion.titulo} style={[styles.resumenSeccion, { borderColor: colors.border }]}>
+                    <Text style={[styles.resumenSeccionTitulo, { color: colors.textMuted }]}>{seccion.titulo.toUpperCase()}</Text>
+                    {seccion.filas.map(([clave, valor]) => (
+                      <View key={clave} style={styles.resumenFila}>
+                        <Text style={[styles.resumenClave, { color: colors.textSecondary }]}>{clave}</Text>
+                        <Text style={[styles.resumenValor, { color: colors.text }]}>{valor}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ))}
+
+                <View style={[styles.resumenSeccion, { borderColor: colors.border }]}>
+                  <Text style={[styles.resumenSeccionTitulo, { color: colors.textMuted }]}>
+                    INFRACCIONES ({faltasSeleccionadas.length})
+                  </Text>
+                  {faltasSeleccionadas.map((f) => (
+                    <View key={f.id} style={{ marginBottom: 8 }}>
+                      <Text style={[styles.resumenValor, { color: colors.danger, textAlign: "left" }]}>
+                        {f.fundamentoLegal} · {f.montoMinUma}–{f.montoMaxUma} UMA
+                      </Text>
+                      <Text style={[styles.resumenClave, { color: colors.text }]}>{f.descripcion}</Text>
+                    </View>
+                  ))}
+                  <View style={styles.resumenFila}>
+                    <Text style={[styles.resumenClave, { color: colors.textSecondary }]}>Sanción estimada</Text>
+                    <Text style={[styles.resumenValor, { color: colors.success }]}>
+                      ${montoTotalMinPesos.toLocaleString("es-MX", { maximumFractionDigits: 0 })} – $
+                      {montoTotalMaxPesos.toLocaleString("es-MX", { maximumFractionDigits: 0 })} MXN
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={[styles.resumenSeccion, { borderColor: colors.border }]}>
+                  <Text style={[styles.resumenSeccionTitulo, { color: colors.textMuted }]}>HECHOS</Text>
+                  <Text style={[styles.resumenClave, { color: colors.text }]}>
+                    {hechos.trim() || "Se generará automáticamente a partir de las infracciones seleccionadas."}
+                  </Text>
+                </View>
+
+                <View style={[styles.resumenSeccion, { borderColor: colors.border }]}>
+                  <Text style={[styles.resumenSeccionTitulo, { color: colors.textMuted }]}>EVIDENCIAS</Text>
+                  <View style={styles.resumenFotos}>
+                    {[fotoPlaca, fotoContexto, fotoDocumento].map((uri, i) =>
+                      uri ? <Image key={i} source={{ uri }} style={styles.resumenFoto} /> : null
+                    )}
+                  </View>
+                </View>
+
+                <Text style={[styles.resumenPregunta, { color: colors.text }]}>
+                  ¿Los datos son correctos? Una vez emitida, la boleta se guardará y se enviará al panel central.
+                </Text>
+              </ScrollView>
+
+              <View style={styles.resumenAcciones}>
+                <TouchableOpacity
+                  style={[styles.changeOffenseBtn, { flex: 1, backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border }]}
+                  onPress={() => setResumenVisible(false)}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name="create-outline" size={18} color={colors.text} />
+                  <Text style={[styles.changeOffenseBtnText, { color: colors.text }]}>EDITAR DATOS</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.changeOffenseBtn, { flex: 1, backgroundColor: colors.primary }, guardando && styles.buttonDisabled]}
+                  onPress={confirmarGuardadoBoleta}
+                  disabled={guardando}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name="checkmark-done-circle" size={18} color="#ffffff" />
+                  <Text style={styles.changeOffenseBtnText}>EMITIR BOLETA</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
         {/* ══ MODAL: Catálogo de Infracciones (multi-select con FlatList) ══════ */}
         <Modal
           visible={modalCatalogoVisible}
@@ -1351,7 +1523,7 @@ export default function NuevaInfraccionScreen() {
                 <TextInput
                   style={[styles.searchBarInput, { color: colors.text }]}
                   placeholder="Buscar por artículo, falta o palabra clave..."
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor={colors.placeholder}
                   value={busquedaCatalogo}
                   onChangeText={setBusquedaCatalogo}
                 />
@@ -1716,6 +1888,18 @@ const styles = StyleSheet.create({
 
   // Modal catálogo
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.75)", justifyContent: "flex-end" },
+
+  // Resumen previo a emitir
+  resumenScroll: { padding: 16, gap: 12 },
+  resumenSeccion: { borderWidth: 1, borderRadius: 14, padding: 14 },
+  resumenSeccionTitulo: { fontSize: 10, fontWeight: "800", letterSpacing: 0.8, marginBottom: 8 },
+  resumenFila: { flexDirection: "row", justifyContent: "space-between", gap: 12, marginBottom: 6 },
+  resumenClave: { fontSize: 13, lineHeight: 18, flexShrink: 1 },
+  resumenValor: { fontSize: 13, fontWeight: "700", lineHeight: 18, flexShrink: 1, textAlign: "right" },
+  resumenFotos: { flexDirection: "row", gap: 8 },
+  resumenFoto: { width: 80, height: 80, borderRadius: 10 },
+  resumenPregunta: { fontSize: 14, fontWeight: "700", textAlign: "center", marginTop: 4 },
+  resumenAcciones: { flexDirection: "row", gap: 10, paddingHorizontal: 16, paddingTop: 12 },
   modalCatalogContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "92%", borderWidth: 1, paddingTop: 16 },
   modalCatalogHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1 },
   modalHeaderRight: { flexDirection: "row", alignItems: "center", gap: 8 },

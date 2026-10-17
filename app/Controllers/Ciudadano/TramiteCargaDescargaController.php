@@ -104,6 +104,7 @@ class TramiteCargaDescargaController extends Controller
         $session = Services::session();
         $userId = (int)$session->get('user_id');
         $validation = Services::validation();
+        normalizar_campos_mayusculas($request, ['rfc']);
 
         $tipoSolicitante = $request->getPost('tipo_solicitante') ?? 'particular';
         $esMudanza = !empty($request->getPost('es_mudanza'));

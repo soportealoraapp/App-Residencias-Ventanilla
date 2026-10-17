@@ -1288,3 +1288,12 @@ body.sidebar-open-no-scroll {
   }
 }
 
+/* Placeholders: claramente distinguibles del texto capturado */
+.form-control::placeholder {
+  color: #94a3b8;
+  font-style: italic;
+  opacity: 1;
+}
+.form-control.text-uppercase::placeholder {
+  text-transform: none;
+}

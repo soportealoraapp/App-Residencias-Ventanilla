@@ -2,6 +2,7 @@
 
 namespace App\Controllers\Api;
 
+use App\Libraries\AgenteTokenService;
 use App\Models\AgenteTransitoModel;
 use CodeIgniter\Controller;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -68,8 +69,13 @@ class AgentesTransitoApiController extends Controller
             ]);
         }
 
+        $acceso = (new AgenteTokenService())->emitir((int) $agente->id);
+
         return $this->response->setStatusCode(200)->setJSON([
-            'success' => true,
+            'success'    => true,
+            'token'      => $acceso['token'],
+            'token_type' => 'Bearer',
+            'expira_en'  => $acceso['expira_en'],
             'agente'  => [
                 'id'              => (int) $agente->id,
                 'placa'           => $agente->placa,

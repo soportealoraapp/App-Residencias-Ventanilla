@@ -107,3 +107,28 @@ if (!function_exists('estatus_badge')) {
         return $map[$estatus] ?? 'bg-secondary';
     }
 }
+
+if (!function_exists('normalizar_campos_mayusculas')) {
+    /**
+     * Convierte a mayúsculas (y recorta) campos del POST antes de validarlos,
+     * p. ej. RFC o CURP, para que un valor capturado en minúsculas no falle la
+     * validación y obligue al ciudadano a recapturar el formulario.
+     *
+     * @param list<string> $campos
+     */
+    function normalizar_campos_mayusculas(\CodeIgniter\HTTP\IncomingRequest $request, array $campos): void
+    {
+        $post = $request->getPost() ?? [];
+        $cambios = [];
+        foreach ($campos as $campo) {
+            if (isset($post[$campo]) && is_string($post[$campo])) {
+                $cambios[$campo] = mb_strtoupper(trim($post[$campo]), 'UTF-8');
+            }
+        }
+        if ($cambios === []) {
+            return;
+        }
+        $request->setGlobal('post', array_merge($post, $cambios));
+        $request->setGlobal('request', array_merge($request->getVar() ?? [], $cambios));
+    }
+}

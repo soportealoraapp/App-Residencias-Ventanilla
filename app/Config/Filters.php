@@ -24,6 +24,7 @@ class Filters extends BaseConfig
         'auth'          => \App\Filters\AuthFilter::class,
         'role'          => \App\Filters\RoleFilter::class,
         'adminRedirect' => \App\Filters\AdminRedirectFilter::class,
+        'agenteToken'   => \App\Filters\AgenteTokenFilter::class,
     ];
 
     public array $globals = [

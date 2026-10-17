@@ -51,6 +51,7 @@ class TramiteConcesionTransporteController extends Controller
         $request = Services::request();
         $session = Services::session();
         $userId = (int) $session->get('user_id');
+        normalizar_campos_mayusculas($request, ['rfc']);
 
         $convocatoriaId = (int) $request->getPost('convocatoria_id');
         $convocatoria = $this->convocatoriaModel->vigente($convocatoriaId);

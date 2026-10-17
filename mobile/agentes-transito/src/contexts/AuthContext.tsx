@@ -1,6 +1,11 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { clearObsoleteAgentToken } from "../api/client";
+import {
+  clearAgentToken,
+  clearObsoleteAgentToken,
+  getAgentToken,
+  saveAgentToken,
+} from "../api/client";
 import {
   AgentePerfil,
   clearAgentProfile,
@@ -19,6 +24,8 @@ interface AuthContextValue {
   signIn: (placa: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   logout: () => Promise<void>;
+  /** Cierra la sesión porque el servidor rechazó el token; las boletas se conservan. */
+  expireSession: (mensaje: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -31,7 +38,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function cargarSesionGuardada() {
       try {
-        const restaurada = await restoreAgentProfile(AsyncStorage, clearObsoleteAgentToken);
+        const restaurada = await restoreAgentProfile(
+          AsyncStorage,
+          clearObsoleteAgentToken,
+          getAgentToken
+        );
         setUser(restaurada.profile);
         if (restaurada.errors.length > 0) setSessionError(restaurada.errors.join(" "));
       } catch {
@@ -51,13 +62,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Debe ingresar su número de placa/credencial y contraseña.");
       }
 
-      const agente = await loginAgente(placa, password);
+      const { agente, token } = await loginAgente(placa, password);
       const perfil = formatearAgente(agente);
       try {
+        await saveAgentToken(token);
         await saveAgentProfile(AsyncStorage, perfil);
       } catch {
         setUser(null);
-        throw new Error("Credenciales aceptadas, pero no se pudo guardar el perfil en este dispositivo.");
+        await clearAgentProfile(AsyncStorage, clearAgentToken);
+        throw new Error("Credenciales aceptadas, pero no se pudo guardar la sesión en este dispositivo.");
       }
       setUser(perfil);
     } catch (error) {
@@ -72,10 +85,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    const erroresAlCerrar = await clearAgentProfile(AsyncStorage, clearObsoleteAgentToken);
+    const erroresAlCerrar = await clearAgentProfile(AsyncStorage, clearAgentToken);
     setUser(null);
     setSessionError(erroresAlCerrar.length > 0 ? erroresAlCerrar.join(" ") : null);
   };
+
+  const expireSession = useCallback(async (mensaje: string) => {
+    const erroresAlCerrar = await clearAgentProfile(AsyncStorage, clearAgentToken);
+    setUser(null);
+    setSessionError([mensaje, ...erroresAlCerrar].join(" "));
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -86,6 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signIn,
       signOut,
       logout: signOut,
+      expireSession,
     }),
     [user, isLoading, sessionError]
   );

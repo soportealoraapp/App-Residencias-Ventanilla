@@ -86,11 +86,18 @@
                                             <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2">Inactivo</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="text-end pe-4">
+                                    <td class="text-end pe-4 text-nowrap">
                                         <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3"
-                                            onclick='editarFalta(<?= json_encode($item) ?>)'>
+                                            onclick="editarFalta(<?= esc(json_encode($item), 'attr') ?>)">
                                             Editar
                                         </button>
+                                        <?php if (in_array('administrador', (array) (session('roles') ?? []), true)): ?>
+                                            <form action="/admin/app-transito/catalogo/eliminar/<?= (int) $item->id ?>" method="POST" class="d-inline" data-no-loading="true"
+                                                onsubmit="return confirm('¿Eliminar la falta <?= esc($item->fundamento_legal, 'js') ?> del catálogo? Las boletas ya emitidas no se modifican. Si solo quieres ocultarla en la app, edítala y desactívala.');">
+                                                <?= csrf_field() ?>
+                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">Eliminar</button>
+                                            </form>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

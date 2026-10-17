@@ -49,6 +49,7 @@ export default function DashboardScreen() {
     valorUma,
     sincronizar,
     eliminar,
+    enLinea,
   } = useInfracciones();
   const { colors, isDark } = useTheme();
   const primaryActionTextColor = isDark ? colors.background : "#ffffff";
@@ -98,7 +99,9 @@ export default function DashboardScreen() {
   const handleSincronizar = async () => {
     try {
       const res = await sincronizar();
-      if (res.exito) {
+      if (res.requiereLogin) {
+        Alert.alert("Sesión expirada", res.mensaje);
+      } else if (res.exito) {
         Alert.alert(
           totalErroresSincronizacion > 0 ? "Sincronización incompleta" : "Sincronización al día",
           res.totalSincronizadas > 0
@@ -325,7 +328,10 @@ export default function DashboardScreen() {
                   )}
                   {totalErroresSincronizacion === 0 && totalPendientes > 0 && (
                     <Text style={[styles.syncSummarySubtitle, { color: colors.textSecondary }]}>
-                      {totalPendientes} pendiente(s) de sincronizar.
+                      {totalPendientes} pendiente(s).{" "}
+                      {enLinea === false
+                        ? "Sin conexión: se enviarán automáticamente al recuperar internet."
+                        : "Se envían automáticamente mientras haya conexión."}
                     </Text>
                   )}
                   {totalErroresSincronizacion === 0 && totalPendientes === 0 && ultimaSincronizacion && (

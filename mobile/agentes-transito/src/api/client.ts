@@ -2,7 +2,10 @@ import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 import { API_BASE_URL } from "../constants/config";
 
+/** Clave de un esquema anterior; solo se borra, nunca se usa para autenticar. */
 const AUTH_TOKEN_KEY = "auth_token";
+/** Token Bearer emitido por POST /api/agentes/login. */
+const AGENT_TOKEN_KEY = "agent_api_token_v1";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public body?: unknown) {
@@ -11,9 +14,32 @@ export class ApiError extends Error {
   }
 }
 
-async function getToken(): Promise<string | null> {
-  if (Platform.OS === "web") return null;
-  return SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+// En web no hay almacenamiento seguro: el token vive en sessionStorage y se pierde
+// al cerrar la pestaña. En nativo se guarda cifrado con expo-secure-store.
+function webSessionStorage(): Storage | null {
+  return typeof sessionStorage !== "undefined" ? sessionStorage : null;
+}
+
+export async function getAgentToken(): Promise<string | null> {
+  if (Platform.OS === "web") return webSessionStorage()?.getItem(AGENT_TOKEN_KEY) ?? null;
+  return SecureStore.getItemAsync(AGENT_TOKEN_KEY);
+}
+
+export async function saveAgentToken(token: string): Promise<void> {
+  if (Platform.OS === "web") {
+    webSessionStorage()?.setItem(AGENT_TOKEN_KEY, token);
+    return;
+  }
+  await SecureStore.setItemAsync(AGENT_TOKEN_KEY, token);
+}
+
+export async function clearAgentToken(): Promise<void> {
+  if (Platform.OS === "web") {
+    webSessionStorage()?.removeItem(AGENT_TOKEN_KEY);
+  } else {
+    await SecureStore.deleteItemAsync(AGENT_TOKEN_KEY);
+  }
+  await clearObsoleteAgentToken();
 }
 
 export async function clearObsoleteAgentToken(): Promise<void> {
@@ -45,7 +71,7 @@ export async function apiRequest<T>(
   };
 
   if (auth) {
-    const token = await getToken();
+    const token = await getAgentToken();
     if (token) finalHeaders.Authorization = `Bearer ${token}`;
   }
 

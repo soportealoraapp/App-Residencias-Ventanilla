@@ -114,7 +114,7 @@ $oldNumVehiculos = old('num_vehiculos', '1');
                                     <label for="rfc" class="form-label fw-semibold">
                                         RFC con Homoclave <span class="text-danger">*</span>
                                     </label>
-                                    <input type="text" class="form-control text-uppercase" id="rfc" name="rfc" required maxlength="13" value="<?= esc($oldRfc) ?>" placeholder="XAXX010101XXX">
+                                    <input type="text" class="form-control text-uppercase" id="rfc" name="rfc" required minlength="12" maxlength="13" pattern="[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}" title="12 caracteres (persona moral) o 13 (persona física)" value="<?= esc($oldRfc) ?>" placeholder="Ej. GODE561231GR8">
                                     <?php if ($validation->getError('rfc')): ?>
                                         <div class="text-danger small mt-1"><?= $validation->getError('rfc') ?></div>
                                     <?php endif; ?>

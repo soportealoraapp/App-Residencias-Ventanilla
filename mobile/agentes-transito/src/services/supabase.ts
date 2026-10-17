@@ -3,7 +3,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Infraccion } from "../types/infraccion";
 import { ApiError, apiRequest } from "../api/client";
 
-// Las credenciales de Supabase pueden estar en .env (EXPO_PUBLIC_*) si se usa como réplica secundaria
+// Las credenciales de Supabase pueden estar en .env (EXPO_PUBLIC_*). Con la llave anon
+// solo se lee catálogo y parámetros como respaldo; las boletas y evidencias se envían
+// exclusivamente al backend municipal, que valida el token del agente.
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "https://placeholder.supabase.co";
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "placeholder";
 
@@ -135,24 +137,26 @@ export function transformarInfraccionABoleta(inf: Infraccion): BoletaInsert {
 
 // ─── API helpers ────────────────────────────────────────────────────────────────
 
+export interface LoginAgenteResultado {
+  agente: AgenteRow;
+  /** Token Bearer para los endpoints de sincronización. */
+  token: string;
+  expiraEn: string | null;
+}
+
+const RESPUESTA_LOGIN_INCOMPLETA = "El servidor devolvió una respuesta de autenticación incompleta.";
+
 /** Autentica al agente únicamente mediante el backend municipal. */
-export async function loginAgente(placa: string, password: string): Promise<AgenteRow> {
+export async function loginAgente(placa: string, password: string): Promise<LoginAgenteResultado> {
   const placaLimpia = placa.toUpperCase().trim();
+  let res: { success: boolean; agente?: AgenteRow; token?: unknown; expira_en?: unknown };
   try {
-    const res = await apiRequest<{
-      success: boolean;
-      agente: AgenteRow;
-    }>("/api/agentes/login", {
+    res = await apiRequest<typeof res>("/api/agentes/login", {
       method: "POST",
       body: { placa: placaLimpia, password },
       auth: false,
       timeoutMs: 10000,
     });
-
-    if (!res?.success || !res.agente) {
-      throw new Error("El servidor devolvió una respuesta de autenticación incompleta.");
-    }
-    return res.agente;
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
       throw new Error("Credenciales incorrectas o agente inactivo.");
@@ -165,6 +169,15 @@ export async function loginAgente(placa: string, password: string): Promise<Agen
     }
     throw new Error("No se pudo conectar con el servidor. Revise su conexión e inténtelo de nuevo.");
   }
+
+  if (!res?.success || !res.agente || typeof res.token !== "string" || res.token === "") {
+    throw new Error(RESPUESTA_LOGIN_INCOMPLETA);
+  }
+  return {
+    agente: res.agente,
+    token: res.token,
+    expiraEn: typeof res.expira_en === "string" ? res.expira_en : null,
+  };
 }
 
 /** Cargar catálogo oficial de infracciones desde CodeIgniter 4 (o caché local) */
@@ -274,34 +287,27 @@ export async function fetchParametros(): Promise<Record<string, string>> {
   };
 }
 
-/** Sincronizar una boleta pendiente al servidor municipal CodeIgniter 4 */
+/**
+ * Sincronizar una boleta pendiente al servidor municipal CodeIgniter 4.
+ * No hay respaldo directo a Supabase: el servidor es quien comprueba que la boleta
+ * pertenece al agente del token. Un 401 se propaga como ApiError para pedir login.
+ */
 export async function sincronizarBoleta(boleta: BoletaInsert): Promise<void> {
-  // 1. Intento primario: Enviar a CI4 /api/infracciones/sincronizar
-  try {
-    const res = await apiRequest<{ success: boolean; message?: string }>("/api/infracciones/sincronizar", {
+  const res = await apiRequest<{ success: boolean; message?: string; errores?: string[] }>(
+    "/api/infracciones/sincronizar",
+    {
       method: "POST",
       body: boleta,
       auth: true,
-    });
-    if (res?.success) {
-      return;
+      timeoutMs: 20000,
     }
-  } catch (ci4Err) {
-    console.warn("[sync] Error enviando boleta a CI4, probando Supabase como respaldo:", ci4Err);
-  }
-
-  // 2. Respaldo secundario si CI4 no respondió
-  const { error } = await supabase
-    .from("boletas_infracciones")
-    .upsert(boleta, { onConflict: "folio" });
-
-  if (error) {
-    console.error("Error upsert boleta Supabase:", error);
-    throw new Error(error.message);
+  );
+  if (!res?.success) {
+    throw new Error(res?.errores?.[0] || res?.message || "El servidor no aceptó la boleta.");
   }
 }
 
-/** Subir foto de evidencia al servidor municipal (o Supabase si aplica) */
+/** Subir foto de evidencia al servidor municipal. Si falla, la boleta queda pendiente. */
 export async function subirFotoEvidencia(
   folio: string,
   tipo: "placa" | "contexto" | "documento",
@@ -314,54 +320,28 @@ export async function subirFotoEvidencia(
     return uri;
   }
 
-  // 1. Intento primario: Subida a CodeIgniter 4 servidor local
-  try {
-    const formData = new FormData();
-    formData.append("folio", folio);
-    formData.append("tipo", tipo);
-    const filename = `${tipo}_${Date.now()}.jpg`;
-    formData.append("foto", {
-      uri,
-      name: filename,
-      type: "image/jpeg",
-    } as any);
+  const formData = new FormData();
+  formData.append("folio", folio);
+  formData.append("tipo", tipo);
+  const filename = `${tipo}_${Date.now()}.jpg`;
+  formData.append("foto", {
+    uri,
+    name: filename,
+    type: "image/jpeg",
+  } as any);
 
-    const res = await apiRequest<{ success: boolean; url: string }>("/api/infracciones/evidencias", {
+  const res = await apiRequest<{ success: boolean; url?: string; message?: string }>(
+    "/api/infracciones/evidencias",
+    {
       method: "POST",
       body: formData,
       auth: true,
-    });
-
-    if (res?.success && res.url) {
-      return res.url;
+      timeoutMs: 30000,
     }
-  } catch (ci4Err) {
-    console.warn(`[storage] Error subiendo evidencia a CI4, probando Supabase:`, ci4Err);
+  );
+
+  if (!res?.success || !res.url) {
+    throw new Error(res?.message || `El servidor no aceptó la evidencia (${tipo}).`);
   }
-
-  // 2. Respaldo secundario: Supabase Storage
-  try {
-    const res = await fetch(uri);
-    const blob = await res.blob();
-    const mime = blob.type || "image/jpeg";
-    const ext = mime.includes("png") ? "png" : "jpg";
-    const folioLimpio = folio.replace(/[^A-Za-z0-9_-]/g, "_");
-    const filePath = `${folioLimpio}/${tipo}_${Date.now()}.${ext}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("evidencias")
-      .upload(filePath, blob, {
-        contentType: mime,
-        upsert: true,
-      });
-
-    if (!uploadError) {
-      const { data } = supabase.storage.from("evidencias").getPublicUrl(filePath);
-      return data.publicUrl;
-    }
-  } catch (err) {
-    console.warn(`[storage] Excepción subiendo evidencia ${tipo}:`, err);
-  }
-
-  return uri;
+  return res.url;
 }

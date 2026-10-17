@@ -1,5 +1,8 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { AppState } from "react-native";
+import NetInfo from "@react-native-community/netinfo";
 import { Infraccion, FaltaCatalogo } from "../types/infraccion";
+import { useAuth } from "./AuthContext";
 import {
   actualizarInfraccionesLocales,
   eliminarInfraccionLocal,
@@ -25,6 +28,8 @@ interface InfraccionesContextValue {
   ultimaSincronizacion: string | null;
   valorUma: number;
   catalogo: FaltaCatalogo[];
+  /** null mientras no se conoce el estado de la red */
+  enLinea: boolean | null;
   guardarInfraccion: (infraccion: Infraccion) => Promise<void>;
   sincronizar: () => Promise<SyncResultado>;
   eliminar: (id: string) => Promise<void>;
@@ -128,13 +133,31 @@ const DATOS_INICIALES_DEMO: Infraccion[] = [
   },
 ];
 
+/** Reintento periódico mientras haya boletas pendientes y conexión. */
+const INTERVALO_REINTENTO_MS = 60_000;
+
+/** Una boleta pertenece al agente si coincide su id (cuando existe) o su placa. */
+export function perteneceAlAgente(
+  infraccion: Infraccion,
+  agente: { id: number; placa: string } | null
+): boolean {
+  if (!agente) return false;
+  if (infraccion.agente.id != null) return infraccion.agente.id === agente.id;
+  return infraccion.agente.placa.trim().toUpperCase() === agente.placa.trim().toUpperCase();
+}
+
 export function InfraccionesProvider({ children }: { children: React.ReactNode }) {
-  const [infracciones, setInfracciones] = useState<Infraccion[]>([]);
+  const { user, expireSession } = useAuth();
+  // Todas las boletas guardadas en el dispositivo (puede haber de varios agentes
+  // si comparten teléfono). Hacia la interfaz solo se exponen las del agente en sesión.
+  const [todasLasInfracciones, setTodasLasInfracciones] = useState<Infraccion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [ultimaSincronizacion, setUltimaSincronizacion] = useState<string | null>(null);
   const [valorUma, setValorUma] = useState<number>(117.31);
   const [catalogo, setCatalogo] = useState<FaltaCatalogo[]>(CATALOGO_FALTAS_URIANGATO);
+  const [enLinea, setEnLinea] = useState<boolean | null>(null);
+  const syncEnCurso = useRef<Promise<SyncResultado> | null>(null);
 
   const cargarDatos = async () => {
     setIsLoading(true);
@@ -145,12 +168,12 @@ export function InfraccionesProvider({ children }: { children: React.ReactNode }
       if (!items || items.length === 0) {
         if (process.env.EXPO_PUBLIC_APP_ENV === "development") {
           await actualizarInfraccionesLocales(DATOS_INICIALES_DEMO);
-          setInfracciones(DATOS_INICIALES_DEMO);
+          setTodasLasInfracciones(DATOS_INICIALES_DEMO);
         } else {
-          setInfracciones([]);
+          setTodasLasInfracciones([]);
         }
       } else {
-        setInfracciones(items);
+        setTodasLasInfracciones(items);
       }
 
       const ultimaSync = await obtenerUltimaSincronizacion();
@@ -195,29 +218,91 @@ export function InfraccionesProvider({ children }: { children: React.ReactNode }
     cargarDatos();
   }, []);
 
+  /**
+   * Sincroniza las boletas pendientes del dispositivo. Si ya hay una
+   * sincronización en curso devuelve esa misma, para no enviar boletas dos veces.
+   */
+  const sincronizar = useCallback((): Promise<SyncResultado> => {
+    if (syncEnCurso.current) return syncEnCurso.current;
+
+    const ejecucion = (async () => {
+      setIsSyncing(true);
+      try {
+        const res = await sincronizarInfraccionesLocales();
+        setTodasLasInfracciones(await obtenerInfraccionesLocales());
+        setUltimaSincronizacion(await obtenerUltimaSincronizacion());
+        // Token rechazado: las boletas siguen pendientes y se pide volver a iniciar sesión.
+        if (res.requiereLogin) await expireSession(res.mensaje);
+        return res;
+      } finally {
+        setIsSyncing(false);
+        syncEnCurso.current = null;
+      }
+    })();
+    syncEnCurso.current = ejecucion;
+    return ejecucion;
+  }, [expireSession]);
+
+  const hayPendientes = todasLasInfracciones.some((i) => i.estado === "pendiente");
+  const hayPendientesRef = useRef(hayPendientes);
+  hayPendientesRef.current = hayPendientes;
+  const enLineaRef = useRef(enLinea);
+
+  // Sincronización automática silenciosa: solo con sesión activa, conexión y pendientes.
+  const sincronizarSiProcede = useCallback(() => {
+    if (!user || enLineaRef.current === false || !hayPendientesRef.current) return;
+    sincronizar().catch((err) => console.warn("[auto-sync] No se pudo sincronizar:", err));
+  }, [user, sincronizar]);
+
+  // 1) Al recuperar la conexión a internet.
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      const conectado = !!state.isConnected && state.isInternetReachable !== false;
+      const estabaDesconectado = enLineaRef.current !== true;
+      enLineaRef.current = conectado;
+      setEnLinea(conectado);
+      if (conectado && estabaDesconectado) sincronizarSiProcede();
+    });
+    return unsubscribe;
+  }, [sincronizarSiProcede]);
+
+  // 2) Al volver la app a primer plano.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (estado) => {
+      if (estado === "active") sincronizarSiProcede();
+    });
+    return () => sub.remove();
+  }, [sincronizarSiProcede]);
+
+  // 3) Reintento periódico mientras haya pendientes (p. ej. el servidor estaba caído).
+  useEffect(() => {
+    if (!user || !hayPendientes) return;
+    sincronizarSiProcede();
+    const id = setInterval(sincronizarSiProcede, INTERVALO_REINTENTO_MS);
+    return () => clearInterval(id);
+  }, [user, hayPendientes, sincronizarSiProcede]);
+
   const guardarInfraccion = async (nueva: Infraccion) => {
     const listaActualizada = await guardarInfraccionLocal(nueva);
-    setInfracciones(listaActualizada);
-  };
-
-  const sincronizar = async (): Promise<SyncResultado> => {
-    setIsSyncing(true);
-    try {
-      const res = await sincronizarInfraccionesLocales();
-      const actualizadas = await obtenerInfraccionesLocales();
-      setInfracciones(actualizadas);
-      const ultima = await obtenerUltimaSincronizacion();
-      setUltimaSincronizacion(ultima);
-      return res;
-    } finally {
-      setIsSyncing(false);
-    }
+    setTodasLasInfracciones(listaActualizada);
+    hayPendientesRef.current = true;
+    // 4) Enviar de inmediato si hay conexión; si no, queda en cola.
+    sincronizarSiProcede();
   };
 
   const eliminar = async (id: string) => {
+    const objetivo = todasLasInfracciones.find((i) => i.id === id);
+    if (!objetivo || !perteneceAlAgente(objetivo, user)) {
+      throw new Error("Solo puedes eliminar boletas emitidas por ti.");
+    }
     const restantes = await eliminarInfraccionLocal(id);
-    setInfracciones(restantes);
+    setTodasLasInfracciones(restantes);
   };
+
+  const infracciones = useMemo(
+    () => todasLasInfracciones.filter((i) => perteneceAlAgente(i, user)),
+    [todasLasInfracciones, user]
+  );
 
   const pendientes = useMemo(
     () => infracciones.filter((i) => i.estado === "pendiente"),
@@ -241,12 +326,14 @@ export function InfraccionesProvider({ children }: { children: React.ReactNode }
       ultimaSincronizacion,
       valorUma,
       catalogo,
+      enLinea,
       guardarInfraccion,
       sincronizar,
       eliminar,
       recargar: cargarDatos,
     }),
-    [infracciones, pendientes, sincronizadas, isLoading, isSyncing, ultimaSincronizacion, valorUma, catalogo]
+    // guardarInfraccion/eliminar dependen de user y de la lista completa.
+    [infracciones, todasLasInfracciones, pendientes, sincronizadas, isLoading, isSyncing, ultimaSincronizacion, valorUma, catalogo, enLinea, sincronizar, sincronizarSiProcede]
   );
 
   return (

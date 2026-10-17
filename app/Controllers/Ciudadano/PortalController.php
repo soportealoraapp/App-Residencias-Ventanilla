@@ -164,6 +164,7 @@ class PortalController extends Controller
     {
         $session = Services::session();
         $userId = (int) $session->get('user_id');
+        normalizar_campos_mayusculas($this->request, ['curp', 'rfc']);
 
         $rules = [
             'curp'      => 'required|exact_length[18]|alpha_numeric',
@@ -174,7 +175,7 @@ class PortalController extends Controller
             'estado'    => 'required|min_length[2]',
             'ciudad'    => 'required|min_length[2]',
             'domicilio' => 'required|min_length[5]',
-            'rfc'       => 'permit_empty|exact_length[13]|regex_match[/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/]',
+            'rfc'       => 'permit_empty|min_length[12]|max_length[13]|regex_match[/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/]',
             'ine_frente' => 'permit_empty|uploaded|mime_in[ine_frente,image/jpeg,image/png]|max_size[ine_frente,5120]',
             'ine_reverso' => 'permit_empty|uploaded|mime_in[ine_reverso,image/jpeg,image/png]|max_size[ine_reverso,5120]',
         ];

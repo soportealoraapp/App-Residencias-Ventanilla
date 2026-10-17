@@ -108,6 +108,7 @@
                                             </button>
                                         </div>
                                         <small class="text-muted"><?= esc($b->fecha_infraccion) ?> <?= esc(substr($b->hora_infraccion, 0, 5)) ?> hrs</small>
+                                        <span class="badge bg-light text-dark border small ms-1"><?= esc(ucfirst((string) ($b->estado ?? 'recibida'))) ?></span>
                                     </td>
                                     <td>
                                         <div class="fw-semibold text-dark small"><?= esc($b->agente_nombre ?? $b->agente_placa) ?></div>
@@ -247,10 +248,22 @@
                                                     <?php endif; ?>
                                                 </div>
                                             </div>
-                                            <div class="modal-footer border-0 pt-0 d-flex justify-content-between">
-                                                <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
-                                                    <i class="bi bi-printer me-1"></i>Imprimir Boleta
-                                                </button>
+                                            <div class="modal-footer border-0 pt-0 d-flex justify-content-between flex-wrap gap-2">
+                                                <div class="d-flex gap-2">
+                                                    <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                                                        <i class="bi bi-printer me-1"></i>Imprimir
+                                                    </button>
+                                                    <a href="/admin/app-transito/boletas/editar/<?= (int) $b->id ?>" class="btn btn-outline-primary">
+                                                        <i class="bi bi-pencil me-1"></i>Editar
+                                                    </a>
+                                                    <?php if (in_array('administrador', (array) (session('roles') ?? []), true)): ?>
+                                                        <form action="/admin/app-transito/boletas/eliminar/<?= (int) $b->id ?>" method="POST" class="d-inline" data-no-loading="true"
+                                                            onsubmit="return confirm('¿Eliminar la boleta <?= esc($b->folio, 'js') ?>? Quedará una copia en la auditoría.');">
+                                                            <?= csrf_field() ?>
+                                                            <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash me-1"></i>Eliminar</button>
+                                                        </form>
+                                                    <?php endif; ?>
+                                                </div>
                                                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cerrar</button>
                                             </div>
                                         </div>

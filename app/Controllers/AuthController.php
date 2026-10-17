@@ -64,6 +64,11 @@ class AuthController extends Controller
             return redirect()->back()->withInput()->with('errors', ['credenciales' => 'Usuario o contraseña incorrectos.']);
         }
 
+        if (isset($user->activo) && (int) $user->activo !== 1) {
+            $this->auditoriaModel->registrar('users', (int) $user->id, 'login_cuenta_inactiva', null, []);
+            return redirect()->back()->withInput()->with('errors', ['credenciales' => 'Tu cuenta está desactivada. Acude a la ventanilla de Tránsito y Transporte.']);
+        }
+
         $roles = $this->userModel->conRoles((int) $user->id);
 
         $session = Services::session();
@@ -91,162 +96,6 @@ class AuthController extends Controller
         }
 
         return redirect()->to('/portal/dashboard');
-    }
-
-    public function register()
-    {
-        return view('auth/register');
-    }
-
-    public function attemptRegister()
-    {
-        $rules = [
-            'curp' => [
-                'rules' => 'required|exact_length[18]|regex_match[/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]{2}\d$/]',
-                'label' => 'CURP',
-            ],
-            'nombre' => [
-                'rules' => 'required|min_length[2]',
-                'label' => 'Nombre(s)',
-            ],
-            'apellido' => [
-                'rules' => 'required|min_length[2]',
-                'label' => 'Apellido(s)',
-            ],
-            'telefono' => [
-                'rules' => 'required|min_length[7]',
-                'label' => 'Teléfono',
-            ],
-            'estado' => [
-                'rules' => 'required|min_length[2]',
-                'label' => 'Estado',
-            ],
-            'ciudad' => [
-                'rules' => 'required|min_length[2]',
-                'label' => 'Ciudad / Municipio',
-            ],
-            'domicilio' => [
-                'rules' => 'required|min_length[5]',
-                'label' => 'Dirección',
-            ],
-            'email' => [
-                'rules' => 'required|valid_email|is_unique[users.email]',
-                'label' => 'Correo electrónico',
-            ],
-            'username' => [
-                'rules' => 'required|alpha_numeric|min_length[5]|is_unique[users.username]',
-                'label' => 'Nombre de usuario',
-            ],
-            'password' => [
-                'rules' => 'required|min_length[6]',
-                'label' => 'Contraseña',
-            ],
-            'password_confirm' => [
-                'rules' => 'required|matches[password]',
-                'label' => 'Confirmar contraseña',
-            ],
-            'rfc' => [
-                'rules' => 'permit_empty|exact_length[13]|regex_match[/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/]',
-                'label' => 'RFC',
-            ],
-            'acepto_terminos' => [
-                'rules' => 'required',
-                'label' => 'Términos y condiciones',
-            ],
-            'ine_frente' => [
-                'rules' => 'uploaded|mime_in[ine_frente,image/jpeg,image/png]|max_size[ine_frente,5120]',
-                'label' => 'INE Frente',
-            ],
-            'ine_reverso' => [
-                'rules' => 'uploaded|mime_in[ine_reverso,image/jpeg,image/png]|max_size[ine_reverso,5120]',
-                'label' => 'INE Reverso',
-            ],
-        ];
-
-        if (! $this->validate($rules)) {
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
-        }
-
-        $storage = new \App\Libraries\SupabaseStorage();
-
-        $frente = $this->request->getFile('ine_frente');
-        $reverso = $this->request->getFile('ine_reverso');
-
-        $frenteExt = $frente->getExtension() === 'jpeg' ? 'jpg' : $frente->getExtension();
-        $reversoExt = $reverso->getExtension() === 'jpeg' ? 'jpg' : $reverso->getExtension();
-
-        $frenteNombre = bin2hex(random_bytes(16)) . '.' . $frenteExt;
-        $reversoNombre = bin2hex(random_bytes(16)) . '.' . $reversoExt;
-
-        $frenteContenido = file_get_contents($frente->getTempName());
-        $reversoContenido = file_get_contents($reverso->getTempName());
-
-        $frenteRuta = 'temp/' . $frenteNombre;
-        $reversoRuta = 'temp/' . $reversoNombre;
-
-        $storage->subir('ine', $frenteRuta, $frenteContenido, $frente->getMimeType());
-        $storage->subir('ine', $reversoRuta, $reversoContenido, $reverso->getMimeType());
-
-        $nombre  = trim((string) $this->request->getPost('nombre'));
-        $apellido = trim((string) $this->request->getPost('apellido'));
-
-        $data = [
-            'nombre_completo' => $nombre . ' ' . $apellido,
-            'curp'            => strtoupper($this->request->getPost('curp')),
-            'apellido'        => $apellido,
-            'email'           => $this->request->getPost('email'),
-            'username'        => $this->request->getPost('username'),
-            'password_hash'   => password_hash((string) $this->request->getPost('password'), PASSWORD_DEFAULT),
-            'telefono'        => $this->request->getPost('telefono'),
-            'estado'          => $this->request->getPost('estado'),
-            'ciudad'          => $this->request->getPost('ciudad'),
-            'domicilio'       => $this->request->getPost('domicilio'),
-            'rfc'             => $this->request->getPost('rfc') !== '' ? strtoupper((string) $this->request->getPost('rfc')) : null,
-            'ine_frente'      => $frenteRuta,
-            'ine_reverso'     => $reversoRuta,
-        ];
-
-        $this->userModel->insert($data);
-        $userId = (int) $this->userModel->getInsertID();
-
-        if ($userId <= 0) {
-            return redirect()->back()->withInput()->with('errors', ['registro' => 'No fue posible crear el usuario.']);
-        }
-
-        $this->auditoriaModel->registrar('users', $userId, 'registro_ciudadano', null, [
-            'username' => $data['username'],
-            'rol_inicial' => 'ciudadano',
-        ]);
-
-        if ($this->userModel->asignarRol($userId, 'ciudadano')) {
-            $this->auditoriaModel->registrar('users', $userId, 'asignar_rol', null, [
-                'rol' => 'ciudadano',
-            ]);
-        }
-
-        $frenteDestino = $userId . '/' . $frenteNombre;
-        $reversoDestino = $userId . '/' . $reversoNombre;
-        $this->moverINE($storage, $frenteRuta, $frenteDestino);
-        $this->moverINE($storage, $reversoRuta, $reversoDestino);
-        $this->userModel->update($userId, [
-            'ine_frente'  => $frenteDestino,
-            'ine_reverso' => $reversoDestino,
-        ]);
-
-        return redirect()->to('/auth/login')->with('message', 'Registro exitoso');
-    }
-
-    protected function moverINE(\App\Libraries\SupabaseStorage $storage, string $origen, string $destino): void
-    {
-        $contenido = $storage->descargar('ine', $origen);
-        if ($contenido !== null) {
-            $mime = mime_content_type($destino) ?: 'application/octet-stream';
-            $ext = pathinfo($destino, PATHINFO_EXTENSION);
-            $mimeMap = ['jpg' => 'image/jpeg', 'png' => 'image/png'];
-            $mime = $mimeMap[$ext] ?? 'image/jpeg';
-            $storage->subir('ine', $destino, $contenido, $mime);
-            $storage->eliminar('ine', [$origen]);
-        }
     }
 
     public function logout()

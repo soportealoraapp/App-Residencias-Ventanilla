@@ -41,7 +41,7 @@
                     <label class="form-label fw-semibold">Placas vehículo</label>
                     <input type="text" name="vehiculo_placas" class="form-control" maxlength="10"
                         value="<?= esc(old('vehiculo_placas', $concesion->vehiculo_placas)) ?>"
-                        placeholder="GTO-123-45">
+                        placeholder="Ej. GTO-123-45">
                 </div>
 
                 <div class="col-md-4">

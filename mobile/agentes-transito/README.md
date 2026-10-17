@@ -14,9 +14,11 @@ La app admite captura local de boletas. Un inicio de sesión nuevo requiere cone
 - La captura incluye datos del agente, fecha/hora, ubicación, infractor, vehículo, falta, hechos, garantías y tres evidencias requeridas.
 - El GPS real intenta obtener permiso y ubicación; si no están disponibles, usa coordenadas de ejemplo de Uriangato.
 - Las opciones de foto de este MVP son simuladas con imágenes de muestra; aún no equivalen a capturar y subir fotos reales con la cámara.
-- El botón de sincronización intenta hacer POST a `/api/infracciones/sincronizar`, pero el backend actual no expone esa ruta. Como la URL base suele terminar en `/api`, el cliente además puede solicitar `/api/api/infracciones/sincronizar`. El manejador actual puede marcar una boleta como sincronizada cuando falla la petición. No usar ese estado como confirmación de recepción del servidor.
+- Cada agente solo ve en la app las boletas que él emitió (se filtran por id/placa del agente en sesión), aunque varios agentes compartan el mismo dispositivo.
+- Antes de guardar, la app muestra un resumen completo de la boleta; el agente puede volver a editar o confirmar la emisión.
+- Las boletas pendientes se envían a `POST /api/infracciones/sincronizar` automáticamente: al recuperar conexión (NetInfo), al volver la app a primer plano, justo después de guardar una boleta y con reintentos cada 60 s mientras queden pendientes. El botón manual sigue disponible. Ya no hay respaldo directo a Supabase: si el servidor no responde, la boleta queda pendiente y se reintenta.
 - El backend sí expone `GET /api/checklist-infracciones`; la app todavía no consume ese catálogo desde el servidor y usa su catálogo local.
-- La sincronización de boletas y carga de evidencias no forman parte de la autenticación corregida. Sus endpoints aún requieren validación de identidad/autorización del lado del servidor; que el cliente adjunte un token no implica que esos controladores lo validen.
+- `POST /api/agentes/login` devuelve un token Bearer (vigencia 12 h; en BD solo se guarda su hash SHA-256). La app lo guarda con `expo-secure-store` (en web, `sessionStorage`) y lo envía a `api/infracciones/sincronizar` y `api/infracciones/evidencias`. El filtro `agenteToken` rechaza peticiones sin token, con token vencido o de agentes inactivos (401), y el servidor exige que `agente_placa` y los folios existentes pertenezcan al agente del token (403). Ante un 401 la app cierra la sesión, conserva las boletas pendientes y pide volver a iniciar sesión.
 
 ## Qué implementaron los últimos cambios
 
@@ -98,24 +100,33 @@ En Windows, `npm run ios` no puede compilar ni iniciar el simulador de iOS; para
 3. Abre **Levantar nueva infracción**, completa los campos obligatorios, elige las tres imágenes de muestra y guarda.
 4. Confirma que la boleta aparece como pendiente. En móvil, permite ubicación para probar GPS; sin permiso se usa una coordenada de demostración.
 5. Reinicia la app para comprobar que se restaura el perfil local y las boletas. La restauración del perfil no confirma ante el servidor que la cuenta siga activa.
-6. No tomes el contador “sincronizadas” ni el botón de sincronización como prueba de recepción backend mientras no exista y se valide el endpoint de envío.
+6. Con conexión, la boleta pasa sola a "sincronizada" en segundos; puedes confirmarla en el panel administrativo en **App Tránsito → Boletas de Campo**.
 
-## Configuración opcional del backend
+## Backend local para las pruebas (necesario para iniciar sesión)
 
-Para probar la autenticación, inicia CodeIgniter desde otra terminal en la raíz:
+El login y la sincronización requieren el backend CodeIgniter. Desde la **raíz del repo**, en otra terminal:
 
 ```powershell
-.\iniciar-servidor.ps1
+.\php82\php.exe spark migrate
+.\php82\php.exe spark serve --host 0.0.0.0 --port 8080
 ```
 
-El servidor web queda en `http://localhost:8080`. Para probarlo desde un teléfono, crea el `.env` local de Expo y configura `EXPO_PUBLIC_API_BASE_URL` con la IP LAN de la computadora en lugar de `localhost`:
+- **`spark migrate` después de cada `git pull`.** Si falta una migración (p. ej. `agentes_transito_tokens`), el login falla aunque las credenciales sean correctas. Si usan la base de Supabase, apliquen también los archivos nuevos de `supabase/migrations/`.
+- **`--host 0.0.0.0` es obligatorio para probar en el celular.** Con `spark serve` a secas el servidor solo escucha en `localhost` y el teléfono recibe "No se pudo conectar con el servidor". Si Windows pregunta por el firewall, permite el acceso en redes privadas.
+- Si no existen los agentes de prueba: `.\php82\php.exe spark db:seed AgentesTransitoSeeder`.
+
+Luego inicia Expo con `npx expo start -c`. El `.env` de Expo (copia de `.env.example`) debe tener:
 
 ```env
 EXPO_PUBLIC_API_BASE_URL=http://192.168.1.25:8080/api
 EXPO_PUBLIC_APP_ENV=development
 ```
 
-Desde `mobile/agentes-transito`, puedes copiar la plantilla con `Copy-Item .env.example .env` y editarla con `notepad .env`. Sustituye la IP del ejemplo por la IP real de tu PC. Después de cambiar variables `EXPO_PUBLIC_*`, reinicia Expo. Para probar un login nuevo, el backend debe estar accesible y las credenciales deben corresponder a un agente activo creado desde el panel administrativo.
+En desarrollo la IP de esa URL se ajusta sola: el navegador usa `localhost` y el celular usa la IP de la PC que ejecuta Expo (`src/constants/config.ts`), así que no hay que editarla al cambiar de red. Solo se respeta tal cual si apunta a un servidor público. La consola de Expo muestra `[config] API_BASE_URL = ...` para confirmar a dónde se conecta.
+
+Con `EXPO_PUBLIC_APP_ENV=development` el login muestra botones de **acceso rápido de prueba** (`AGT-204`, `AGT-107`, `JEF-001`, contraseña `transito2026`); siguen validándose contra el backend y desaparecen con `production`.
+
+**Diagnóstico rápido:** abre `http://<IP-de-tu-PC>:8080/api/parametros` en el navegador del celular. Si no muestra un JSON, el problema es de red (firewall o Wi-Fi distinto), no de la app.
 
 El `.env` de la raíz es independiente del `.env` de Expo. En esta copia solo declara `CI_ENVIRONMENT`; CodeIgniter toma la conexión de sus valores predeterminados de `app/Config/Database.php` (SQLite). Revisa esa configuración si vas a probar con otra base. No copies credenciales reales a archivos versionados.
 

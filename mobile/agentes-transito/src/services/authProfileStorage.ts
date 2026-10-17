@@ -15,9 +15,17 @@ export interface KeyValueStorage {
 export const AUTH_PROFILE_STORAGE_KEY = "@agente_perfil_autenticado_v2";
 export const LEGACY_AUTH_STORAGE_KEY = "@agente_sesion_activa_v1";
 
+export const SESION_SIN_TOKEN =
+  "Tu sesión expiró. Inicia sesión nuevamente; las boletas pendientes se conservan en el dispositivo.";
+
+/**
+ * Restaura el perfil guardado solo si también existe el token de acceso;
+ * sin token el agente no podría sincronizar, así que se le pide iniciar sesión.
+ */
 export async function restoreAgentProfile(
   storage: KeyValueStorage,
-  clearObsoleteToken: () => Promise<void>
+  clearObsoleteToken: () => Promise<void>,
+  readToken: () => Promise<string | null>
 ): Promise<{ profile: AgentePerfil | null; errors: string[] }> {
   const errors: string[] = [];
 
@@ -39,7 +47,12 @@ export async function restoreAgentProfile(
     if (storedProfile !== null) {
       const parsed: unknown = JSON.parse(storedProfile);
       if (isAgentProfile(parsed)) {
-        profile = parsed;
+        if (await readToken()) {
+          profile = parsed;
+        } else {
+          await storage.removeItem(AUTH_PROFILE_STORAGE_KEY);
+          errors.push(SESION_SIN_TOKEN);
+        }
       } else {
         await storage.removeItem(AUTH_PROFILE_STORAGE_KEY);
         errors.push("El perfil local no es válido; inicie sesión nuevamente.");
@@ -61,7 +74,7 @@ export function saveAgentProfile(
 
 export async function clearAgentProfile(
   storage: KeyValueStorage,
-  clearObsoleteToken: () => Promise<void>
+  clearToken: () => Promise<void>
 ): Promise<string[]> {
   const errors: string[] = [];
 
@@ -76,9 +89,9 @@ export async function clearAgentProfile(
     errors.push("No se pudo eliminar un perfil antiguo del dispositivo.");
   }
   try {
-    await clearObsoleteToken();
+    await clearToken();
   } catch {
-    errors.push("No se pudo eliminar una credencial antigua del dispositivo.");
+    errors.push("No se pudo eliminar la credencial de acceso del dispositivo.");
   }
 
   return errors;

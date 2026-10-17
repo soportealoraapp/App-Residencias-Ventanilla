@@ -60,11 +60,6 @@
                             <i class="bi bi-box-arrow-in-right me-1"></i> Iniciar sesión
                         </a>
                     </li>
-                    <li class="nav-item ms-md-2">
-                        <a class="btn btn-light btn-sm w-100 text-primary fw-semibold" href="/auth/register">
-                            <i class="bi bi-person-plus me-1"></i> Registrarse
-                        </a>
-                    </li>
                 <?php endif; ?>
             </ul>
         </div>
@@ -91,6 +86,9 @@
                     <li><?= esc($e) ?></li>
                 <?php endforeach; ?>
             </ul>
+            <p class="small mb-0 mt-2 d-none" data-aviso-archivos>
+                <i class="bi bi-paperclip me-1"></i>Los datos que capturaste se conservaron. Por seguridad, el navegador no guarda los archivos adjuntos: vuelve a seleccionarlos antes de enviar.
+            </p>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
         </div>
     <?php endif; ?>
@@ -148,6 +146,7 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/formularios.js"></script>
 <!-- UI base: tooltips globales + helper de copiar al portapapeles -->
 <script>
 (function () {

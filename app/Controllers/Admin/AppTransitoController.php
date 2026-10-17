@@ -11,6 +11,22 @@ use App\Models\AuditoriaModel;
 
 class AppTransitoController extends Controller
 {
+    private const ESTADOS_BOLETA = [
+        'recibida'  => 'Recibida',
+        'procesada' => 'Procesada',
+        'pagada'    => 'Pagada',
+        'cancelada' => 'Cancelada',
+        'archivada' => 'Archivada',
+    ];
+
+    private const TIPOS_VEHICULO = [
+        'particular'         => 'Particular',
+        'transporte_publico' => 'Transporte público',
+        'carga'              => 'Carga',
+        'motocicleta'        => 'Motocicleta',
+        'otro'               => 'Otro',
+    ];
+
     protected ParametroAppModel $paramModel;
     protected AgenteTransitoModel $agenteModel;
     protected CatalogoInfraccionAppModel $catalogoModel;
@@ -147,8 +163,12 @@ class AppTransitoController extends Controller
             'nombre_completo' => trim((string)$this->request->getPost('nombre_completo')),
             'rol'             => $this->request->getPost('rol'),
             'sector'          => trim((string)$this->request->getPost('sector')) ?: 'Sector Centro',
-            'activo'          => (int)($this->request->getPost('activo') ?? 1),
         ];
+        // Al editar se conserva el estado actual salvo que el formulario lo indique explícitamente.
+        $activo = $this->request->getPost('activo');
+        if ($esNuevo || $activo !== null) {
+            $data['activo'] = $activo === '0' ? 0 : 1;
+        }
 
         $password = $this->request->getPost('password');
         if (!empty($password)) {
@@ -192,6 +212,32 @@ class AppTransitoController extends Controller
     }
 
     /**
+     * Eliminar un agente. Si ya emitió boletas se conserva para no perder la
+     * trazabilidad y se sugiere desactivarlo.
+     */
+    public function eliminarAgente(int $id)
+    {
+        $agente = $this->agenteModel->find($id);
+        if (!$agente) {
+            return redirect()->to(site_url('admin/app-transito'))->with('errors', ['Agente no encontrado.']);
+        }
+
+        $boletas = $this->boletaModel->where('agente_placa', $agente->placa)->countAllResults();
+        if ($boletas > 0) {
+            return redirect()->to(site_url('admin/app-transito'))->with('errors', [
+                "El agente {$agente->placa} tiene {$boletas} boleta(s) registradas y no puede eliminarse; desactívalo para impedir su acceso.",
+            ]);
+        }
+
+        $this->agenteModel->delete($id);
+        $registro = (array) $agente;
+        unset($registro['password_hash']);
+        $this->auditoriaModel->registrar('agentes_transito', $id, 'eliminar', session('user_id'), ['placa' => $agente->placa], $registro);
+
+        return redirect()->to(site_url('admin/app-transito'))->with('message', "Agente {$agente->placa} eliminado.");
+    }
+
+    /**
      * Listado completo de Boletas de Infracción sincronizadas desde la app móvil.
      */
     public function boletas()
@@ -227,6 +273,100 @@ class AppTransitoController extends Controller
             'filtros'  => ['placa' => $placa, 'fecha' => $fecha, 'q' => $q],
             'valorUma' => $valorUma,
         ]);
+    }
+
+    /**
+     * Formulario de corrección de una boleta sincronizada.
+     */
+    public function editarBoleta(int $id)
+    {
+        $boleta = $this->boletaModel->find($id);
+        if (!$boleta) {
+            return redirect()->to(site_url('admin/app-transito/boletas'))->with('errors', ['Boleta no encontrada.']);
+        }
+
+        return view('admin/app_transito/boleta_form', [
+            'boleta'  => $boleta,
+            'estados' => self::ESTADOS_BOLETA,
+            'tipos'   => self::TIPOS_VEHICULO,
+        ]);
+    }
+
+    /**
+     * Guardar correcciones administrativas de una boleta.
+     */
+    public function actualizarBoleta(int $id)
+    {
+        $boleta = $this->boletaModel->find($id);
+        if (!$boleta) {
+            return redirect()->to(site_url('admin/app-transito/boletas'))->with('errors', ['Boleta no encontrada.']);
+        }
+
+        $rules = [
+            'estado'              => ['label' => 'Estado', 'rules' => 'required|in_list[' . implode(',', array_keys(self::ESTADOS_BOLETA)) . ']'],
+            'fecha_infraccion'    => ['label' => 'Fecha', 'rules' => 'required|valid_date[Y-m-d]'],
+            'hora_infraccion'     => ['label' => 'Hora', 'rules' => 'required|regex_match[/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/]'],
+            'lugar'               => ['label' => 'Lugar', 'rules' => 'required|max_length[255]'],
+            'infractor_nombre'    => ['label' => 'Nombre del infractor', 'rules' => 'permit_empty|max_length[180]'],
+            'infractor_domicilio' => ['label' => 'Domicilio del infractor', 'rules' => 'permit_empty|max_length[255]'],
+            'infractor_licencia'  => ['label' => 'Licencia', 'rules' => 'permit_empty|max_length[50]'],
+            'vehiculo_placas'     => ['label' => 'Placas', 'rules' => 'permit_empty|max_length[20]'],
+            'vehiculo_marca'      => ['label' => 'Marca', 'rules' => 'permit_empty|max_length[60]'],
+            'vehiculo_linea'      => ['label' => 'Línea / modelo', 'rules' => 'permit_empty|max_length[80]'],
+            'vehiculo_color'      => ['label' => 'Color', 'rules' => 'permit_empty|max_length[40]'],
+            'vehiculo_tipo'       => ['label' => 'Tipo de vehículo', 'rules' => 'required|in_list[' . implode(',', array_keys(self::TIPOS_VEHICULO)) . ']'],
+            'hechos'              => ['label' => 'Hechos', 'rules' => 'permit_empty|max_length[2000]'],
+        ];
+
+        if (!$this->validate($rules)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        $texto = fn (string $campo): ?string => ($v = trim((string) $this->request->getPost($campo))) === '' ? null : $v;
+        $placas = $texto('vehiculo_placas');
+        $data = [
+            'estado'              => (string) $this->request->getPost('estado'),
+            'fecha_infraccion'    => (string) $this->request->getPost('fecha_infraccion'),
+            'hora_infraccion'     => (string) $this->request->getPost('hora_infraccion'),
+            'lugar'               => (string) $texto('lugar'),
+            'conductor_ausente'   => $this->request->getPost('conductor_ausente') === '1' ? 1 : 0,
+            'infractor_nombre'    => $texto('infractor_nombre'),
+            'infractor_domicilio' => $texto('infractor_domicilio'),
+            'infractor_licencia'  => $texto('infractor_licencia'),
+            'sin_placas'          => $this->request->getPost('sin_placas') === '1' ? 1 : 0,
+            'vehiculo_placas'     => $placas !== null ? strtoupper($placas) : null,
+            'vehiculo_marca'      => $texto('vehiculo_marca'),
+            'vehiculo_linea'      => $texto('vehiculo_linea'),
+            'vehiculo_color'      => $texto('vehiculo_color'),
+            'vehiculo_tipo'       => (string) $this->request->getPost('vehiculo_tipo'),
+            'hechos'              => $texto('hechos'),
+        ];
+
+        $antes = array_intersect_key((array) $boleta, $data);
+        $this->boletaModel->update($id, $data);
+        $this->auditoriaModel->registrar('boletas_infracciones', $id, 'editar', session('user_id'), [
+            'folio'   => $boleta->folio,
+            'antes'   => $antes,
+            'despues' => $data,
+        ]);
+
+        return redirect()->to(site_url('admin/app-transito/boletas'))->with('message', "Boleta {$boleta->folio} actualizada.");
+    }
+
+    /**
+     * Eliminar una boleta (queda copia íntegra en auditoría).
+     */
+    public function eliminarBoleta(int $id)
+    {
+        $boleta = $this->boletaModel->find($id);
+        if (!$boleta) {
+            return redirect()->to(site_url('admin/app-transito/boletas'))->with('errors', ['Boleta no encontrada.']);
+        }
+
+        $this->boletaModel->delete($id);
+        $this->auditoriaModel->registrar('boletas_infracciones', $id, 'eliminar', session('user_id'), ['folio' => $boleta->folio], (array) $boleta);
+
+        return redirect()->to(site_url('admin/app-transito/boletas'))->with('message', "Boleta {$boleta->folio} eliminada.");
     }
 
     /**
@@ -286,7 +426,8 @@ class AppTransitoController extends Controller
             'categoria'        => strtoupper(trim((string)$this->request->getPost('categoria'))),
             'monto_min_uma'    => (float)$this->request->getPost('monto_min_uma'),
             'monto_max_uma'    => (float)$this->request->getPost('monto_max_uma'),
-            'activo'           => (int)($this->request->getPost('activo') ?? 1),
+            // Checkbox: si no viene en el POST significa que se desmarcó.
+            'activo'           => $this->request->getPost('activo') === '1' ? 1 : 0,
             'orden'            => (int)($this->request->getPost('orden') ?? 0),
         ];
 
@@ -299,5 +440,24 @@ class AppTransitoController extends Controller
         }
 
         return redirect()->to(site_url('admin/app-transito/catalogo'))->with('message', $msg);
+    }
+
+    /**
+     * Eliminar una falta del catálogo. Las boletas ya emitidas conservan su
+     * copia de la falta en faltas_json, por lo que no se ven afectadas.
+     */
+    public function eliminarCatalogo(int $id)
+    {
+        $item = $this->catalogoModel->find($id);
+        if (!$item) {
+            return redirect()->to(site_url('admin/app-transito/catalogo'))->with('errors', ['Falta no encontrada.']);
+        }
+
+        $this->catalogoModel->delete($id);
+        $this->auditoriaModel->registrar('catalogo_infracciones_app', $id, 'eliminar', session('user_id'), [
+            'fundamento_legal' => $item->fundamento_legal,
+        ], (array) $item);
+
+        return redirect()->to(site_url('admin/app-transito/catalogo'))->with('message', "Falta {$item->fundamento_legal} eliminada del catálogo.");
     }
 }

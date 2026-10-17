@@ -2,6 +2,7 @@
 
 namespace App\Controllers\Api;
 
+use App\Libraries\AgenteTokenService;
 use App\Models\BoletaChecklistItemModel;
 use App\Models\ParametroSistemaModel;
 use CodeIgniter\Controller;
@@ -149,16 +150,48 @@ class InfraccionesApiController extends Controller
             ]);
         }
 
+        $agente = $this->agenteAutenticado();
+        if ($agente === null) {
+            return $this->respuestaNoAutenticado();
+        }
+        $placaAgente = strtoupper(trim((string) $agente->placa));
+
         $boletaModel = new \App\Models\BoletaInfraccionModel();
+
+        // Se valida el lote completo antes de escribir: un agente solo puede
+        // enviar boletas a su nombre y no puede sobrescribir folios de otro agente.
+        foreach ($boletas as $b) {
+            if (! is_array($b)) {
+                continue;
+            }
+            $folio = trim((string)($b['folio'] ?? ''));
+            $placa = strtoupper(trim((string)($b['agente_placa'] ?? '')));
+
+            if ($placa !== '' && $placa !== $placaAgente) {
+                return $this->response->setStatusCode(403)->setJSON([
+                    'success' => false,
+                    'message' => "La boleta {$folio} no corresponde al agente autenticado.",
+                ]);
+            }
+
+            if ($folio !== '' && ! $this->folioPermitido($boletaModel, $folio, $placaAgente)) {
+                return $this->respuestaFolioAjeno($folio);
+            }
+        }
+
         $sincronizadas = 0;
         $errores = [];
 
         foreach ($boletas as $b) {
+            if (! is_array($b)) {
+                $errores[] = "Boleta con formato inválido.";
+                continue;
+            }
             $folio = trim((string)($b['folio'] ?? ''));
-            $placa = strtoupper(trim((string)($b['agente_placa'] ?? '')));
+            $placa = $placaAgente;
 
-            if ($folio === '' || $placa === '') {
-                $errores[] = "Boleta sin folio o agente_placa válido.";
+            if ($folio === '') {
+                $errores[] = "Boleta sin folio válido.";
                 continue;
             }
 
@@ -175,7 +208,7 @@ class InfraccionesApiController extends Controller
             $data = [
                 'folio'                 => $folio,
                 'agente_placa'          => $placa,
-                'agente_nombre'         => $b['agente_nombre'] ?? null,
+                'agente_nombre'         => $agente->nombre_completo,
                 'fecha_infraccion'      => $b['fecha_infraccion'] ?? date('Y-m-d'),
                 'hora_infraccion'       => $b['hora_infraccion'] ?? date('H:i:s'),
                 'lugar'                 => $b['lugar'] ?? 'No especificado',
@@ -243,13 +276,34 @@ class InfraccionesApiController extends Controller
             return $this->response->setStatusCode(204)->setBody('');
         }
 
+        $agente = $this->agenteAutenticado();
+        if ($agente === null) {
+            return $this->respuestaNoAutenticado();
+        }
+        $placaAgente = strtoupper(trim((string) $agente->placa));
+        $boletaModel = new \App\Models\BoletaInfraccionModel();
+
         $folio = trim((string)($this->request->getPost('folio') ?? 'sin_folio'));
-        $tipo  = trim((string)($this->request->getPost('tipo') ?? 'evidencia'));
+        $tipo  = $this->tipoEvidencia($this->request->getPost('tipo'));
         $folioLimpio = preg_replace('/[^A-Za-z0-9_-]/', '_', $folio);
 
         $file = $this->request->getFile('foto');
         if ($file !== null && $file->isValid()) {
-            $ext = $file->getClientExtension() ?: 'jpg';
+            if (! $this->folioPermitido($boletaModel, $folio, $placaAgente)) {
+                return $this->respuestaFolioAjeno($folio);
+            }
+
+            // La extensión se deduce del contenido, nunca del nombre enviado por el cliente.
+            $ext = strtolower((string) $file->guessExtension());
+            if ($ext === 'jpeg') {
+                $ext = 'jpg';
+            }
+            if (! in_array($ext, ['jpg', 'png', 'webp'], true)) {
+                return $this->response->setStatusCode(415)->setJSON([
+                    'success' => false,
+                    'message' => 'Solo se aceptan imágenes JPG, PNG o WEBP.',
+                ]);
+            }
             $nombreArchivo = "{$tipo}_" . time() . "_{$folioLimpio}.{$ext}";
 
             $destDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'infracciones' . DIRECTORY_SEPARATOR . $folioLimpio;
@@ -269,8 +323,12 @@ class InfraccionesApiController extends Controller
         $json = $this->request->getJSON(true);
         if (is_array($json) && !empty($json['base64'])) {
             $folio = trim((string)($json['folio'] ?? $folio));
-            $tipo  = trim((string)($json['tipo'] ?? $tipo));
+            $tipo  = $this->tipoEvidencia($json['tipo'] ?? $tipo);
             $folioLimpio = preg_replace('/[^A-Za-z0-9_-]/', '_', $folio);
+
+            if (! $this->folioPermitido($boletaModel, $folio, $placaAgente)) {
+                return $this->respuestaFolioAjeno($folio);
+            }
 
             $destDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'infracciones' . DIRECTORY_SEPARATOR . $folioLimpio;
             if (! is_dir($destDir)) {
@@ -295,5 +353,44 @@ class InfraccionesApiController extends Controller
             'success' => false,
             'message' => 'No se recibió un archivo de imagen o base64 válido.',
         ]);
+    }
+
+    private function agenteAutenticado(): ?object
+    {
+        // El filtro agenteToken ya validó la solicitud; se revalida para fallar cerrado.
+        return (new AgenteTokenService())->agenteDeSolicitud($this->request);
+    }
+
+    private function respuestaNoAutenticado(): ResponseInterface
+    {
+        return $this->response->setStatusCode(401)->setJSON([
+            'success' => false,
+            'message' => 'Sesión no válida o expirada. Inicia sesión nuevamente.',
+        ]);
+    }
+
+    private function respuestaFolioAjeno(string $folio): ResponseInterface
+    {
+        return $this->response->setStatusCode(403)->setJSON([
+            'success' => false,
+            'message' => "El folio {$folio} pertenece a otro agente.",
+        ]);
+    }
+
+    /**
+     * Un folio es del agente si aún no existe o si ya está registrado a su placa.
+     */
+    private function folioPermitido(\App\Models\BoletaInfraccionModel $boletaModel, string $folio, string $placaAgente): bool
+    {
+        $existente = $boletaModel->where('folio', $folio)->first();
+
+        return $existente === null || strtoupper(trim((string) $existente->agente_placa)) === $placaAgente;
+    }
+
+    private function tipoEvidencia(mixed $tipo): string
+    {
+        $tipo = is_string($tipo) ? trim($tipo) : '';
+
+        return in_array($tipo, ['placa', 'contexto', 'documento'], true) ? $tipo : 'evidencia';
     }
 }

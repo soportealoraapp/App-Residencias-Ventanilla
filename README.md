@@ -67,6 +67,10 @@ php spark migrate
 php spark db:seed DatabaseSeeder
 ```
 
+> ⚠️ **Cada vez que hagas `git pull`, vuelve a ejecutar `php spark migrate`.** Si falta una migración (por ejemplo la tabla de tokens de agentes), el login de la app móvil falla. Si el equipo usa la base en Supabase, aplica también los archivos nuevos de `supabase/migrations/`.
+>
+> En Windows, si `php` no está en el PATH, usa el PHP incluido en el repo: `./php82/php.exe spark migrate`.
+
 ### 4. Compilar la App Móvil (Expo Web)
 ```bash
 cd mobile/agentes-transito
@@ -77,12 +81,30 @@ cd ../..
 
 ### 5. Iniciar Servidor
 ```bash
-php spark serve --port 8080
+./php82/php.exe spark serve --host 0.0.0.0 --port 8080
 ```
+Usa `--host 0.0.0.0` para que el servidor también acepte conexiones de tu red local (el teléfono con Expo Go). Con un simple `php spark serve` solo escucha en `localhost` y **la app en el celular no podrá conectarse**. Si Windows pregunta por el firewall, permite el acceso en **redes privadas**.
+
 Accede desde tu navegador:
 * Portal Ciudadano: [http://localhost:8080/portal/dashboard](http://localhost:8080/portal/dashboard)
 * Panel Administrativo: [http://localhost:8080/admin/dashboard](http://localhost:8080/admin/dashboard)
 * App Agentes Web: [http://localhost:8080/agentes/](http://localhost:8080/agentes/)
+
+### 6. Probar la App de Agentes con Expo (navegador o celular)
+Con el backend del paso 5 corriendo, en otra terminal:
+```bash
+cd mobile/agentes-transito
+npx expo start -c
+```
+* El celular y la PC deben estar en la **misma red Wi-Fi**.
+* En desarrollo la app detecta sola la dirección del backend (en el navegador usa `localhost:8080` y en el celular la IP de la PC que ejecuta Expo), así que no hace falta cambiar la IP del `.env` cada vez que cambias de red. En la consola de Expo aparece `[config] API_BASE_URL = ...` para confirmarlo.
+* En la pantalla de login hay botones de **acceso rápido de prueba** (`AGT-204`, `AGT-107`, `JEF-001`, contraseña `transito2026`). Solo aparecen con `EXPO_PUBLIC_APP_ENV=development` y requieren que el backend esté corriendo y que exista el seed `AgentesTransitoSeeder`.
+
+**Si la app dice "No se pudo conectar con el servidor":**
+1. ¿El backend está corriendo con `--host 0.0.0.0`?
+2. Abre `http://<IP-de-tu-PC>:8080/api/parametros` en el navegador del celular (la IP la ves con `ipconfig`). Debe mostrar un JSON. Si no carga, es el firewall de Windows o están en redes distintas.
+3. ¿Corriste `php spark migrate` después del último `git pull`?
+4. Reinicia Expo con `npx expo start -c` (las variables `EXPO_PUBLIC_*` se leen al arrancar).
 
 ---
 
@@ -95,6 +117,8 @@ Accede desde tu navegador:
 | `admin@uriangato.gob.mx` | `administrador` | Panel Administrativo (`/admin/`) |
 | `operador1@uriangato.gob.mx` | `operador_ventanilla` | Panel Administrativo (`/admin/`) |
 | `ciudadano@example.com` | `ciudadano` | Portal Ciudadano (`/portal/`) |
+
+> El registro público de ciudadanos está deshabilitado: el ciudadano acude a ventanilla y el administrador u operador crea su cuenta en **Panel → Usuarios y ciudadanos** (`/admin/usuarios`).
 
 ---
 

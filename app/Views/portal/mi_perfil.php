@@ -27,31 +27,31 @@
                 <label for="curp" class="form-label small fw-semibold">CURP <span class="text-danger">*</span></label>
                 <div class="input-group">
                     <span class="input-group-text bg-light text-muted"><i class="bi bi-person-vcard"></i></span>
-                    <input type="text" class="form-control text-uppercase" id="curp" name="curp" value="<?= esc($usuario->curp ?? '') ?>" maxlength="18" required>
+                    <input type="text" class="form-control text-uppercase" id="curp" name="curp" value="<?= esc(old('curp', $usuario->curp ?? '')) ?>" maxlength="18" required>
                 </div>
             </div>
 
             <div class="row g-2 mb-3">
                 <div class="col-sm-6">
                     <label for="nombre" class="form-label small fw-semibold">Nombre(s) <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="nombre" name="nombre" value="<?= esc(explode(' ', $usuario->nombre_completo ?? '')[0] ?? '') ?>" required>
+                    <input type="text" class="form-control" id="nombre" name="nombre" value="<?= esc(old('nombre', explode(' ', $usuario->nombre_completo ?? '')[0] ?? '')) ?>" required>
                 </div>
                 <div class="col-sm-6">
                     <label for="apellido" class="form-label small fw-semibold">Apellido(s) <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="apellido" name="apellido" value="<?= esc($usuario->apellido ?? '') ?>" required>
+                    <input type="text" class="form-control" id="apellido" name="apellido" value="<?= esc(old('apellido', $usuario->apellido ?? '')) ?>" required>
                 </div>
             </div>
 
             <div class="row g-2 mb-3">
                 <div class="col-sm-6">
                     <label for="rfc" class="form-label small fw-semibold">RFC <span class="text-muted">(opcional)</span></label>
-                    <input type="text" class="form-control text-uppercase" id="rfc" name="rfc" value="<?= esc($usuario->rfc ?? '') ?>" maxlength="13">
+                    <input type="text" class="form-control text-uppercase" id="rfc" name="rfc" placeholder="Ej. GODE561231GR8" value="<?= esc(old('rfc', $usuario->rfc ?? '')) ?>" maxlength="13">
                 </div>
                 <div class="col-sm-6">
                     <label for="email" class="form-label small fw-semibold">Correo electrónico <span class="text-danger">*</span></label>
                     <div class="input-group">
                         <span class="input-group-text bg-light text-muted"><i class="bi bi-envelope"></i></span>
-                        <input type="email" class="form-control" id="email" name="email" value="<?= esc($usuario->email ?? '') ?>" required>
+                        <input type="email" class="form-control" id="email" name="email" value="<?= esc(old('email', $usuario->email ?? '')) ?>" required>
                     </div>
                 </div>
             </div>
@@ -60,7 +60,7 @@
                 <label for="telefono" class="form-label small fw-semibold">Teléfono <span class="text-danger">*</span></label>
                 <div class="input-group">
                     <span class="input-group-text bg-light text-muted"><i class="bi bi-telephone"></i></span>
-                    <input type="text" class="form-control" id="telefono" name="telefono" value="<?= esc($usuario->telefono ?? '') ?>" required>
+                    <input type="text" class="form-control" id="telefono" name="telefono" value="<?= esc(old('telefono', $usuario->telefono ?? '')) ?>" required>
                 </div>
             </div>
 
@@ -134,11 +134,11 @@
             <div class="row g-2 mb-3">
                 <div class="col-sm-6">
                     <label for="estado" class="form-label small fw-semibold">Estado <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="estado" name="estado" value="<?= esc($usuario->estado ?? 'Guanajuato') ?>" required>
+                    <input type="text" class="form-control" id="estado" name="estado" value="<?= esc(old('estado', $usuario->estado ?? 'Guanajuato')) ?>" required>
                 </div>
                 <div class="col-sm-6">
                     <label for="ciudad" class="form-label small fw-semibold">Ciudad / Municipio <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="ciudad" name="ciudad" value="<?= esc($usuario->ciudad ?? 'Uriangato') ?>" required>
+                    <input type="text" class="form-control" id="ciudad" name="ciudad" value="<?= esc(old('ciudad', $usuario->ciudad ?? 'Uriangato')) ?>" required>
                 </div>
             </div>
 
@@ -146,7 +146,7 @@
                 <label for="domicilio" class="form-label small fw-semibold">Dirección <span class="text-danger">*</span></label>
                 <div class="input-group">
                     <span class="input-group-text bg-light text-muted"><i class="bi bi-geo-alt"></i></span>
-                    <input type="text" class="form-control" id="domicilio" name="domicilio" value="<?= esc($usuario->domicilio ?? '') ?>" required>
+                    <input type="text" class="form-control" id="domicilio" name="domicilio" value="<?= esc(old('domicilio', $usuario->domicilio ?? '')) ?>" required>
                 </div>
             </div>
 

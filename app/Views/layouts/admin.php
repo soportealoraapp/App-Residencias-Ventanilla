@@ -71,6 +71,12 @@
             <span class="sidebar-text">T-07: Carga/Descarga</span>
         </a>
 
+        <div class="sidebar-section-title mt-3">Ventanilla</div>
+        <a href="/admin/usuarios" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/usuarios') ? 'active' : '' ?>">
+            <i class="bi bi-people me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Usuarios y ciudadanos</span>
+        </a>
+
         <div class="sidebar-section-title mt-3">Catálogos</div>
         <a href="/admin/tarifas" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/tarifas') ? 'active' : '' ?>">
             <i class="bi bi-cash-coin me-2 sidebar-link-icon"></i>
@@ -166,6 +172,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/formularios.js"></script>
 <!-- UI base: tooltips globales + helper de copiar al portapapeles -->
 <script>
 (function () {

@@ -272,7 +272,19 @@
                                                     </span>
                                                 <?php endif; ?>
                                             </td>
-                                            <td class="text-end">
+                                            <td class="text-end text-nowrap">
+                                                <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 me-2 text-primary"
+                                                    title="Editar agente" aria-label="Editar agente <?= esc($ag->placa, 'attr') ?>"
+                                                    onclick="editarAgente(<?= esc(json_encode([
+                                                        'id'              => (int) $ag->id,
+                                                        'placa'           => $ag->placa,
+                                                        'nombre_completo' => $ag->nombre_completo,
+                                                        'sector'          => $ag->sector,
+                                                        'rol'             => $ag->rol,
+                                                        'activo'          => (int) $ag->activo,
+                                                    ]), 'attr') ?>)">
+                                                    <i class="bi bi-pencil-square fs-5"></i>
+                                                </button>
                                                 <form action="/admin/app-transito/agentes/toggle/<?= $ag->id ?>" method="POST" class="d-inline" data-no-loading="true">
                                                     <?= csrf_field() ?>
                                                     <button type="submit" class="btn btn-sm btn-link text-decoration-none p-0 text-<?= $ag->activo == 1 ? 'warning' : 'success' ?>"
@@ -280,6 +292,15 @@
                                                         <i class="bi bi-power fs-5"></i>
                                                     </button>
                                                 </form>
+                                                <?php if (in_array('administrador', (array) (session('roles') ?? []), true)): ?>
+                                                    <form action="/admin/app-transito/agentes/eliminar/<?= $ag->id ?>" method="POST" class="d-inline ms-2" data-no-loading="true"
+                                                        onsubmit="return confirm('¿Eliminar definitivamente al agente <?= esc($ag->placa, 'js') ?>? Si ya emitió boletas no se podrá eliminar; en ese caso desactívalo.');">
+                                                        <?= csrf_field() ?>
+                                                        <button type="submit" class="btn btn-sm btn-link text-decoration-none p-0 text-danger" title="Eliminar agente" aria-label="Eliminar agente <?= esc($ag->placa, 'attr') ?>">
+                                                            <i class="bi bi-trash fs-5"></i>
+                                                        </button>
+                                                    </form>
+                                                <?php endif; ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -393,8 +414,9 @@
                 <h5 class="modal-title fw-bold" id="modalNuevoAgenteLabel">Registrar Nuevo Agente</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="/admin/app-transito/agentes/guardar" method="POST">
+            <form action="/admin/app-transito/agentes/guardar" method="POST" id="formAgente">
                 <?= csrf_field() ?>
+                <input type="hidden" name="id" id="agente_id" value="">
                 <div class="modal-body">
                     <p class="text-muted small mb-3">El agente usará este número de placa y contraseña para ingresar a la app en su teléfono.</p>
 
@@ -424,13 +446,13 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="password" class="form-label small fw-semibold">Contraseña Inicial <span class="text-danger">*</span></label>
-                        <input type="password" class="form-control" id="password" name="password" placeholder="Mínimo 4 caracteres" required>
+                        <label for="password" class="form-label small fw-semibold" id="agentePasswordLabel">Contraseña Inicial <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Mínimo 4 caracteres" minlength="4" autocomplete="new-password" required>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary fw-semibold">Registrar Agente</button>
+                    <button type="submit" class="btn btn-primary fw-semibold" id="agenteSubmit">Registrar Agente</button>
                 </div>
             </form>
         </div>
@@ -438,6 +460,34 @@
 </div>
 
 <script>
+// Reutiliza el modal de alta para editar un agente existente.
+function editarAgente(agente) {
+    document.getElementById('modalNuevoAgenteLabel').innerText = 'Editar Agente ' + agente.placa;
+    document.getElementById('agente_id').value = agente.id;
+    document.getElementById('placa').value = agente.placa;
+    document.getElementById('nombre_completo').value = agente.nombre_completo;
+    document.getElementById('sector').value = agente.sector || '';
+    document.getElementById('rol').value = agente.rol;
+    const password = document.getElementById('password');
+    password.required = false;
+    password.value = '';
+    password.placeholder = 'Vacío = conservar la actual';
+    document.getElementById('agentePasswordLabel').innerText = 'Nueva contraseña (opcional)';
+    document.getElementById('agenteSubmit').innerText = 'Guardar cambios';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNuevoAgente')).show();
+}
+
+document.getElementById('modalNuevoAgente')?.addEventListener('hidden.bs.modal', function () {
+    document.getElementById('formAgente').reset();
+    document.getElementById('agente_id').value = '';
+    document.getElementById('modalNuevoAgenteLabel').innerText = 'Registrar Nuevo Agente';
+    const password = document.getElementById('password');
+    password.required = true;
+    password.placeholder = 'Mínimo 4 caracteres';
+    document.getElementById('agentePasswordLabel').innerHTML = 'Contraseña Inicial <span class="text-danger">*</span>';
+    document.getElementById('agenteSubmit').innerText = 'Registrar Agente';
+});
+
 // Cálculo en vivo de ejemplo de UMA
 document.getElementById('valor_uma_vigente')?.addEventListener('input', function(e) {
     const val = parseFloat(e.target.value) || 0;

@@ -12,6 +12,8 @@ export interface ThemeColors {
   text: string;
   textSecondary: string;
   textMuted: string;
+  /** Texto de ejemplo en campos vacíos: más tenue que textMuted para no confundirse con un dato capturado */
+  placeholder: string;
   primary: string;
   primaryLight: string;
   primaryBg: string;
@@ -39,6 +41,7 @@ export const darkColors: ThemeColors = {
   text: "#fafafa",
   textSecondary: "#a1a1aa",
   textMuted: "#71717a",
+  placeholder: "#52525b",
   primary: "#3b82f6",
   primaryLight: "#60a5fa",
   primaryBg: "rgba(59, 130, 246, 0.12)",
@@ -66,6 +69,7 @@ export const lightColors: ThemeColors = {
   text: "#0f172a",
   textSecondary: "#475569",
   textMuted: "#64748b",
+  placeholder: "#a3aebf",
   primary: "#2563eb",
   primaryLight: "#3b82f6",
   primaryBg: "rgba(37, 99, 235, 0.08)",

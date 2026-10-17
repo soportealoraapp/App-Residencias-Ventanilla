@@ -14,8 +14,6 @@ $routes->setAutoRoute(false);
 
 $routes->get('auth/login', 'AuthController::login', ['as' => 'login']);
 $routes->post('auth/attempt-login', 'AuthController::attemptLogin');
-$routes->get('auth/register', 'AuthController::register', ['as' => 'register']);
-$routes->post('auth/attempt-register', 'AuthController::attemptRegister');
 $routes->get('auth/logout', 'AuthController::logout', ['as' => 'logout']);
 $routes->get('auth/forgot', 'AuthController::forgot');
 $routes->post('auth/attempt-forgot', 'AuthController::attemptForgot');
@@ -34,12 +32,12 @@ $routes->get('api/parametros', 'Api\InfraccionesApiController::parametros');
 $routes->options('api/parametros', 'Api\InfraccionesApiController::parametros');
 
 $routes->options('api/infracciones/sincronizar', 'Api\InfraccionesApiController::sincronizar');
-$routes->post('api/infracciones/sincronizar', 'Api\InfraccionesApiController::sincronizar');
+$routes->post('api/infracciones/sincronizar', 'Api\InfraccionesApiController::sincronizar', ['filter' => 'agenteToken']);
 $routes->options('api/boletas/sincronizar', 'Api\InfraccionesApiController::sincronizar');
-$routes->post('api/boletas/sincronizar', 'Api\InfraccionesApiController::sincronizar');
+$routes->post('api/boletas/sincronizar', 'Api\InfraccionesApiController::sincronizar', ['filter' => 'agenteToken']);
 
 $routes->options('api/infracciones/evidencias', 'Api\InfraccionesApiController::subirEvidencia');
-$routes->post('api/infracciones/evidencias', 'Api\InfraccionesApiController::subirEvidencia');
+$routes->post('api/infracciones/evidencias', 'Api\InfraccionesApiController::subirEvidencia', ['filter' => 'agenteToken']);
 
 $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->group('', ['filter' => 'role:administrador,operador_ventanilla'], function($routes) {
@@ -79,12 +77,29 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->get('app-transito/boletas', 'Admin\\AppTransitoController::boletas');
         $routes->get('app-transito/catalogo', 'Admin\\AppTransitoController::catalogo');
         $routes->post('app-transito/catalogo/guardar', 'Admin\\AppTransitoController::guardarCatalogo');
+        $routes->get('app-transito/boletas/editar/(:num)', 'Admin\\AppTransitoController::editarBoleta/$1');
+        $routes->post('app-transito/boletas/actualizar/(:num)', 'Admin\\AppTransitoController::actualizarBoleta/$1');
+
+        // Cuentas del portal: el registro público se retiró, la ventanilla da de alta a los ciudadanos.
+        $routes->get('usuarios', 'Admin\\UsuariosController::index');
+        $routes->get('usuarios/nuevo', 'Admin\\UsuariosController::formNuevo');
+        $routes->post('usuarios/guardar', 'Admin\\UsuariosController::guardar');
+        $routes->get('usuarios/editar/(:num)', 'Admin\\UsuariosController::formEditar/$1');
+        $routes->post('usuarios/actualizar/(:num)', 'Admin\\UsuariosController::actualizar/$1');
+        $routes->post('usuarios/toggle/(:num)', 'Admin\\UsuariosController::toggleEstado/$1');
+    });
+
+    // Bajas definitivas: solo administrador.
+    $routes->group('', ['filter' => 'role:administrador'], function($routes) {
+        $routes->post('usuarios/eliminar/(:num)', 'Admin\\UsuariosController::eliminar/$1');
+        $routes->post('app-transito/agentes/eliminar/(:num)', 'Admin\\AppTransitoController::eliminarAgente/$1');
+        $routes->post('app-transito/boletas/eliminar/(:num)', 'Admin\\AppTransitoController::eliminarBoleta/$1');
+        $routes->post('app-transito/catalogo/eliminar/(:num)', 'Admin\\AppTransitoController::eliminarCatalogo/$1');
     });
 });
 
 $routes->get('/', 'Home::index');
 $routes->get('login', 'AuthController::login');
-$routes->get('register', 'AuthController::register');
 $routes->get('logout', 'AuthController::logout');
 
 

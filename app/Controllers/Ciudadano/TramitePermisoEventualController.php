@@ -47,6 +47,7 @@ class TramitePermisoEventualController extends Controller
         $request = Services::request();
         $session = Services::session();
         $userId = (int) $session->get('user_id');
+        normalizar_campos_mayusculas($request, ['rfc']);
         $tipoPersona = (string) ($request->getPost('tipo_persona') ?? '');
 
         $rules = [
