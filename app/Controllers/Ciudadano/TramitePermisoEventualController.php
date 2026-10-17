@@ -117,7 +117,7 @@ class TramitePermisoEventualController extends Controller
         }
 
         if (! $this->validate($rules)) {
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+            return redirect()->to('/portal/tramites/permiso-eventual')->withInput()->with('errors', $this->validator->getErrors());
         }
 
         $monto = $this->tarifarioService->calcularMonto(self::TRAMITE, 'base') ?? 156.94;
@@ -137,7 +137,7 @@ class TramitePermisoEventualController extends Controller
 
         if ($solicitudId === false) {
             $db->transRollback();
-            return redirect()->back()->withInput()->with('error', 'No fue posible crear la solicitud.');
+            return redirect()->to('/portal/tramites/permiso-eventual')->withInput()->with('error', 'No fue posible crear la solicitud.');
         }
 
         $this->solicitudDatoModel->guardarDatos((int) $solicitudId, [
@@ -159,21 +159,21 @@ class TramitePermisoEventualController extends Controller
             $file = $request->getFile($campo);
             if ($file === null || ! $file->isValid()) {
                 $db->transRollback();
-                return redirect()->back()->withInput()->with('error', "No fue posible guardar: {$label}. El archivo no es válido.");
+                return redirect()->to('/portal/tramites/permiso-eventual')->withInput()->with('error', "No fue posible guardar: {$label}. El archivo no es válido.");
             }
 
             try {
                 $this->uploader->subir($file, $campo, (int) $solicitudId, $userId);
             } catch (\Throwable $e) {
                 $db->transRollback();
-                return redirect()->back()->withInput()->with('error', "Error al subir {$label}: " . $e->getMessage());
+                return redirect()->to('/portal/tramites/permiso-eventual')->withInput()->with('error', "Error al subir {$label}: " . $e->getMessage());
             }
         }
 
         $db->transComplete();
 
         if ($db->transStatus() === false) {
-            return redirect()->back()->withInput()->with('error', 'Ocurrió un error al procesar el registro del trámite.');
+            return redirect()->to('/portal/tramites/permiso-eventual')->withInput()->with('error', 'Ocurrió un error al procesar el registro del trámite.');
         }
 
         return redirect()->to('/portal/tramites/permiso-eventual/resumen/' . $folio);

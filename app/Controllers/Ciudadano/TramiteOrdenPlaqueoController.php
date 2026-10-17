@@ -111,7 +111,7 @@ class TramiteOrdenPlaqueoController extends Controller
         $allRules = array_merge($rules, $docRules);
 
         if (! $this->validate($allRules)) {
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+            return redirect()->to('/portal/tramites/orden-plaqueo')->withInput()->with('errors', $this->validator->getErrors());
         }
 
         $numTitulo = trim((string) $request->getPost('numero_titulo_concesion'));
@@ -133,7 +133,7 @@ class TramiteOrdenPlaqueoController extends Controller
         ]);
 
         if (! $solicitudId) {
-            return redirect()->back()->withInput()->with('error', 'No fue posible registrar la solicitud en la base de datos.');
+            return redirect()->to('/portal/tramites/orden-plaqueo')->withInput()->with('error', 'No fue posible registrar la solicitud en la base de datos.');
         }
 
         $datosGuardar = [
@@ -163,7 +163,7 @@ class TramiteOrdenPlaqueoController extends Controller
             if ($file && ($file->isValid() || ENVIRONMENT === 'testing') && ! $file->hasMoved() && $file->getError() === UPLOAD_ERR_OK) {
                 $docObj = $this->uploader->subir($file, $tipoDoc, (int) $solicitudId, $userId);
                 if ($docObj === null) {
-                    return redirect()->back()->withInput()->with('error', "Error al procesar el archivo: {$inputKey}");
+                    return redirect()->to('/portal/tramites/orden-plaqueo')->withInput()->with('error', "Error al procesar el archivo: {$inputKey}");
                 }
             }
         }

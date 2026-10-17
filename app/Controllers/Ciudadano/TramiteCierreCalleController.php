@@ -18,6 +18,9 @@ class TramiteCierreCalleController extends Controller
 {
     private const TRAMITE = 'UR-TT-T-05';
 
+    /** Documentos que el ciudadano puede adjuntar; ninguno es obligatorio. */
+    private const DOCUMENTOS_OPCIONALES = ['identificacion_oficial', 'solicitud_escrita'];
+
     protected SolicitudModel $solicitudModel;
     protected SolicitudDatoModel $solicitudDatoModel;
     protected DocumentoModel $documentoModel;
@@ -89,18 +92,25 @@ class TramiteCierreCalleController extends Controller
                 'rules' => 'required|min_length[10]|max_length[500]',
                 'label' => 'Descripción del evento',
             ],
+            // Documentos opcionales: si se adjuntan, se valida tamaño y tipo.
             'identificacion_oficial' => [
-                'rules' => 'uploaded[identificacion_oficial]|max_size[identificacion_oficial,10240]|mime_in[identificacion_oficial,application/pdf,image/jpeg,image/png]',
+                'rules' => 'max_size[identificacion_oficial,10240]|mime_in[identificacion_oficial,application/pdf,image/jpeg,image/png]',
                 'label' => 'Identificación oficial',
             ],
             'solicitud_escrita' => [
-                'rules' => 'uploaded[solicitud_escrita]|max_size[solicitud_escrita,10240]|mime_in[solicitud_escrita,application/pdf,image/jpeg,image/png]',
+                'rules' => 'max_size[solicitud_escrita,10240]|mime_in[solicitud_escrita,application/pdf,image/jpeg,image/png]',
                 'label' => 'Solicitud escrita',
             ],
         ];
+        foreach (self::DOCUMENTOS_OPCIONALES as $campo) {
+            $archivo = $request->getFile($campo);
+            if ($archivo === null || $archivo->getError() === UPLOAD_ERR_NO_FILE) {
+                unset($rules[$campo]);
+            }
+        }
 
         if (! $this->validate($rules)) {
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+            return redirect()->to('/portal/tramites/cierre-calle')->withInput()->with('errors', $this->validator->getErrors());
         }
 
         $monto = $this->tarifarioService->calcularMonto(self::TRAMITE, 'base') ?? 287.00;
@@ -115,7 +125,7 @@ class TramiteCierreCalleController extends Controller
         ]);
 
         if ($solicitudId === false) {
-            return redirect()->back()->withInput()->with('error', 'No fue posible crear la solicitud.');
+            return redirect()->to('/portal/tramites/cierre-calle')->withInput()->with('error', 'No fue posible crear la solicitud.');
         }
 
         $this->solicitudDatoModel->guardarDatos((int) $solicitudId, [
@@ -131,14 +141,41 @@ class TramiteCierreCalleController extends Controller
             'descripcion_evento' => $request->getPost('descripcion_evento'),
         ]);
 
-        foreach (['identificacion_oficial', 'solicitud_escrita'] as $campo) {
+        foreach (self::DOCUMENTOS_OPCIONALES as $campo) {
             $file = $request->getFile($campo);
-            if ($file === null || ! $file->isValid() || $this->uploader->subir($file, $campo, (int) $solicitudId, $userId) === null) {
-                return redirect()->back()->withInput()->with('error', 'No fue posible guardar el documento requerido.');
+            if ($file === null || $file->getError() === UPLOAD_ERR_NO_FILE) {
+                continue;
+            }
+            if (! $file->isValid() || $this->uploader->subir($file, $campo, (int) $solicitudId, $userId) === null) {
+                // No dejar una solicitud a medias: se retira junto con sus datos y documentos ya subidos.
+                $this->descartarSolicitud((int) $solicitudId);
+                $etiqueta = $campo === 'identificacion_oficial' ? 'la identificación oficial' : 'la solicitud escrita';
+                return redirect()->to('/portal/tramites/cierre-calle')->withInput()->with(
+                    'error',
+                    "No fue posible guardar {$etiqueta}. Verifica que sea PDF, JPG o PNG de máximo 10 MB e inténtalo de nuevo."
+                );
             }
         }
 
         return redirect()->to('/portal/tramites/cierre-calle/resumen/' . $folio);
+    }
+
+    /**
+     * Elimina una solicitud recién creada cuyo registro no pudo completarse,
+     * junto con sus datos, documentos ya subidos e historial.
+     */
+    private function descartarSolicitud(int $solicitudId): void
+    {
+        $rutas = array_map(static fn ($doc) => $doc->ruta_interna, $this->documentoModel->porSolicitud($solicitudId));
+        if ($rutas !== []) {
+            (new \App\Libraries\SupabaseStorage())->eliminar('documentos', $rutas);
+        }
+
+        $db = \Config\Database::connect();
+        foreach (['documentos', 'solicitud_datos', 'historial_estatus'] as $tabla) {
+            $db->table($tabla)->where('solicitud_id', $solicitudId)->delete();
+        }
+        $this->solicitudModel->delete($solicitudId);
     }
 
     public function resumen(string $folio)

@@ -182,7 +182,7 @@ class TramiteCargaDescargaController extends Controller
         }
 
         if (!$this->validate($rules)) {
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+            return redirect()->to('/portal/tramites/carga-descarga/formulario')->withInput()->with('errors', $this->validator->getErrors());
         }
 
         $folio = FolioGenerator::generar();
@@ -190,7 +190,7 @@ class TramiteCargaDescargaController extends Controller
         $monto = $this->tarifarioService->calcularMontoUrTtT07($tipoSolicitante, $request->getPost('periodo'), $numCamionesFinal);
 
         if ($monto === null) {
-            return redirect()->back()->withInput()->with('error', 'No hay tarifa configurada para esta combinación.');
+            return redirect()->to('/portal/tramites/carga-descarga/formulario')->withInput()->with('error', 'No hay tarifa configurada para esta combinación.');
         }
 
         $solicitudId = $this->solicitudModel->insert([
@@ -203,7 +203,7 @@ class TramiteCargaDescargaController extends Controller
         ]);
 
         if ($solicitudId === false) {
-            return redirect()->back()->withInput()->with('error', 'Error al crear la solicitud.');
+            return redirect()->to('/portal/tramites/carga-descarga/formulario')->withInput()->with('error', 'Error al crear la solicitud.');
         }
 
         $datosGuardar = [
@@ -224,7 +224,7 @@ class TramiteCargaDescargaController extends Controller
         if ($fileId !== null && $fileId->isValid()) {
             $doc = $this->uploader->subir($fileId, 'identificacion_oficial', (int)$solicitudId, $userId);
             if ($doc === null) {
-                return redirect()->back()->withInput()->with('error', 'Error al subir el documento: Identificación Oficial');
+                return redirect()->to('/portal/tramites/carga-descarga/formulario')->withInput()->with('error', 'Error al subir el documento: Identificación Oficial');
             }
         }
 
@@ -232,7 +232,7 @@ class TramiteCargaDescargaController extends Controller
         if ($fileTc !== null && $fileTc->isValid()) {
             $doc = $this->uploader->subir($fileTc, 'tarjeta_circulacion', (int)$solicitudId, $userId);
             if ($doc === null) {
-                return redirect()->back()->withInput()->with('error', 'Error al subir el documento: Tarjeta de Circulación');
+                return redirect()->to('/portal/tramites/carga-descarga/formulario')->withInput()->with('error', 'Error al subir el documento: Tarjeta de Circulación');
             }
         }
 
@@ -241,7 +241,7 @@ class TramiteCargaDescargaController extends Controller
             if ($fileCd !== null && $fileCd->isValid()) {
                 $doc = $this->uploader->subir($fileCd, 'documento_carga_descarga', (int)$solicitudId, $userId);
                 if ($doc === null) {
-                    return redirect()->back()->withInput()->with('error', 'Error al subir el documento: Documento Carga/Descarga');
+                    return redirect()->to('/portal/tramites/carga-descarga/formulario')->withInput()->with('error', 'Error al subir el documento: Documento Carga/Descarga');
                 }
             }
         }

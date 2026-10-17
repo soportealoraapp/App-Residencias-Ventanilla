@@ -85,7 +85,7 @@ class TramiteDespintadoController extends Controller
         ];
 
         if (! $this->validate($allRules)) {
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+            return redirect()->to('/portal/tramites/constancia-despintado')->withInput()->with('errors', $this->validator->getErrors());
         }
 
         $numTitulo = trim((string) $request->getPost('numero_titulo_concesion'));
@@ -107,7 +107,7 @@ class TramiteDespintadoController extends Controller
         ]);
 
         if (! $solicitudId) {
-            return redirect()->back()->withInput()->with('error', 'No fue posible registrar la solicitud de constancia de despintado.');
+            return redirect()->to('/portal/tramites/constancia-despintado')->withInput()->with('error', 'No fue posible registrar la solicitud de constancia de despintado.');
         }
 
         $datosGuardar = [
@@ -130,7 +130,7 @@ class TramiteDespintadoController extends Controller
             if ($file && ($file->isValid() || ENVIRONMENT === 'testing') && ! $file->hasMoved() && $file->getError() === UPLOAD_ERR_OK) {
                 $docObj = $this->uploader->subir($file, $tipoDoc, (int) $solicitudId, $userId);
                 if ($docObj === null) {
-                    return redirect()->back()->withInput()->with('error', "Error al procesar el archivo: {$inputKey}");
+                    return redirect()->to('/portal/tramites/constancia-despintado')->withInput()->with('error', "Error al procesar el archivo: {$inputKey}");
                 }
             }
         }
@@ -180,14 +180,14 @@ class TramiteDespintadoController extends Controller
         ];
 
         if (! $this->validate($rules)) {
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+            return redirect()->to('/portal/tramites/ur-02/solicitud/' . rawurlencode($folio) . '/cita')->withInput()->with('errors', $this->validator->getErrors());
         }
 
         $fechaCita = (string) $request->getPost('fecha_cita');
         // Standardize format
         $fechaTimestamp = strtotime($fechaCita);
         if ($fechaTimestamp === false) {
-            return redirect()->back()->withInput()->with('error', 'Fecha de cita inválida.');
+            return redirect()->to('/portal/tramites/ur-02/solicitud/' . rawurlencode($folio) . '/cita')->withInput()->with('error', 'Fecha de cita inválida.');
         }
         $fechaSql = date('Y-m-d H:i:s', $fechaTimestamp);
 

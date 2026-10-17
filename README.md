@@ -61,6 +61,8 @@ cp env .env
 ```
 *(Consulta el diccionario completo de variables en [DOCUMENTACION_GENERAL.md](./DOCUMENTACION_GENERAL.md#5-diccionario-de-variables-de-entorno-env)).*
 
+> **Documentos de los trámites:** si `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` están configurados, los archivos se suben a Supabase Storage. Si no (lo normal en local), se guardan en `writable/uploads/storage/` (carpeta privada, no accesible por web) y se descargan con enlaces firmados que caducan en 1 hora. Puedes cambiar la carpeta con `STORAGE_LOCAL_PATH`.
+
 ### 3. Migraciones y Base de Datos
 ```bash
 php spark migrate

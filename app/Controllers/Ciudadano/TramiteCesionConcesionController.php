@@ -190,19 +190,19 @@ class TramiteCesionConcesionController extends Controller
         }
 
         if (!$this->validate($rules)) {
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+            return redirect()->to('/portal/tramites/cesion-concesion')->withInput()->with('errors', $this->validator->getErrors());
         }
 
         $numeroTitulo = $request->getPost('numero_titulo_concesion');
         $concesion = $this->concesionModel->findByNumeroTitulo($numeroTitulo);
         if ($concesion === null || $concesion->estatus !== 'vigente') {
-            return redirect()->back()->withInput()->with('error', 'La concesión indicada no se encuentra vigente o no existe.');
+            return redirect()->to('/portal/tramites/cesion-concesion')->withInput()->with('error', 'La concesión indicada no se encuentra vigente o no existe.');
         }
 
         $folio = FolioGenerator::generar();
         $monto = $this->tarifarioService->calcularMontoUrTtT06();
         if ($monto === null) {
-            return redirect()->back()->withInput()->with('error', 'Tarifa no configurada para cesión.');
+            return redirect()->to('/portal/tramites/cesion-concesion')->withInput()->with('error', 'Tarifa no configurada para cesión.');
         }
 
         $solicitudId = $this->solicitudModel->insert([
@@ -215,7 +215,7 @@ class TramiteCesionConcesionController extends Controller
         ]);
 
         if ($solicitudId === false) {
-            return redirect()->back()->withInput()->with('error', 'Error al crear la solicitud.');
+            return redirect()->to('/portal/tramites/cesion-concesion')->withInput()->with('error', 'Error al crear la solicitud.');
         }
 
         $datosGuardar = [
@@ -233,7 +233,7 @@ class TramiteCesionConcesionController extends Controller
         if ($fileTitulo !== null && $fileTitulo->isValid()) {
             $doc = $this->uploader->subir($fileTitulo, 'titulo_concesion_original', (int)$solicitudId, $userId);
             if ($doc === null) {
-                return redirect()->back()->withInput()->with('error', 'Error al subir el documento: Título concesión original.');
+                return redirect()->to('/portal/tramites/cesion-concesion')->withInput()->with('error', 'Error al subir el documento: Título concesión original.');
             }
         }
 
@@ -243,7 +243,7 @@ class TramiteCesionConcesionController extends Controller
                 if ($docFile !== null && $docFile->isValid() && !$docFile->hasMoved()) {
                     $doc = $this->uploader->subir($docFile, 'documentos_capacidad', (int)$solicitudId, $userId);
                     if ($doc === null) {
-                        return redirect()->back()->withInput()->with('error', 'Error al subir los documentos de capacidad legal.');
+                        return redirect()->to('/portal/tramites/cesion-concesion')->withInput()->with('error', 'Error al subir los documentos de capacidad legal.');
                     }
                 }
             }
@@ -254,7 +254,7 @@ class TramiteCesionConcesionController extends Controller
             if ($f !== null && $f->isValid()) {
                 $doc = $this->uploader->subir($f, $campo, (int)$solicitudId, $userId);
                 if ($doc === null) {
-                    return redirect()->back()->withInput()->with('error', 'Error al subir el documento: ' . $nombre . '.');
+                    return redirect()->to('/portal/tramites/cesion-concesion')->withInput()->with('error', 'Error al subir el documento: ' . $nombre . '.');
                 }
             }
         }

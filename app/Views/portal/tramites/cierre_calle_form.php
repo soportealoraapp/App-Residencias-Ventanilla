@@ -140,9 +140,9 @@
                         <div class="col-md-6">
                             <div class="p-3 border rounded-3 h-100 bg-light bg-opacity-25">
                                 <label for="identificacion_oficial" class="form-label fw-semibold">
-                                    <i class="bi bi-person-badge text-primary me-1"></i>1. Identificación Oficial <span class="text-danger">*</span>
+                                    <i class="bi bi-person-badge text-primary me-1"></i>1. Identificación Oficial <span class="text-muted fw-normal small">(opcional)</span>
                                 </label>
-                                <input id="identificacion_oficial" type="file" class="form-control" name="identificacion_oficial" accept="application/pdf,image/jpeg,image/png" required>
+                                <input id="identificacion_oficial" type="file" class="form-control" name="identificacion_oficial" accept="application/pdf,image/jpeg,image/png">
                                 <div class="form-text small">INE, pasaporte o cédula profesional del solicitante.</div>
                                 <?= validation_show_error('identificacion_oficial') ?>
                             </div>
@@ -150,9 +150,9 @@
                         <div class="col-md-6">
                             <div class="p-3 border rounded-3 h-100 bg-light bg-opacity-25">
                                 <label for="solicitud_escrita" class="form-label fw-semibold">
-                                    <i class="bi bi-file-text text-primary me-1"></i>2. Solicitud Escrita / Croquis <span class="text-danger">*</span>
+                                    <i class="bi bi-file-text text-primary me-1"></i>2. Solicitud Escrita / Croquis <span class="text-muted fw-normal small">(opcional)</span>
                                 </label>
-                                <input id="solicitud_escrita" type="file" class="form-control" name="solicitud_escrita" accept="application/pdf,image/jpeg,image/png" required>
+                                <input id="solicitud_escrita" type="file" class="form-control" name="solicitud_escrita" accept="application/pdf,image/jpeg,image/png">
                                 <div class="form-text small">Escrito firmado y/o croquis de ubicación del tramo.</div>
                                 <?= validation_show_error('solicitud_escrita') ?>
                             </div>

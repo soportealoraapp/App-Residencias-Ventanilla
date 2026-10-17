@@ -57,7 +57,7 @@ class TramiteConcesionTransporteController extends Controller
         $convocatoria = $this->convocatoriaModel->vigente($convocatoriaId);
 
         if ($convocatoria === null) {
-            return redirect()->back()->withInput()->with('error', 'No fue posible registrar la solicitud: la convocatoria especificada no está vigente o ha expirado.');
+            return redirect()->to('/portal/tramites/concesion-transporte')->withInput()->with('error', 'No fue posible registrar la solicitud: la convocatoria especificada no está vigente o ha expirado.');
         }
 
         $allRules = [
@@ -120,7 +120,7 @@ class TramiteConcesionTransporteController extends Controller
         ];
 
         if (! $this->validate($allRules)) {
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+            return redirect()->to('/portal/tramites/concesion-transporte')->withInput()->with('errors', $this->validator->getErrors());
         }
 
         $monto = $this->tarifarioService->calcularMonto('UR-TT-T-01', 'base') ?? 9055.20;
@@ -138,7 +138,7 @@ class TramiteConcesionTransporteController extends Controller
         ]);
 
         if (! $solicitudId) {
-            return redirect()->back()->withInput()->with('error', 'Error al registrar la solicitud de concesión.');
+            return redirect()->to('/portal/tramites/concesion-transporte')->withInput()->with('error', 'Error al registrar la solicitud de concesión.');
         }
 
         $datosGuardar = [
@@ -168,7 +168,7 @@ class TramiteConcesionTransporteController extends Controller
             if ($file && ($file->isValid() || ENVIRONMENT === 'testing') && ! $file->hasMoved() && $file->getError() === UPLOAD_ERR_OK) {
                 $docObj = $this->uploader->subir($file, $tipoDoc, (int) $solicitudId, $userId);
                 if ($docObj === null) {
-                    return redirect()->back()->withInput()->with('error', "Error al procesar el archivo: {$inputKey}");
+                    return redirect()->to('/portal/tramites/concesion-transporte')->withInput()->with('error', "Error al procesar el archivo: {$inputKey}");
                 }
             }
         }

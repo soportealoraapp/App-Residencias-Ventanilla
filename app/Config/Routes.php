@@ -44,7 +44,7 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->get('dashboard', 'Admin\\AdminController::dashboard', ['as' => 'admin.dashboard']);
         $routes->get('auditoria', 'Admin\\AdminController::auditoria', ['as' => 'admin.auditoria']);
         $routes->get('solicitudes', 'Admin\\AdminController::listaSolicitudes', ['as' => 'admin.solicitudes']);
-        $routes->get('solicitudes/(:any)', 'Admin\\AdminController::verSolicitud/$1', ['as' => 'admin.solicitud.ver']);
+        $routes->get('solicitudes/(:segment)', 'Admin\\AdminController::verSolicitud/$1', ['as' => 'admin.solicitud.ver']);
         $routes->post('solicitudes/cambiar-estatus/(:num)', 'Admin\\AdminController::cambiarEstatus/$1');
         $routes->post('solicitudes/ur04/evaluacion/(:num)', 'Admin\\AdminController::guardarEvaluacionUr04/$1');
         $routes->post('solicitudes/ur05/validacion/(:num)', 'Admin\\AdminController::validarCierreCalleUr05/$1');
@@ -98,6 +98,9 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     });
 });
 
+// Archivos del almacenamiento local (sin Supabase), servidos con URL firmada.
+$routes->get('archivos/(:segment)', 'ArchivosLocalesController::servir/$1');
+
 $routes->get('/', 'Home::index');
 $routes->get('login', 'AuthController::login');
 $routes->get('logout', 'AuthController::logout');
@@ -108,8 +111,8 @@ $routes->group('portal', ['filter' => 'auth'], static function ($routes) {
     $routes->get('dashboard', 'Ciudadano\PortalController::dashboard', ['as' => 'portal.dashboard']);
     $routes->get('tramites', 'Ciudadano\PortalController::tramites', ['as' => 'portal.tramites']);
     $routes->get('mis-solicitudes', 'Ciudadano\PortalController::misSolicitudes', ['as' => 'portal.mis_solicitudes']);
-    $routes->get('solicitud/(:any)', 'Ciudadano\PortalController::verSolicitud/$1', ['as' => 'portal.ver_solicitud']);
-    $routes->get('solicitud/(:any)/descargar/(:num)', 'Ciudadano\PortalController::descargarDocumento/$1/$2', ['as' => 'portal.solicitud.descargar']);
+    $routes->get('solicitud/(:segment)', 'Ciudadano\PortalController::verSolicitud/$1', ['as' => 'portal.ver_solicitud']);
+    $routes->get('solicitud/(:segment)/descargar/(:num)', 'Ciudadano\PortalController::descargarDocumento/$1/$2', ['as' => 'portal.solicitud.descargar']);
 
     $routes->get('mi-perfil', 'Ciudadano\PortalController::miPerfil', ['as' => 'portal.mi_perfil']);
     $routes->post('mi-perfil', 'Ciudadano\PortalController::guardarPerfil');

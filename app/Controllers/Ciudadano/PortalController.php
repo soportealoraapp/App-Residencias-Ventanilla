@@ -181,7 +181,7 @@ class PortalController extends Controller
         ];
 
         if (! $this->validate($rules)) {
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+            return redirect()->to('/portal/mi-perfil')->withInput()->with('errors', $this->validator->getErrors());
         }
 
         $userModel = new UserModel();
@@ -195,7 +195,7 @@ class PortalController extends Controller
         if ($email !== $actual->email) {
             $existe = $userModel->where('email', $email)->where('id !=', $userId)->first();
             if ($existe !== null) {
-                return redirect()->back()->withInput()->with('errors', ['email' => 'Este correo ya está registrado por otro usuario.']);
+                return redirect()->to('/portal/mi-perfil')->withInput()->with('errors', ['email' => 'Este correo ya está registrado por otro usuario.']);
             }
         }
 
@@ -203,7 +203,7 @@ class PortalController extends Controller
         if ($curp !== $actual->curp) {
             $existeCurp = $userModel->where('curp', $curp)->where('id !=', $userId)->first();
             if ($existeCurp !== null) {
-                return redirect()->back()->withInput()->with('errors', ['curp' => 'Esta CURP ya está registrada por otro usuario.']);
+                return redirect()->to('/portal/mi-perfil')->withInput()->with('errors', ['curp' => 'Esta CURP ya está registrada por otro usuario.']);
             }
         }
 
