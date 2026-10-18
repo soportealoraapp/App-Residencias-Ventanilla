@@ -27,7 +27,7 @@ $pager = $__view['pager'] ?? null;
 <?= view('layouts/_ayuda', [
     'tono'   => 'info',
     'titulo' => 'Cuentas de ciudadano y personal',
-    'texto'  => 'El registro en línea está deshabilitado. Las cuentas de ciudadano se crean aquí cuando la persona acude a ventanilla con su identificación oficial. Las <strong>bajas definitivas</strong> son exclusivas del administrador.',
+    'texto'  => 'El ciudadano puede <strong>autorregistrarse</strong> en el portal; aquí la ventanilla también crea o edita cuentas para la atención presencial con identificación oficial. Las <strong>cuentas de agentes de tránsito</strong> y las <strong>bajas definitivas</strong> son exclusivas del administrador.',
 ]) ?>
 
 <div class="row mb-3 g-2">

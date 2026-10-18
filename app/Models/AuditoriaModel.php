@@ -96,6 +96,41 @@ class AuditoriaModel extends Model
         return $total;
     }
 
+    /**
+     * Cuenta registros de ciudadanos creados desde una IP en los últimos minutos.
+     * Frena el alta automatizada masiva (spam) apoyándose en la BD, ya que la
+     * caché es efímera en entornos serverless como Vercel.
+     */
+    public function registrosPorIp(string $ip, int $minutos = 60): int
+    {
+        if ($ip === '') {
+            return 0;
+        }
+
+        $desde = date('Y-m-d H:i:s', time() - ($minutos * 60));
+
+        $filas = $this->select('detalle')
+            ->where('accion', 'registro_ciudadano')
+            ->where('fecha >=', $desde)
+            ->orderBy('fecha', 'DESC')
+            ->limit(1000)
+            ->get()
+            ->getResult();
+
+        $total = 0;
+        foreach ($filas as $fila) {
+            $detalle = $fila->detalle ?? null;
+            if (is_string($detalle)) {
+                $detalle = json_decode($detalle, true);
+            }
+            if (is_array($detalle) && ($detalle['ip'] ?? null) === $ip) {
+                $total++;
+            }
+        }
+
+        return $total;
+    }
+
     public function buscar(array $filtros = []): array
     {
         if (! empty($filtros['entidad'])) {

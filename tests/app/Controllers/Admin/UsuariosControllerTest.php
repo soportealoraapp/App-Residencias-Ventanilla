@@ -65,10 +65,11 @@ class UsuariosControllerTest extends DatabaseTestCase
         ];
     }
 
-    public function testRegistroPublicoYaNoExiste(): void
+    public function testRegistroPublicoCiudadanoExiste(): void
     {
-        $this->assertFalse(in_array('auth/register', array_keys(service('routes')->getRoutes('GET')), true));
-        $this->assertFalse(in_array('auth/attempt-register', array_keys(service('routes')->getRoutes('POST')), true));
+        // El ciudadano SÍ puede autorregistrarse (solo los agentes de tránsito son de alta admin).
+        $this->assertTrue(in_array('auth/register', array_keys(service('routes')->getRoutes('GET')), true));
+        $this->assertTrue(in_array('auth/attempt-register', array_keys(service('routes')->getRoutes('POST')), true));
     }
 
     public function testOperadorCreaCiudadanoConCurpYRfcNormalizados(): void

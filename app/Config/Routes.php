@@ -14,6 +14,9 @@ $routes->setAutoRoute(false);
 
 $routes->get('auth/login', 'AuthController::login', ['as' => 'login']);
 $routes->post('auth/attempt-login', 'AuthController::attemptLogin');
+// Registro público SOLO de ciudadanos. Los agentes de tránsito los crea el admin.
+$routes->get('auth/register', 'AuthController::register', ['as' => 'register']);
+$routes->post('auth/attempt-register', 'AuthController::attemptRegister');
 $routes->get('auth/logout', 'AuthController::logout', ['as' => 'logout']);
 $routes->get('auth/forgot', 'AuthController::forgot');
 $routes->post('auth/attempt-forgot', 'AuthController::attemptForgot');
@@ -80,7 +83,7 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->get('app-transito/boletas/editar/(:num)', 'Admin\\AppTransitoController::editarBoleta/$1');
         $routes->post('app-transito/boletas/actualizar/(:num)', 'Admin\\AppTransitoController::actualizarBoleta/$1');
 
-        // Cuentas del portal: el registro público se retiró, la ventanilla da de alta a los ciudadanos.
+        // Cuentas del portal: el ciudadano puede autorregistrarse; la ventanilla también las gestiona aquí.
         $routes->get('usuarios', 'Admin\\UsuariosController::index');
         $routes->get('usuarios/nuevo', 'Admin\\UsuariosController::formNuevo');
         $routes->post('usuarios/guardar', 'Admin\\UsuariosController::guardar');
@@ -103,6 +106,7 @@ $routes->get('archivos/(:segment)', 'ArchivosLocalesController::servir/$1');
 
 $routes->get('/', 'Home::index');
 $routes->get('login', 'AuthController::login');
+$routes->get('register', 'AuthController::register');
 $routes->get('logout', 'AuthController::logout');
 
 

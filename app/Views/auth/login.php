@@ -79,7 +79,7 @@
 
     <div class="mt-4 pt-3 border-top text-center small">
         <p class="mb-2 text-muted">
-            ¿No tienes cuenta? Acude a la <strong>ventanilla de Tránsito y Transporte</strong> con tu identificación oficial para que te demos de alta.
+            ¿No tienes cuenta? <a href="/auth/register" class="fw-semibold text-success text-decoration-none">Crea tu cuenta de ciudadano</a>
         </p>
         <p class="mb-0">
             <a href="/" class="text-muted text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Volver al inicio</a>

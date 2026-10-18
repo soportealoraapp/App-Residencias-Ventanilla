@@ -11,10 +11,12 @@ use CodeIgniter\HTTP\Files\UploadedFile;
 /**
  * Alta, edición y baja de cuentas del portal desde la ventanilla.
  *
- * El registro público fue retirado: el ciudadano acude de forma presencial y
- * el personal de ventanilla (operador o administrador) crea su cuenta aquí.
- * El operador de ventanilla solo administra cuentas de ciudadano; el
- * administrador puede además asignar roles internos y eliminar cuentas.
+ * El ciudadano puede autorregistrarse en /auth/register, y la ventanilla
+ * (operador o administrador) también puede crear o editar su cuenta aquí para
+ * la atención presencial. El operador de ventanilla solo administra cuentas de
+ * ciudadano; el administrador puede además asignar roles internos y eliminar
+ * cuentas. Las cuentas de AGENTES DE TRÁNSITO no se autorregistran: se dan de
+ * alta exclusivamente desde el panel (App Tránsito) por el administrador.
  */
 class UsuariosController extends Controller
 {

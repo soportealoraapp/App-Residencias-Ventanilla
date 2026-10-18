@@ -117,6 +117,124 @@ class AuthController extends Controller
         return redirect()->to('/portal/dashboard');
     }
 
+    public function register()
+    {
+        return view('auth/register');
+    }
+
+    public function attemptRegister()
+    {
+        $rules = [
+            'curp'     => ['rules' => 'required|exact_length[18]|regex_match[/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]{2}\d$/]', 'label' => 'CURP'],
+            'nombre'   => ['rules' => 'required|min_length[2]|max_length[80]', 'label' => 'Nombre(s)'],
+            'apellido' => ['rules' => 'required|min_length[2]|max_length[120]', 'label' => 'Apellido(s)'],
+            'telefono' => ['rules' => 'required|min_length[7]|max_length[20]', 'label' => 'Teléfono'],
+            'estado'   => ['rules' => 'required|min_length[2]|max_length[60]', 'label' => 'Estado'],
+            'ciudad'   => ['rules' => 'required|min_length[2]|max_length[60]', 'label' => 'Ciudad / Municipio'],
+            'domicilio' => ['rules' => 'required|min_length[5]|max_length[200]', 'label' => 'Dirección'],
+            'email'    => ['rules' => 'required|valid_email|max_length[180]|is_unique[users.email]', 'label' => 'Correo electrónico'],
+            'username' => ['rules' => 'required|alpha_numeric|min_length[5]|max_length[40]|is_unique[users.username]', 'label' => 'Nombre de usuario'],
+            'password' => ['rules' => 'required|min_length[8]|max_length[100]|regex_match[/^(?=.*[A-Za-z])(?=.*\d).+$/', 'label' => 'Contraseña'],
+            'password_confirm' => ['rules' => 'required|matches[password]', 'label' => 'Confirmar contraseña'],
+            'rfc'      => ['rules' => 'permit_empty|exact_length[13]|regex_match[/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/', 'label' => 'RFC'],
+            'acepto_terminos' => ['rules' => 'required', 'label' => 'Términos y condiciones'],
+            // INE opcional: solo se valida si la persona decide adjuntarla ahora.
+            'ine_frente'  => ['rules' => 'permit_empty|mime_in[ine_frente,image/jpeg,image/png]|max_size[ine_frente,5120]', 'label' => 'INE (frente)'],
+            'ine_reverso' => ['rules' => 'permit_empty|mime_in[ine_reverso,image/jpeg,image/png]|max_size[ine_reverso,5120]', 'label' => 'INE (reverso)'],
+        ];
+
+        if (! $this->validate($rules)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        $ip = $this->request->getIPAddress();
+
+        // Anti abuso: frena el alta automatizada masiva desde una misma IP.
+        if (ENVIRONMENT !== 'testing' && $this->auditoriaModel->registrosPorIp($ip) >= 5) {
+            return redirect()->back()->withInput()->with('errors', [
+                'registro' => 'Has enviado demasiados registros seguidos. Espera un momento o acude a la ventanilla.',
+            ]);
+        }
+
+        $nombre   = trim((string) $this->request->getPost('nombre'));
+        $apellido = trim((string) $this->request->getPost('apellido'));
+
+        $data = [
+            'nombre_completo' => $nombre . ' ' . $apellido,
+            'curp'            => strtoupper((string) $this->request->getPost('curp')),
+            'apellido'        => $apellido,
+            'email'           => $this->request->getPost('email'),
+            'username'        => $this->request->getPost('username'),
+            'password_hash'   => password_hash((string) $this->request->getPost('password'), PASSWORD_DEFAULT),
+            'telefono'        => $this->request->getPost('telefono'),
+            'estado'          => $this->request->getPost('estado'),
+            'ciudad'          => $this->request->getPost('ciudad'),
+            'domicilio'       => $this->request->getPost('domicilio'),
+            'rfc'             => $this->request->getPost('rfc') !== '' ? strtoupper((string) $this->request->getPost('rfc')) : null,
+            'activo'          => 1,
+        ];
+
+        if (! $this->userModel->insert($data)) {
+            return redirect()->back()->withInput()->with('errors', ['registro' => 'No fue posible crear tu cuenta. Intenta de nuevo.']);
+        }
+
+        $userId = (int) $this->userModel->getInsertID();
+        if ($userId <= 0) {
+            return redirect()->back()->withInput()->with('errors', ['registro' => 'No fue posible crear tu cuenta. Intenta de nuevo.']);
+        }
+
+        // El autorregistro SOLO produce cuentas de ciudadano; nunca de agente,
+        // operador o administrador (esos los da de alta el personal).
+        if ($this->userModel->asignarRol($userId, 'ciudadano')) {
+            $this->auditoriaModel->registrar('users', $userId, 'asignar_rol', null, ['rol' => 'ciudadano']);
+        }
+
+        $this->auditoriaModel->registrar('users', $userId, 'registro_ciudadano', null, [
+            'username'    => $data['username'],
+            'rol_inicial' => 'ciudadano',
+            'ip'          => $ip,
+        ]);
+
+        $this->guardarIneOpcional($userId);
+
+        return redirect()->to('/auth/login')->with('message', 'Cuenta creada con éxito. Ya puedes iniciar sesión.');
+    }
+
+    /**
+     * Guarda la INE solo si el ciudadano la adjuntó durante el registro.
+     */
+    protected function guardarIneOpcional(int $userId): void
+    {
+        $guardado = [];
+
+        foreach (['ine_frente', 'ine_reverso'] as $campo) {
+            $archivo = $this->request->getFile($campo);
+            if ($archivo === null || ! $archivo->isValid()) {
+                continue;
+            }
+
+            $ext = strtolower($archivo->getExtension()) === 'jpeg' ? 'jpg' : strtolower($archivo->getExtension());
+            $nombreArchivo = bin2hex(random_bytes(16)) . '.' . $ext;
+            $contenido = @file_get_contents($archivo->getTempName());
+            if ($contenido === false) {
+                continue;
+            }
+
+            $destino = $userId . '/' . $nombreArchivo;
+            try {
+                $storage = new \App\Libraries\SupabaseStorage();
+                $storage->subir('ine', $destino, $contenido, $archivo->getMimeType() ?: 'image/jpeg');
+                $guardado[$campo] = $destino;
+            } catch (\Throwable $e) {
+                log_message('error', 'No se pudo guardar la INE durante el registro: ' . $e->getMessage());
+            }
+        }
+
+        if ($guardado !== []) {
+            $this->userModel->update($userId, $guardado);
+        }
+    }
+
     public function logout()
     {
         $userId = (int) Services::session()->get('user_id');

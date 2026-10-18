@@ -41,8 +41,11 @@
                                 <i class="bi bi-building fs-2"></i>
                             </div>
                             <h3 class="card-title h4 mb-2">¿No tienes cuenta?</h3>
-                            <p class="text-muted small mb-0">Las cuentas de ciudadano se crean de forma presencial. Acude a la ventanilla de Tránsito y Transporte con tu identificación oficial (INE) y comprobante de domicilio; el personal te entregará tu usuario y contraseña.</p>
+                            <p class="text-muted small mb-0">Crea tu cuenta de ciudadano para iniciar tus trámites en línea. También puedes acudir a la ventanilla de Tránsito y Transporte con tu INE y comprobante de domicilio si prefieres atención presencial.</p>
                         </div>
+                        <a href="/auth/register" class="btn btn-primary btn-lg w-100 shadow-sm">
+                            <i class="bi bi-person-plus me-2"></i>Crear mi cuenta
+                        </a>
                     </div>
                 </div>
             </div>
