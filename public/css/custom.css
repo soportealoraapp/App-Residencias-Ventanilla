@@ -1548,6 +1548,11 @@ main.container .card {
   overflow: hidden;
   border-radius: var(--radius-lg);
 }
+.inicio-hero-logo {
+  height: 96px;
+  max-width: 100%;
+  width: auto;
+}
 .inicio-hero::before {
   content: "";
   position: absolute;
@@ -1570,6 +1575,40 @@ main.container .card {
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
+}
+
+/* Adaptación móvil de la portada:
+   - La foto horizontal se recorta mal en pantallas verticales, así que se
+     ancla al centro-superior para mantener el sujeto visible.
+   - Se reduce el desenfoque (costoso en gama baja) y se sube la opacidad del
+     velo para asegurar contraste del texto sin depender del blur.
+   - Logo, separación e interlineado se escalan para que quepa sin scroll. */
+@media (max-width: 767.98px) {
+  .inicio-hero-logo {
+    height: 60px;
+  }
+  .inicio-hero::before {
+    /* Retrato: prioriza la franja superior-centro de la fotografía */
+    background-position: center 35%;
+    background-size: cover;
+  }
+  .inicio-hero::after {
+    /* Velo más presente y blur ligero: legible y fluido en móviles */
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.78) 50%, rgba(255, 255, 255, 0.88));
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+  .inicio-hero .tramite-card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .inicio-hero .card-body {
+    padding: 1.15rem !important;
+  }
+  .inicio-hero .badge {
+    font-size: 0.72rem;
+    padding: 0.4em 0.75em !important;
+  }
 }
 
 /* Interruptores de la pantalla Permisos del Operador */

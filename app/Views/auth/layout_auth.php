@@ -11,6 +11,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
     <!-- Custom Mobile-First Stylesheet -->
+    <link rel="icon" type="image/webp" href="/logo-uri.webp">
+    <link rel="apple-touch-icon" href="/logo-uri.webp">
     <link href="/css/custom.css" rel="stylesheet">
 </head>
 <body>
