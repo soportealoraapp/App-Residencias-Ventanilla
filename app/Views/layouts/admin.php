@@ -30,7 +30,31 @@
         <?php
             $qTramite = $_GET['tramite'] ?? '';
             $isAllSolicitudes = uri_string() === 'admin/solicitudes' && $qTramite === '';
+
+            // Contexto de rol: separa con claridad Administrador vs Ventanilla.
+            $rolesUsuario = (array) (session('roles') ?? []);
+            $esAdministrador = in_array('administrador', $rolesUsuario, true);
+            $esVentanilla = in_array('operador_ventanilla', $rolesUsuario, true);
+            if ($esAdministrador) {
+                $rolChip = 'rol-admin';
+                $rolNombre = 'Administrador';
+                $rolAlcance = 'Acceso completo: operación, catálogos y configuración.';
+            } elseif ($esVentanilla) {
+                $rolChip = 'rol-ventanilla';
+                $rolNombre = 'Ventanilla';
+                $rolAlcance = 'Operación diaria. Las bajas definitivas son exclusivas del administrador.';
+            } else {
+                $rolChip = 'rol-ciudadano';
+                $rolNombre = implode(', ', $rolesUsuario) ?: 'Usuario';
+                $rolAlcance = 'Sesión autenticada del panel.';
+            }
         ?>
+
+        <div class="sidebar-alcance">
+            <span class="alcance-nombre rol-chip <?= $rolChip ?>"><?= esc($rolNombre) ?></span>
+            <p class="alcance-detalle"><?= esc($rolAlcance) ?></p>
+        </div>
+
         <div class="sidebar-section-title">Operaciones</div>
         <a href="/admin/dashboard" class="sidebar-link <?= uri_string() === 'admin/dashboard' || uri_string() === 'admin' ? 'active' : '' ?>">
             <i class="bi bi-speedometer2 me-2 sidebar-link-icon"></i>
@@ -116,7 +140,7 @@
         <div class="sidebar-section-title mt-3">Sesión</div>
         <div class="px-3 py-2 text-white-50 small sidebar-user-info">
             <div class="fw-semibold text-white text-truncate sidebar-text"><?= esc(session('nombre_completo') ?? session('username') ?? 'Usuario') ?></div>
-            <div class="badge bg-secondary-subtle text-white mt-1 sidebar-text"><?= implode(', ', (array)(session('roles') ?? [])) ?></div>
+            <div class="mt-1 sidebar-text"><span class="rol-chip <?= $rolChip ?>"><?= esc($rolNombre) ?></span></div>
         </div>
         <a href="/auth/logout" class="sidebar-link text-danger mt-2">
             <i class="bi bi-box-arrow-right me-2 sidebar-link-icon"></i>
@@ -134,9 +158,14 @@
                 <h1 class="h5 mb-0 text-truncate"><?= $this->renderSection('pageTitle') ?></h1>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-primary-subtle text-primary d-none d-sm-inline-block">
-                    <?= implode(', ', (array)(session('roles') ?? [])) ?>
+                <span class="rol-chip <?= $rolChip ?> d-none d-sm-inline-flex" data-bs-toggle="tooltip" data-bs-placement="bottom" title="<?= esc($rolAlcance) ?>">
+                    <?= esc($rolNombre) ?>
                 </span>
+                <button type="button" class="btn-ayuda-rol" data-bs-toggle="tooltip" data-bs-placement="bottom"
+                        title="Panel de <?= esc($rolNombre) ?>. Pasa el cursor sobre los iconos &#63; para ver ayuda de cada sección.">
+                    <i class="bi bi-question-lg" aria-hidden="true"></i>
+                    <span class="visually-hidden">Ayuda</span>
+                </button>
                 <a href="/auth/logout" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center" title="Cerrar sesión">
                     <i class="bi bi-box-arrow-right"></i>
                     <span class="d-none d-md-inline ms-1">Salir</span>

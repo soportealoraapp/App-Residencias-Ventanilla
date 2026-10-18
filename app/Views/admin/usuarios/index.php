@@ -2,10 +2,11 @@
 <?= $this->section('pageTitle') ?>Usuarios y ciudadanos<?= $this->endSection() ?>
 <?= $this->section('content') ?>
 
-<div class="alert alert-info small d-flex align-items-start">
-    <i class="bi bi-info-circle me-2 mt-1"></i>
-    <div>El registro en línea está deshabilitado. Las cuentas de ciudadano se crean aquí cuando la persona acude a ventanilla con su identificación oficial.</div>
-</div>
+<?= view('layouts/_ayuda', [
+    'tono'   => 'info',
+    'titulo' => 'Cuentas de ciudadano y personal',
+    'texto'  => 'El registro en línea está deshabilitado. Las cuentas de ciudadano se crean aquí cuando la persona acude a ventanilla con su identificación oficial. Las <strong>bajas definitivas</strong> son exclusivas del administrador.',
+]) ?>
 
 <div class="row mb-3 g-2">
     <div class="col-lg-9">
@@ -62,7 +63,15 @@
                 </thead>
                 <tbody>
                 <?php if (empty($usuarios)): ?>
-                    <tr><td colspan="8" class="text-center text-muted py-4">No hay cuentas que coincidan con la búsqueda.</td></tr>
+                    <tr>
+                        <td colspan="8">
+                            <div class="empty-state">
+                                <i class="bi bi-person-search" aria-hidden="true"></i>
+                                <div class="empty-titulo">Sin resultados</div>
+                                <div class="empty-texto">No hay cuentas que coincidan con la búsqueda. Ajusta los filtros o crea una nueva cuenta.</div>
+                            </div>
+                        </td>
+                    </tr>
                 <?php else: ?>
                     <?php foreach ($usuarios as $u): ?>
                         <?php

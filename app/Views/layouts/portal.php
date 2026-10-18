@@ -47,7 +47,13 @@
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                             <li><h6 class="dropdown-header"><i class="bi bi-person-badge me-1"></i> <?= esc(session('username')) ?></h6></li>
-                            <li><span class="dropdown-item-text small text-muted">Rol: <?= implode(', ', session('roles') ?? []) ?></span></li>
+                            <?php
+                                $__rolesPortal = (array) (session('roles') ?? []);
+                                $__esCiudadano = in_array('ciudadano', $__rolesPortal, true);
+                                $__chip = $__esCiudadano ? 'rol-ciudadano' : (in_array('administrador', $__rolesPortal, true) ? 'rol-admin' : (in_array('operador_ventanilla', $__rolesPortal, true) ? 'rol-ventanilla' : 'rol-ciudadano'));
+                                $__rolEtiqueta = $__esCiudadano ? 'Ciudadano' : implode(', ', $__rolesPortal ?: ['Usuario']);
+                            ?>
+                            <li class="px-3 pb-1"><span class="rol-chip <?= $__chip ?>"><?= esc($__rolEtiqueta) ?></span></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="/portal/mi-perfil"><i class="bi bi-person-gear me-2"></i>Mi Perfil</a></li>
                             <li><hr class="dropdown-divider"></li>

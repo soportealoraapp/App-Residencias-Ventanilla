@@ -2,6 +2,12 @@
 <?= $this->section('pageTitle') ?>Catálogo de Concesiones<?= $this->endSection() ?>
 <?= $this->section('content') ?>
 
+<?= view('layouts/_ayuda', [
+    'tono'   => 'info',
+    'titulo' => 'Concesiones de transporte',
+    'texto'  => 'Consulta el padrón de concesiones: ruta, vigencia y estado. Desde aquí se da seguimiento a las concesiones vigentes, vencidas y en transmisión.',
+]) ?>
+
 <?php
 $filtros = isset($filtros) && is_array($filtros) ? $filtros : ['q' => '', 'estatus' => ''];
 $filtros['q'] = $filtros['q'] ?? '';

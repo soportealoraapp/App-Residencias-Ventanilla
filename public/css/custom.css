@@ -1297,3 +1297,242 @@ body.sidebar-open-no-scroll {
 .form-control.text-uppercase::placeholder {
   text-transform: none;
 }
+
+/* ==========================================================================
+   CAPA UX · tooltips, cuadros de ayuda, animaciones suaves, roles
+   (mejora transversal: panel admin + portal, los 3 roles)
+   ========================================================================== */
+
+/* --- Tooltips y popovers con tema propio (oscuro, minimalista) --- */
+.tooltip .tooltip-inner {
+  background: rgba(15, 23, 42, 0.96);
+  color: #f1f5f9;
+  font-weight: 500;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.22);
+  max-width: 280px;
+  text-align: left;
+}
+.tooltip .tooltip-arrow::before {
+  border-top-color: rgba(15, 23, 42, 0.96);
+  border-bottom-color: rgba(15, 23, 42, 0.96);
+  border-left-color: rgba(15, 23, 42, 0.96);
+  border-right-color: rgba(15, 23, 42, 0.96);
+}
+.popover {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  font-size: 0.85rem;
+}
+.popover-header {
+  font-weight: 700;
+  background: #f8fafc;
+  border-bottom-color: var(--border-color);
+  border-top-left-radius: 11px;
+  border-top-right-radius: 11px;
+}
+
+/* --- Icono de ayuda puntero ("?") que lleva el tooltip --- */
+.ayuda-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: help;
+  vertical-align: middle;
+  margin-left: 0.35rem;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+.ayuda-icon:hover {
+  background: var(--primary-color);
+  color: #ffffff;
+  transform: scale(1.08);
+}
+
+/* --- Cuadros de ayuda / contexto (bajo ruido visual) --- */
+.ayuda {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  border-left-width: 4px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+.ayuda .ayuda-icono {
+  flex-shrink: 0;
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+.ayuda .ayuda-cuerpo { min-width: 0; }
+.ayuda .ayuda-titulo {
+  display: block;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.1rem;
+}
+.ayuda p:last-child, .ayuda ul:last-child { margin-bottom: 0; }
+.ayuda-info   { border-left-color: var(--info-color);    background: #f1f9ff; }
+.ayuda-info   .ayuda-icono { color: var(--info-color); }
+.ayuda-ok     { border-left-color: var(--success-color); background: #f2fbf7; }
+.ayuda-ok     .ayuda-icono { color: var(--success-color); }
+.ayuda-alerta { border-left-color: var(--warning-color); background: #fffaf0; }
+.ayuda-alerta .ayuda-icono { color: var(--warning-color); }
+.ayuda-peligro{ border-left-color: var(--danger-color);  background: #fff5f5; }
+.ayuda-peligro .ayuda-icono { color: var(--danger-color); }
+
+/* --- Texto de ayuda bajo campos de formulario --- */
+.hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+/* --- Estado vacío (tablas y listas sin registros) --- */
+.empty-state {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: #94a3b8;
+}
+.empty-state i {
+  font-size: 2.4rem;
+  display: block;
+  margin-bottom: 0.6rem;
+  opacity: 0.6;
+}
+.empty-state .empty-titulo {
+  font-weight: 600;
+  color: #64748b;
+  font-size: 0.98rem;
+}
+.empty-state .empty-texto { font-size: 0.85rem; margin-top: 0.2rem; }
+
+/* --- Encabezado de sección reutilizable (organización limpia) --- */
+.panel-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 0 0 1rem;
+}
+.panel-titulo h2, .panel-titulo h3 {
+  font-size: 1.05rem;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.panel-subtitulo { font-size: 0.85rem; color: #64748b; margin: 0.15rem 0 0; }
+
+/* --- Chips de rol (los 3 roles, colores definidos) --- */
+.rol-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+}
+.rol-chip::before {
+  content: '';
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.85;
+}
+.rol-admin      { color: #4338ca; background: #eef2ff; } /* administrador */
+.rol-ventanilla { color: #0f766e; background: #ecfdf5; } /* operador_ventanilla */
+.rol-ciudadano  { color: #0369a1; background: #e0f2fe; } /* ciudadano */
+
+/* Banner de alcance del rol en la barra lateral */
+.sidebar-alcance {
+  margin: 0.5rem 0.9rem 0.25rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.10);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+.sidebar-alcance .alcance-nombre { font-size: 0.8rem; }
+.sidebar-alcance .alcance-detalle { font-size: 0.72rem; color: #94a3b8; margin: 0.15rem 0 0; }
+
+/* --- Animaciones de entrada sutiles (una vez al cargar) --- */
+@keyframes uiFadeRise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes uiFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.topbar-admin { animation: uiFadeRise 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.main-admin .alert { animation: uiFadeRise 0.3s ease both; }
+.main-admin .card,
+.main-admin .stat-card-elevated,
+main.container .card {
+  animation: uiFadeRise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+/* Escalonado ligero para la fila de KPIs */
+.main-admin .row > .col:nth-child(1) .stat-card-elevated { animation-delay: 0.02s; }
+.main-admin .row > .col:nth-child(2) .stat-card-elevated { animation-delay: 0.07s; }
+.main-admin .row > .col:nth-child(3) .stat-card-elevated { animation-delay: 0.12s; }
+.main-admin .row > .col:nth-child(4) .stat-card-elevated { animation-delay: 0.17s; }
+.main-admin .row > .col:nth-child(5) .stat-card-elevated { animation-delay: 0.22s; }
+
+/* Botón de ayuda en la barra superior */
+.btn-ayuda-rol {
+  width: 34px; height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #64748b;
+  border: 1px solid var(--border-color);
+  background: #ffffff;
+  transition: all 0.15s ease;
+}
+.btn-ayuda-rol:hover {
+  color: var(--primary-color);
+  border-color: #bfdbfe;
+  background: var(--primary-light);
+}
+
+/* Transición suave para el cierre de alertas */
+.alert.fade:not(.show) { opacity: 0; }
+
+/* Respeta la preferencia de movimiento reducido en toda la capa UX */
+@media (prefers-reduced-motion: reduce) {
+  .topbar-admin,
+  .main-admin .alert,
+  .main-admin .card,
+  .main-admin .stat-card-elevated,
+  main.container .card {
+    animation: none !important;
+  }
+  .ayuda-icon:hover, .btn-ayuda-rol:hover { transform: none; }
+  .tooltip .tooltip-inner { transition: none; }
+}

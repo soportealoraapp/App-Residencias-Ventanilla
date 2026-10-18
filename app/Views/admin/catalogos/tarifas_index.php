@@ -20,6 +20,12 @@ $tarifas = $__view['tarifas'] ?? [];
 <?= $this->section('pageTitle') ?>Catálogo de Tarifas<?= $this->endSection() ?>
 <?= $this->section('content') ?>
 
+<?= view('layouts/_ayuda', [
+    'tono'   => 'info',
+    'titulo' => 'Tarifario de trámites',
+    'texto'  => 'Define el costo oficial vigente por trámite. Los montos se aplican automáticamente a las nuevas solicitudes según el tarifario activo.',
+]) ?>
+
 <div class="row mb-3">
     <div class="col-md-8">
         <form method="get" class="row g-2 align-items-end">

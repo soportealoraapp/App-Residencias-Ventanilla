@@ -34,6 +34,25 @@ function badge_color_estatus(string $estatus): string {
 }
 ?>
 
+<?php
+$__roles = (array) (session('roles') ?? []);
+$__esAdmin = in_array('administrador', $__roles, true);
+?>
+<div class="panel-titulo">
+    <div>
+        <h2><i class="bi bi-speedometer2" aria-hidden="true"></i> Panel de control</h2>
+        <p class="panel-subtitulo"><?= $__esAdmin
+            ? 'Vista general del sistema: solicitudes, catálogos, auditoría y configuración.'
+            : 'Vista operativa de ventanilla: da seguimiento a las solicitudes recibidas.' ?></p>
+    </div>
+</div>
+
+<?= view('layouts/_ayuda', [
+    'tono'   => 'info',
+    'titulo' => 'Cómo usar este inicio',
+    'texto'  => 'Cada tarjeta es un acceso directo: haz clic para abrir las solicitudes de ese estado. Pasa el cursor sobre los iconos de ayuda (?) repartidos por el panel para ver tips de cada sección.',
+]) ?>
+
 <div class="row g-2 g-md-3 mb-3 mb-md-4">
     <div class="col-6 col-md-4 col-lg">
         <a href="<?= site_url('admin/solicitudes') ?>" class="text-decoration-none">

@@ -17,6 +17,12 @@ $solicitudes = $__view['solicitudes'] ?? [];
 <?= $this->section('pageTitle') ?>Evaluación Comparativa · Convocatoria #<?= esc($convocatoria->id) ?><?= $this->endSection() ?>
 <?= $this->section('content') ?>
 
+<?= view('layouts/_ayuda', [
+    'tono'   => 'info',
+    'titulo' => 'Evaluación de convocatoria',
+    'texto'  => 'Revisa los puntajes de cada solicitante y designa al ganador. La selección es definitiva: confirma los datos antes de registrar la elección.',
+]) ?>
+
 <div class="row mb-3">
     <div class="col">
         <nav aria-label="breadcrumb">

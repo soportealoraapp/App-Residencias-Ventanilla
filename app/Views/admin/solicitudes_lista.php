@@ -23,6 +23,12 @@ $tramitesDisponibles['UR-TT-T-07'] = 'T-07: Permiso de Carga y Descarga';
 $estatusLista = \App\Libraries\EstadoSolicitudService::ESTATUS_MAESTRO;
 ?>
 
+<?= view('layouts/_ayuda', [
+    'tono'   => 'info',
+    'titulo' => 'Expedientes de trámites',
+    'texto'  => 'Filtra por trámite, estatus o búsqueda rápida (folio, RFC, nombre). Haz clic en <strong>Ver</strong> para abrir el expediente completo y cambiar su estatus.',
+]) ?>
+
 <div class="card mb-3 mb-md-4 border-0 shadow-sm">
     <div class="card-header bg-white py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
         <h6 class="mb-0 small fw-bold"><i class="bi bi-funnel me-1 text-primary"></i>Filtros de búsqueda</h6>
@@ -99,9 +105,10 @@ $estatusLista = \App\Libraries\EstadoSolicitudService::ESTATUS_MAESTRO;
     <!-- Mobile Card List (< 768px) -->
     <div class="d-block d-md-none">
         <?php if (empty($solicitudes)): ?>
-            <div class="text-center text-muted py-5">
-                <i class="bi bi-inbox fs-2 mb-2 d-block opacity-50"></i>
-                No se encontraron solicitudes con los filtros indicados.
+            <div class="empty-state">
+                <i class="bi bi-inbox" aria-hidden="true"></i>
+                <div class="empty-titulo">Sin solicitudes</div>
+                <div class="empty-texto">No se encontraron solicitudes con los filtros indicados.</div>
             </div>
         <?php else: ?>
             <?php foreach ($solicitudes as $s): ?>
@@ -161,8 +168,12 @@ $estatusLista = \App\Libraries\EstadoSolicitudService::ESTATUS_MAESTRO;
             <tbody>
                 <?php if (empty($solicitudes)): ?>
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-5">
-                            No se encontraron solicitudes con los filtros indicados
+                        <td colspan="8">
+                            <div class="empty-state">
+                                <i class="bi bi-inbox" aria-hidden="true"></i>
+                                <div class="empty-titulo">Sin solicitudes</div>
+                                <div class="empty-texto">No se encontraron solicitudes con los filtros indicados.</div>
+                            </div>
                         </td>
                     </tr>
                 <?php else: ?>

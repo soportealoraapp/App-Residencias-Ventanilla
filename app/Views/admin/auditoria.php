@@ -2,6 +2,13 @@
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('pageTitle') ?>Auditoría del sistema<?= $this->endSection() ?>
 <?= $this->section('content') ?>
+
+<?= view('layouts/_ayuda', [
+    'tono'   => 'info',
+    'titulo' => 'Trazabilidad del sistema',
+    'texto'  => 'Registro histórico de acciones sobre usuarios, trámites y catálogos. Incluye intentos de acceso y la IP de origen para facilitar la auditoría.',
+]) ?>
+
 <div class="card mb-3 mb-md-4 border-0 shadow-sm">
     <div class="card-header bg-white py-3">
         <h2 class="h6 mb-1 fw-bold"><i class="bi bi-shield-check me-2 text-primary"></i>Registro de auditoría</h2>
