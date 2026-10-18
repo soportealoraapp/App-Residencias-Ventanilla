@@ -1,4 +1,15 @@
-<?php declare(strict_types=1); ?>
+<?php declare(strict_types=1);
+
+/**
+ * Variables inyectadas por el controlador del panel vía view(..., $data).
+ * Se leen desde get_defined_vars() para que Intelephense no las marque como
+ * "undefined" sin alterar el runtime de CI4.
+ */
+$__view = get_defined_vars();
+
+/** @var array<string, int> $estadisticas */
+$estadisticas = $__view['estadisticas'] ?? [];
+?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('pageTitle') ?>Inicio<?= $this->endSection() ?>
 <?= $this->section('content') ?>

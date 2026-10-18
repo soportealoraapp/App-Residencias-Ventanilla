@@ -1,4 +1,18 @@
-<?php declare(strict_types=1); ?>
+<?php declare(strict_types=1);
+
+/**
+ * Variables inyectadas por Admin\ConvocatoriasController::evaluacion() vía
+ * view(..., $data). Se leen desde get_defined_vars() para que Intelephense no
+ * las marque como "undefined" sin alterar el runtime de CI4.
+ */
+$__view = get_defined_vars();
+
+/** @var object $convocatoria */
+$convocatoria = $__view['convocatoria'] ?? (object) [];
+
+/** @var array<int, object> $solicitudes */
+$solicitudes = $__view['solicitudes'] ?? [];
+?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('pageTitle') ?>Evaluación Comparativa · Convocatoria #<?= esc($convocatoria->id) ?><?= $this->endSection() ?>
 <?= $this->section('content') ?>
