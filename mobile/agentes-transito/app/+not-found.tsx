@@ -8,11 +8,11 @@ import { ThemeToggle } from "../src/components/ThemeToggle";
 /**
  * Pantalla para rutas inexistentes dentro de la app de Agentes de Tránsito.
  *
- * Sustituye el "Unmatched Route" en inglés de Expo Router (y, de paso, el 404
- * genérico de la plataforma) por un mensaje claro y humano en español, con una
- * acción para regresar a un punto conocido.
+ * En Expo Router 57 el archivo especial es "+not-found.tsx" (antes "+unmatched").
+ * Sustituye la pantalla "Unmatched Route" en inglés por un mensaje claro y humano
+ * en español, con acciones para regresar a un punto conocido.
  */
-export default function UnmatchedScreen() {
+export default function NotFoundScreen() {
   const router = useRouter();
   const { colors } = useTheme();
 
