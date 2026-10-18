@@ -1536,3 +1536,49 @@ main.container .card {
   .ayuda-icon:hover, .btn-ayuda-rol:hover { transform: none; }
   .tooltip .tooltip-inner { transition: none; }
 }
+
+/* ============================================================
+   PORTADA DE LA VENTANILLA: fondo fotográfico (uriangato.webp)
+   La foto va desenfocada detrás de un velo blanco translúcido,
+   así nunca compite con el texto ni con las tarjetas.
+   ============================================================ */
+.inicio-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+}
+.inicio-hero::before {
+  content: "";
+  position: absolute;
+  inset: -24px; /* margen extra para que el desenfoque no deje bordes vacíos */
+  z-index: -2;
+  background: #eef2f7 url('/uriangato.webp') center / cover no-repeat;
+}
+.inicio-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  /* Velo blanco: garantiza contraste del texto aunque el navegador no soporte blur */
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.6) 45%, rgba(255, 255, 255, 0.78));
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+.inicio-hero .tramite-card {
+  /* Las tarjetas blancas flotan sobre la foto sin perder legibilidad */
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* Interruptores de la pantalla Permisos del Operador */
+.permiso-card .form-check-input {
+  cursor: pointer;
+  transform: scale(1.25);
+  margin: 0;
+}
+.permiso-card .form-check-input:checked {
+  background-color: var(--primary-color, #2563eb);
+  border-color: var(--primary-color, #2563eb);
+}

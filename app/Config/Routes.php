@@ -92,8 +92,10 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->post('usuarios/toggle/(:num)', 'Admin\\UsuariosController::toggleEstado/$1');
     });
 
-    // Bajas definitivas: solo administrador.
+    // Bajas definitivas y permisos del operador: solo administrador.
     $routes->group('', ['filter' => 'role:administrador'], function($routes) {
+        $routes->get('permisos-operador', 'Admin\\PermisosController::index');
+        $routes->post('permisos-operador/guardar', 'Admin\\PermisosController::guardar');
         $routes->post('usuarios/eliminar/(:num)', 'Admin\\UsuariosController::eliminar/$1');
         $routes->post('app-transito/agentes/eliminar/(:num)', 'Admin\\AppTransitoController::eliminarAgente/$1');
         $routes->post('app-transito/boletas/eliminar/(:num)', 'Admin\\AppTransitoController::eliminarBoleta/$1');

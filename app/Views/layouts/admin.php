@@ -42,12 +42,23 @@
             } elseif ($esVentanilla) {
                 $rolChip = 'rol-ventanilla';
                 $rolNombre = 'Ventanilla';
-                $rolAlcance = 'Operación diaria. Las bajas definitivas son exclusivas del administrador.';
+                $rolAlcance = 'Operación diaria según los permisos que te otorgó el administrador.';
             } else {
                 $rolChip = 'rol-ciudadano';
                 $rolNombre = implode(', ', $rolesUsuario) ?: 'Usuario';
                 $rolAlcance = 'Sesión autenticada del panel.';
             }
+
+            // Permisos del operador (los define el administrador en su pantalla).
+            $permisosOp = \App\Libraries\PermisosOperador::todos();
+            $permitido = static function (string $clave) use ($esAdministrador, $esVentanilla, $permisosOp): bool {
+                if ($esAdministrador || !$esVentanilla) {
+                    return true;
+                }
+                return $permisosOp[$clave] ?? true;
+            };
+            $hayAppTransito = $permitido('app_transito_config') || $permitido('app_transito_boletas') || $permitido('app_transito_catalogo');
+            $hayCatalogos = $permitido('tarifas') || $permitido('concesiones') || $permitido('formatos') || $permitido('auditoria') || $permitido('convocatorias');
         ?>
 
         <div class="sidebar-alcance">
@@ -60,6 +71,7 @@
             <i class="bi bi-speedometer2 me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Inicio</span>
         </a>
+        <?php if ($permitido('solicitudes')): ?>
         <a href="/admin/solicitudes" class="sidebar-link <?= $isAllSolicitudes ? 'active' : '' ?>">
             <i class="bi bi-folder2-open me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Todas las solicitudes</span>
@@ -94,48 +106,79 @@
             <i class="bi bi-truck me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">T-07: Carga/Descarga</span>
         </a>
+        <?php endif; ?>
 
+        <?php if ($permitido('usuarios')): ?>
         <div class="sidebar-section-title mt-3">Ventanilla</div>
         <a href="/admin/usuarios" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/usuarios') ? 'active' : '' ?>">
             <i class="bi bi-people me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Usuarios y ciudadanos</span>
         </a>
+        <?php endif; ?>
 
+        <?php if ($hayCatalogos): ?>
         <div class="sidebar-section-title mt-3">Catálogos</div>
+        <?php if ($permitido('tarifas')): ?>
         <a href="/admin/tarifas" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/tarifas') ? 'active' : '' ?>">
             <i class="bi bi-cash-coin me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Tarifario</span>
         </a>
+        <?php endif; ?>
+        <?php if ($permitido('concesiones')): ?>
         <a href="/admin/concesiones" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/concesiones') ? 'active' : '' ?>">
             <i class="bi bi-card-list me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Concesiones</span>
         </a>
+        <?php endif; ?>
+        <?php if ($permitido('formatos')): ?>
         <a href="/admin/formatos" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/formatos') ? 'active' : '' ?>">
             <i class="bi bi-file-earmark-richtext me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Formatos de trámite</span>
         </a>
+        <?php endif; ?>
+        <?php if ($permitido('auditoria')): ?>
         <a href="/admin/auditoria" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/auditoria') ? 'active' : '' ?>">
             <i class="bi bi-shield-check me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Auditoría</span>
         </a>
+        <?php endif; ?>
+        <?php if ($permitido('convocatorias')): ?>
         <a href="/admin/convocatorias/1/evaluacion" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/convocatorias') ? 'active' : '' ?>">
             <i class="bi bi-award-fill me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Convocatorias UR-01</span>
         </a>
+        <?php endif; ?>
+        <?php endif; ?>
 
+        <?php if ($hayAppTransito): ?>
         <div class="sidebar-section-title mt-3">App Tránsito</div>
+        <?php if ($permitido('app_transito_config')): ?>
         <a href="/admin/app-transito" class="sidebar-link <?= uri_string() === 'admin/app-transito' ? 'active' : '' ?>">
             <i class="bi bi-sliders me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Configuración & UMA</span>
         </a>
+        <?php endif; ?>
+        <?php if ($permitido('app_transito_boletas')): ?>
         <a href="/admin/app-transito/boletas" class="sidebar-link <?= uri_string() === 'admin/app-transito/boletas' ? 'active' : '' ?>">
             <i class="bi bi-receipt-cutoff me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Boletas de Campo</span>
         </a>
+        <?php endif; ?>
+        <?php if ($permitido('app_transito_catalogo')): ?>
         <a href="/admin/app-transito/catalogo" class="sidebar-link <?= uri_string() === 'admin/app-transito/catalogo' ? 'active' : '' ?>">
             <i class="bi bi-journal-bookmark me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Catálogo de Faltas</span>
         </a>
+        <?php endif; ?>
+        <?php endif; ?>
+
+        <?php if ($esAdministrador): ?>
+        <div class="sidebar-section-title mt-3">Seguridad</div>
+        <a href="/admin/permisos-operador" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/permisos-operador') ? 'active' : '' ?>">
+            <i class="bi bi-shield-lock me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Permisos del Operador</span>
+        </a>
+        <?php endif; ?>
 
         <div class="sidebar-section-title mt-3">Sesión</div>
         <div class="px-3 py-2 text-white-50 small sidebar-user-info">

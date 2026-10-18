@@ -23,6 +23,7 @@ class Filters extends BaseConfig
         'forcehttps'    => ForceHTTPS::class,
         'auth'          => \App\Filters\AuthFilter::class,
         'role'          => \App\Filters\RoleFilter::class,
+        'permisoOperador' => \App\Filters\PermisoOperadorFilter::class,
         'adminRedirect' => \App\Filters\AdminRedirectFilter::class,
         'agenteToken'   => \App\Filters\AgenteTokenFilter::class,
     ];
@@ -57,6 +58,13 @@ class Filters extends BaseConfig
                 'portal/mis-solicitudes',
                 'portal/solicitud/*',
                 'portal/mi-perfil',
+            ],
+        ],
+        // Permisos configurables del operador de ventanilla en todo el panel.
+        'permisoOperador' => [
+            'before' => [
+                'admin',
+                'admin/*',
             ],
         ],
     ];

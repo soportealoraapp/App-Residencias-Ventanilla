@@ -37,6 +37,11 @@ function badge_color_estatus(string $estatus): string {
 <?php
 $__roles = (array) (session('roles') ?? []);
 $__esAdmin = in_array('administrador', $__roles, true);
+// Ventanilla: respeta los permisos que definió el administrador.
+$__permisosOp = \App\Libraries\PermisosOperador::todos();
+$__puedeSolicitudes = $__esAdmin
+    || !in_array('operador_ventanilla', $__roles, true)
+    || ($__permisosOp['solicitudes'] ?? true);
 ?>
 <div class="panel-titulo">
     <div>
@@ -50,9 +55,12 @@ $__esAdmin = in_array('administrador', $__roles, true);
 <?= view('layouts/_ayuda', [
     'tono'   => 'info',
     'titulo' => 'Cómo usar este inicio',
-    'texto'  => 'Cada tarjeta es un acceso directo: haz clic para abrir las solicitudes de ese estado. Pasa el cursor sobre los iconos de ayuda (?) repartidos por el panel para ver tips de cada sección.',
+    'texto'  => $__puedeSolicitudes
+        ? 'Cada tarjeta es un acceso directo: haz clic para abrir las solicitudes de ese estado. Pasa el cursor sobre los iconos de ayuda (?) repartidos por el panel para ver tips de cada sección.'
+        : 'Vista general del sistema. Las secciones disponibles para tu cuenta son las que el administrador activó en Permisos del Operador.',
 ]) ?>
 
+<?php if ($__puedeSolicitudes): ?>
 <div class="row g-2 g-md-3 mb-3 mb-md-4">
     <div class="col-6 col-md-4 col-lg">
         <a href="<?= site_url('admin/solicitudes') ?>" class="text-decoration-none">
@@ -125,6 +133,7 @@ $__esAdmin = in_array('administrador', $__roles, true);
         </a>
     </div>
 </div>
+<?php endif; ?>
 
 <div class="row g-2 g-md-3 mb-3 mb-md-4">
     <div class="col-12 col-md-4">
@@ -205,9 +214,13 @@ $__esAdmin = in_array('administrador', $__roles, true);
                     </div>
                     <?php if ($act['solicitud']): ?>
                         <div class="small mb-1">
-                            <a href="<?= site_url('admin/solicitudes/' . $act['solicitud']->folio) ?>" class="fw-bold font-monospace">
-                                <?= esc($act['solicitud']->folio) ?>
-                            </a>
+                            <?php if ($__puedeSolicitudes): ?>
+                                <a href="<?= site_url('admin/solicitudes/' . $act['solicitud']->folio) ?>" class="fw-bold font-monospace">
+                                    <?= esc($act['solicitud']->folio) ?>
+                                </a>
+                            <?php else: ?>
+                                <span class="fw-bold font-monospace"><?= esc($act['solicitud']->folio) ?></span>
+                            <?php endif; ?>
                             <span class="text-muted">· <?= tramite_nombre($act['solicitud']->tramite) ?></span>
                         </div>
                     <?php endif; ?>
@@ -251,9 +264,13 @@ $__esAdmin = in_array('administrador', $__roles, true);
                             </td>
                             <td>
                                 <?php if ($act['solicitud']): ?>
-                                    <a href="<?= site_url('admin/solicitudes/' . $act['solicitud']->folio) ?>" class="fw-bold text-decoration-none">
-                                        <code><?= esc($act['solicitud']->folio) ?></code>
-                                    </a>
+                                    <?php if ($__puedeSolicitudes): ?>
+                                        <a href="<?= site_url('admin/solicitudes/' . $act['solicitud']->folio) ?>" class="fw-bold text-decoration-none">
+                                            <code><?= esc($act['solicitud']->folio) ?></code>
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="fw-bold"><code><?= esc($act['solicitud']->folio) ?></code></span>
+                                    <?php endif; ?>
                                     <div class="small text-muted"><?= tramite_nombre($act['solicitud']->tramite) ?></div>
                                 <?php else: ?>
                                     <span class="text-muted">—</span>

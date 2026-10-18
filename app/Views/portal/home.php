@@ -1,6 +1,7 @@
 <?= $this->extend('layouts/portal') ?>
 <?= $this->section('title') ?>Inicio - Ventanilla Digital de Movilidad Uriangato<?= $this->endSection() ?>
 <?= $this->section('content') ?>
+<div class="inicio-hero">
 <div class="row justify-content-center align-items-center py-3 py-md-5">
     <div class="col-lg-10 text-center">
         <div class="mb-4 mb-md-5">
@@ -51,6 +52,7 @@
             </div>
         </div>
     </div>
+</div>
 </div>
 <?= $this->endSection() ?>
 

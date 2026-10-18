@@ -28,7 +28,7 @@ class AuditoriaModel extends Model
     protected $updatedField     = '';
     protected $deletedField     = '';
 
-    public function registrar(string $entidad, $entidadId, string $accion, ?int $usuarioId, ?array $detalle = null, $registroBorrado = null): void
+    public function registrar(string $entidad, int|string|null $entidadId, string $accion, ?int $usuarioId, ?array $detalle = null, string|array|null $registroBorrado = null): void
     {
         try {
             $ahora = new DateTime();
@@ -51,7 +51,7 @@ class AuditoriaModel extends Model
         }
     }
 
-    public function porEntidad(string $entidad, $entidadId): array
+    public function porEntidad(string $entidad, int|string|null $entidadId): array
     {
         return $this->where('entidad', $entidad)
             ->where('entidad_id', $entidadId)
