@@ -76,6 +76,10 @@
             <i class="bi bi-folder2-open me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Todas las solicitudes</span>
         </a>
+        <a href="/admin/solicitudes/nueva" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/solicitudes/nueva') ? 'active' : '' ?>">
+            <i class="bi bi-plus-circle me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Nueva solicitud presencial</span>
+        </a>
         <a href="/admin/solicitudes?tramite=UR-TT-T-01" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-01' ? 'active' : '' ?>">
             <i class="bi bi-award me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">T-01: Concesiones</span>

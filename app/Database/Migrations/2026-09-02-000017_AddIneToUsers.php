@@ -26,6 +26,9 @@ class AddIneToUsers extends Migration
 
     public function down()
     {
+        if ($this->db->DBDriver === 'SQLite3') {
+            return;
+        }
         $this->forge->dropColumn('users', ['ine_frente', 'ine_reverso']);
     }
 }

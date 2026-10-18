@@ -110,11 +110,16 @@ $estatusLista = \App\Libraries\EstadoSolicitudService::ESTATUS_MAESTRO;
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
         <h6 class="mb-0 fw-bold"><i class="bi bi-list-columns-reverse me-2 text-primary"></i>Solicitudes (<?= number_format($pager->getTotal()) ?> registros)</h6>
-        <?php if ($filtros['tramite'] !== '' || $filtros['estatus'] !== '' || $filtros['q'] !== ''): ?>
-            <a href="<?= site_url('admin/solicitudes') ?>" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-x-lg me-1"></i>Limpiar
+        <div class="d-flex gap-2">
+            <a href="/admin/solicitudes/nueva" class="btn btn-success btn-sm">
+                <i class="bi bi-plus-lg me-1"></i>Nueva Presencial
             </a>
-        <?php endif; ?>
+            <?php if ($filtros['tramite'] !== '' || $filtros['estatus'] !== '' || $filtros['q'] !== ''): ?>
+                <a href="<?= site_url('admin/solicitudes') ?>" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x-lg me-1"></i>Limpiar
+                </a>
+            <?php endif; ?>
+        </div>
     </div>
 
     <!-- Mobile Card List (< 768px) -->

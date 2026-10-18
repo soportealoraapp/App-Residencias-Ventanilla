@@ -50,6 +50,11 @@ $__puedeSolicitudes = $__esAdmin
             ? 'Vista general del sistema: solicitudes, catálogos, auditoría y configuración.'
             : 'Vista operativa de ventanilla: da seguimiento a las solicitudes recibidas.' ?></p>
     </div>
+    <?php if ($__puedeSolicitudes): ?>
+    <a href="/admin/solicitudes/nueva" class="btn btn-success btn-sm ms-auto">
+        <i class="bi bi-plus-lg me-1"></i>Registrar Solicitud Presencial
+    </a>
+    <?php endif; ?>
 </div>
 
 <?= view('layouts/_ayuda', [

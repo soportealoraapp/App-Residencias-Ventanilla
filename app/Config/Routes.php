@@ -47,6 +47,10 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->get('dashboard', 'Admin\\AdminController::dashboard', ['as' => 'admin.dashboard']);
         $routes->get('auditoria', 'Admin\\AdminController::auditoria', ['as' => 'admin.auditoria']);
         $routes->get('solicitudes', 'Admin\\AdminController::listaSolicitudes', ['as' => 'admin.solicitudes']);
+        $routes->get('solicitudes/nueva', 'Admin\\SolicitudPresencialController::index');
+        $routes->post('solicitudes/nueva/buscar-ciudadano', 'Admin\\SolicitudPresencialController::buscarCiudadano');
+        $routes->post('solicitudes/nueva/guardar', 'Admin\\SolicitudPresencialController::guardar');
+        $routes->get('solicitudes/nueva/(:segment)', 'Admin\\SolicitudPresencialController::formulario/$1');
         $routes->get('solicitudes/(:segment)', 'Admin\\AdminController::verSolicitud/$1', ['as' => 'admin.solicitud.ver']);
         $routes->post('solicitudes/cambiar-estatus/(:num)', 'Admin\\AdminController::cambiarEstatus/$1');
         $routes->post('solicitudes/ur04/evaluacion/(:num)', 'Admin\\AdminController::guardarEvaluacionUr04/$1');
