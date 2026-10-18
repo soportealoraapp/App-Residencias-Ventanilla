@@ -12,10 +12,10 @@ Plataforma gubernamental integral para la digitalización de trámites, gestión
 
 ## 📌 Enlaces Rápidos a la Documentación Oficial
 
-* 📘 [**DOCUMENTACION_GENERAL.md**](./DOCUMENTACION_GENERAL.md): Documentación técnica y operativa integral del sistema completo (Visión macro, separación del Portal/Panel Web y la App Móvil de Tránsitos, arquitectura de bases de datos, flujos normativos y guía de despliegue en Vercel).
+* 📘 [**DOCUMENTACION_GENERAL.md**](./DOCUMENTACION_GENERAL.md): Documentación técnica y operativa integral del sistema completo (Visión macro, separación del Portal/Panel Web y la App Móvil de Tránsitos, arquitectura de bases de datos, modelos de acceso, flujos normativos y guía de despliegue en Vercel).
 * ⚙️ [**DOCUMENTACION_BACKEND.md**](./DOCUMENTACION_BACKEND.md): Documentación técnica exhaustiva del **Backend en CodeIgniter 4 / PHP 8.2** (Controladores, Modelos, Servicios, Storage Supabase, Filtros RBAC, Seguridad y API REST).
 * 📱 [**DOCUMENTACION_APP_TRANSITO.md**](./DOCUMENTACION_APP_TRANSITO.md): Documentación técnica exhaustiva de la **App Móvil para Agentes de Tránsito en React Native / Expo** (Arquitectura Offline-First, Cámara, GPS, cálculo de sanciones en UMA y sincronización con Supabase).
-* 🎓 [**DOC_METODOLOGIA_PORTAL_PANEL.md**](./DOC_METODOLOGIA_PORTAL_PANEL.md): Documento metodológico y memoria de arquitectura enfocado en el **Portal Ciudadano y Panel Administrativo Web**, diseñado como base para reporte de Residencia Profesional.
+* 🎓 [**DOC_METODOLOGIA_PORTAL_PANEL.md**](./DOC_METODOLOGIA_PORTAL_PANEL.md): Documento metodológico y memoria de arquitectura enfocado en el **Portal Ciudadano y Panel Administrativo Web**, diseñado como base para reporte de Residencia Profesional. Cubre patrones de diseño, esquema y diccionario de datos, pipeline documental, RBAC y permisología configurable del operador, despliegue serverless, los 7 trámites, **radicación presencial en ventanilla**, **diseño responsivo móvil** y **estrategia de pruebas automatizadas**.
 
 ---
 
@@ -25,8 +25,8 @@ El ecosistema digital integra tres ramas de desarrollo comunicadas a través de 
 
 1. **Backend Centralizado (API & Core):** Desarrollado en CodeIgniter 4 sobre PHP 8.2 en arquitectura serverless. Controla la lógica de negocio, validaciones documentales, pasarela mock de pago, servicios de tarifario y endpoints REST para clientes externos.
 2. **Portal Ciudadano y Panel Administrativo Web:**
-   * **Portal Ciudadano (`/portal/`):** Plataforma web responsiva donde los ciudadanos y concesionarios gestionan los 7 trámites oficiales (UR-TT-T-01 al UR-TT-T-07), consultan expedientes y realizan pagos en línea simulados.
-   * **Panel Administrativo (`/admin/`):** Consola para funcionarios municipales con control de acceso por roles (`administrador`, `operador_ventanilla`), tableros analíticos en tiempo real, validación de expedientes con comentarios obligatorios, padrón inmutable de auditoría y gestión de catálogos (tarifas, concesiones, convocatorias y formatos).
+   * **Portal Ciudadano (`/portal/`):** Plataforma web responsiva donde los ciudadanos y concesionarios gestionan los 7 trámites oficiales (UR-TT-T-01 al UR-TT-T-07), consultan expedientes y realizan pagos en línea simulados. El ciudadano **se autorregistra** sin intermediarios.
+   * **Panel Administrativo (`/admin/`):** Consola para funcionarios municipales con control de acceso por roles (`administrador`, `operador_ventanilla`) y **permisos configurables por sección**, tableros analíticos en tiempo real, validación de expedientes con comentarios obligatorios, **radicación presencial de solicitudes para el ciudadano que acude a ventanilla**, padrón inmutable de auditoría y gestión de catálogos (tarifas, concesiones, convocatorias, formatos y cuentas de usuario).
 3. **App Móvil para Agentes de Tránsito (`/agentes/`):** Aplicación desarrollada con Expo SDK 57 / React Native / TypeScript, utilizable en dispositivos móviles o vía Web SPA. Diseñada para operación *Offline-First*, cálculo automático de multas en UMA, captura fotográfica geolocalizada y sincronización directa con Supabase.
 
 ---
@@ -37,11 +37,12 @@ El ecosistema digital integra tres ramas de desarrollo comunicadas a través de 
 |---|---|
 | **Backend & Core** | PHP 8.2 (Strict Types), CodeIgniter 4.5.8, Composer |
 | **Bases de Datos** | PostgreSQL 15+ (Supabase) con PgBouncer Pooler (puerto 6543) |
-| **Almacenamiento** | Supabase Storage (Buckets privados `documentos` y `evidencias`) |
+| **Almacenamiento** | Supabase Storage (Buckets privados `documentos` y `evidencias`) con alternativa local firmada |
 | **Criptografía** | Hashing SHA-256 inmutable de archivos y contraseñas BCRYPT |
-| **Frontend Web** | Bootstrap 5.3.2, Bootstrap Icons 1.11.1, Plus Jakarta Sans, CSS Modular |
+| **Frontend Web** | Bootstrap 5.3.2, Bootstrap Icons 1.11.1, Plus Jakarta Sans, CSS *mobile-first* con design tokens |
 | **App Móvil & SPA** | React Native 0.86, Expo SDK 57, TypeScript, AsyncStorage, `@supabase/supabase-js` |
 | **Despliegue & Cloud** | Vercel Serverless (`vercel-php@0.7.4`), CI/CD automatizado vía Git |
+| **Pruebas** | PHPUnit 10 (117 casos / 442 aserciones) sobre harness SQLite aislado |
 
 ---
 
@@ -49,8 +50,8 @@ El ecosistema digital integra tres ramas de desarrollo comunicadas a través de 
 
 ### 1. Clonar e Instalar Dependencias
 ```bash
-git clone https://github.com/soportealoraapp/App-Residencias.git
-cd App-Residencias
+git clone https://github.com/soportealoraapp/App-Residencias-Ventanilla.git
+cd App-Residencias-Ventanilla
 composer install
 ```
 
@@ -120,7 +121,9 @@ npx expo start -c
 | `operador1@uriangato.gob.mx` | `operador_ventanilla` | Panel Administrativo (`/admin/`) |
 | `ciudadano@example.com` | `ciudadano` | Portal Ciudadano (`/portal/`) |
 
-> El registro público de ciudadanos está deshabilitado: el ciudadano acude a ventanilla y el administrador u operador crea su cuenta en **Panel → Usuarios y ciudadanos** (`/admin/usuarios`).
+> **El ciudadano se autorregistra** en el portal ([`/auth/register`](http://localhost:8080/auth/register)); el sistema solo produce cuentas con rol `ciudadano`.
+>
+> Lo que **no** puede crearse desde el registro público son cuentas de **operador**, **administrador** o **agente de tránsito**: esas las da de alta el administrador desde **Panel → Usuarios y ciudadanos** (`/admin/usuarios`) y **Panel → App Tránsito → Agentes** (`/admin/app-transito`), porque son personal con capacidad de sanción y su identidad debe verificarse físicamente.
 
 ---
 
@@ -130,7 +133,25 @@ Para ejecutar la suite de pruebas unitarias y de integración:
 ```bash
 ./vendor/bin/phpunit
 ```
-Las pruebas cubren validaciones de trámites, cálculo dinámico de tarifas, reglas de transición de la máquina de estados y control de acceso.
+En Windows, si `php` no está en el PATH: `./php82/php.exe vendor/bin/phpunit`.
+
+Las pruebas (**117 casos / 442 aserciones**) cubren: control de acceso por rol, permisos configurables del operador, validaciones de los 7 trámites, cálculo dinámico de tarifas (incluido el monto por camiones de UR-07), reglas de transición de la máquina de estados, radicación presencial, trazas de auditoría e historial, endpoints REST de agentes y el blindaje del almacenamiento local (firma HMAC, caducidad y rechazo de travesía de ruta).
+
+La suite corre contra **SQLite en memoria** con prefijo `db_`, nunca contra la base institucional. Requiere que las migraciones estén aplicadas (`php spark migrate`).
+
+---
+
+## 📱 Interfaz Web Responsiva (Portal y Panel)
+
+Ambas interfaces son *mobile-first*: el ciudadano y el operador pueden usarlas desde un teléfono sin perder funcionalidad.
+
+* **Objetivos táctiles de 44 px** y campos a 16 px (evita el zoom automático de iOS al enfocar un formulario).
+* **Portal:** navegación inferior fija tipo app en móvil, con el contenido desplazado para no quedar tapado.
+* **Panel:** la barra lateral se convierte en gaveta deslizante (`min(300px, 86vw)`) con fondo oscurecido y barra superior pegajosa; respeta áreas seguras en dispositivos con muesca (`viewport-fit=cover` + `env(safe-area-inset-*)`).
+* **Portada:** la fotografía institucional se ancla y el desenfoque se reduce en pantallas verticales para conservar el sujeto y el contraste del texto sin sacrificar rendimiento.
+* **Accesibilidad:** respeta `prefers-reduced-motion`, conserva foco visible por teclado y un modo de impresión que oculta la interfaz para imprimir expedientes.
+
+> ⚠️ **Restricción de despliegue:** en Vercel solo se sirve lo declarado en `vercel.json`; todo lo demás cae en el comodín que entrega la petición a PHP y devuelve 404. **Si agregas una imagen, icono o archivo estático a `public/`, añade su ruta al arreglo `routes`** y verifica la URL ya desplegada (en local `spark serve` sí sirve todo el directorio, así que el fallo no se ve antes de producción).
 
 ---
 

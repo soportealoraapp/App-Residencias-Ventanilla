@@ -5,7 +5,7 @@
 **Carrera:** Ingeniería en Sistemas Computacionales / Ingeniería en Software  
 **Institución Receptora:** Dirección de Movilidad y Transporte — H. Ayuntamiento de Uriangato, Gto.  
 **Autor:** Residente Profesional  
-**Versión del Documento:** 2.0  
+**Versión del Documento:** 3.0  
 **Fecha:** Octubre 2026  
 
 ---
@@ -23,10 +23,12 @@
    * 3.2. Diccionario de Datos del Módulo Web
    * 3.3. Pipeline de Almacenamiento Documental y Criptografía en Supabase Storage
    * 3.4. Mecanismo de Descarga Segura y Forzado de Content-Disposition
+   * 3.5. Estrategia Dual de Almacenamiento: Nube Supabase y Depósito Local Firmado
 4. [Seguridad y Control de Acceso Basado en Roles (RBAC)](#4-seguridad-y-control-de-acceso-basado-en-roles-rbac)
    * 4.1. Matriz de Control de Acceso por Rol
    * 4.2. Arquitectura de Filtros y Middlewares
    * 4.3. Mitigación de Vulnerabilidades Web (CSRF, XSS, SQLi)
+   * 4.4. Permisos Configurables del Operador de Ventanilla (Autorización de Grano Fino)
 5. [Despliegue en Entorno Serverless y Persistencia de Sesiones](#5-despliegue-en-entorno-serverless-y-persistencia-de-sesiones)
    * 5.1. Retos del Paradigma Serverless en Vercel para PHP
    * 5.2. Persistencia de Sesiones en Base de Datos (ci_sessions)
@@ -36,15 +38,33 @@
    * 6.2. Motor de Cotización Dinámica (TarifarioService)
    * 6.3. Arquitectura del Mock de Pasarela de Pagos
    * 6.4. Consulta de Expedientes y Gestión del Perfil Ciudadano
+   * 6.5. Autorregistro de Ciudadanos y Recuperación de Cuenta
 7. [Lógica de Negocio del Panel Administrativo](#7-lógica-de-negocio-del-panel-administrativo)
    * 7.1. Dashboard de Métricas y Analítica Operativa
    * 7.2. Máquina de Estados Finitos y Transiciones Reguladas
    * 7.3. Regla de Negocio: Observaciones Obligatorias en Prevenciones y Rechazos
    * 7.4. Padrón Inmutable de Auditoría
    * 7.5. Módulos de Catálogos Municipales y Parámetros Operativos
+   * 7.6. Radicación Presencial de Solicitudes desde Ventanilla (Canal Híbrido)
+   * 7.7. Gestión del Padrón de Cuentas desde el Panel
+   * 7.8. Mapa Maestro de Rutas y Módulos del Panel
 8. [Integración HTTP y Consumo de Servicios Centralizados](#8-integración-http-y-consumo-de-servicios-centralizados)
    * 8.1. Integración con la API REST de Supabase Storage mediante cURL
    * 8.2. Exposición y Gobernanza de Endpoints REST para Clientes Externos
+9. [Experiencia de Usuario y Diseño Responsivo Mobile-First](#9-experiencia-de-usuario-y-diseño-responsivo-mobile-first)
+   * 9.1. Sistema de Diseño y Design Tokens
+   * 9.2. Escala Tipográfica y Objetivos Táctiles
+   * 9.3. Adaptación del Portal Ciudadano (Navegación Inferior y Colapso)
+   * 9.4. Adaptación del Panel Administrativo (Gaveta Lateral y Áreas Seguras)
+   * 9.5. Portada Fotográfica: Composición, Velo de Contraste y Comportamiento en Retrato
+   * 9.6. Identidad Visual, Favicones y Recursos Estáticos en el Edge
+   * 9.7. Accesibilidad, Movimiento Reducido y Rendimiento
+10. [Aseguramiento de la Calidad y Estrategia de Pruebas](#10-aseguramiento-de-la-calidad-y-estrategia-de-pruebas)
+   * 10.1. Suite Automatizada con PHPUnit y FeatureTestTrait
+   * 10.2. Matriz de Cobertura Funcional
+   * 10.3. Harness de Pruebas Aislado en SQLite
+   * 10.4. Pruebas de Humo y Verificación en Producción
+11. [Conclusiones Técnicas de la Metodología](#11-conclusiones-técnicas-de-la-metodología)
 
 ---
 
@@ -53,8 +73,9 @@
 El presente reporte metodológico documenta formalmente el diseño ingenieril, construcción técnica, aseguramiento de la calidad y despliegue del subsistema **Portal Ciudadano y Panel Administrativo Web**, desarrollado en el marco del proyecto integral de modernización digital para la Dirección de Movilidad y Transporte del Municipio de Uriangato, Guanajuato.
 
 ### 1.1. Alcance Técnico Asignado
-* **Portal Ciudadano:** Desarrollo de la interfaz web para el registro autenticado de ciudadanos, captura asistida de solicitudes para 7 trámites de transporte y vialidad, cálculo automatizado de derechos municipales según la Ley de Ingresos, carga validada de expedientes probatorios en formato digital, pasarela mock de pago en línea y consulta de estatus con trazabilidad histórica.
-* **Panel Administrativo Web:** Construcción del panel de control de uso exclusivo para funcionarios públicos (roles `administrador` y `operador_ventanilla`), incorporando tableros analíticos de control (KPIs), visualizador centralizado de expedientes con dictaminación técnica, módulo de citas para verificación física, bitácora de auditoría inmutable y módulos de administración para los catálogos del municipio (tarifas, concesiones, convocatorias y formatos oficiales).
+* **Portal Ciudadano:** Desarrollo de la interfaz web para el **autorregistro** autogestionado de ciudadanos, captura asistida de solicitudes para 7 trámites de transporte y vialidad, cálculo automatizado de derechos municipales según la Ley de Ingresos, carga validada de expedientes probatorios en formato digital, pasarela mock de pago en línea y consulta de estatus con trazabilidad histórica.
+* **Panel Administrativo Web:** Construcción del panel de control de uso exclusivo para funcionarios públicos (roles `administrador` y `operador_ventanilla`), incorporando tableros analíticos de control (KPIs), visualizador centralizado de expedientes con dictaminación técnica, módulo de citas para verificación física, **radicación presencial de solicitudes desde ventanilla** (atención del ciudadano que no usa el portal web), bitácora de auditoría inmutable, **permisología configurable por sección para el operador**, gestión del padrón de cuentas y módulos de administración para los catálogos del municipio (tarifas, concesiones, convocatorias y formatos oficiales).
+* **Transversal:** Diseño responsivo *mobile-first* para operarse desde teléfono, tableta o escritorio en ambas interfaces, y despliegue sobre infraestructura serverless (Vercel PHP) con doble estrategia de almacenamiento documental (nube Supabase y depósito local firmado).
 
 ### 1.2. Exclusiones Metodológicas
 Se excluye del análisis profundo de este documento la implementación interna del cliente móvil nativo para agentes de tránsito (desarrollado en Expo / React Native), abordándose únicamente en lo relativo a los puntos de contacto e interoperabilidad con la base de datos relacional y los endpoints de configuración y registro expuestos por el backend web.
@@ -326,6 +347,58 @@ Para mitigar riesgos de filtración de información y accesos no autorizados a e
 
 ---
 
+### 3.5. Estrategia Dual de Almacenamiento: Nube Supabase y Depósito Local Firmado
+
+El requisito operativo de que el sistema **funcione igual en producción y en una laptop sin salida a internet** (demostración en palacio municipal, desarrollo en red restringida, pruebas automatizadas) obligó a que el almacenamiento documental no fuera una dependencia dura de Supabase.
+
+La librería `App\Libraries\SupabaseStorage` actúa como **fachada única** con dos backends intercambiables. El selector se resuelve una sola vez en el constructor, por detección de configuración y no por una bandera manual, de forma que nadie pueda quedar "a medias" entre ambos modos:
+
+```php
+$supabaseUrl = trim((string) ($_ENV['SUPABASE_URL'] ?? ''));
+$this->serviceKey = $_ENV['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
+
+// Modo local si la URL no es un host válido o falta la clave de servicio.
+$this->usarLocal   = parse_url($supabaseUrl, PHP_URL_HOST) === null || $this->serviceKey === '';
+$this->rutaLocal   = rtrim((string) ($_ENV['STORAGE_LOCAL_PATH']
+                    ?? (WRITEPATH . 'uploads' . DIRECTORY_SEPARATOR . 'storage')), '/\\');
+```
+
+| Método de la fachada | Backend Nube (`usarLocal = false`) | Backend Local (`usarLocal = true`) |
+|---|---|---|
+| `subir()` | `POST /storage/v1/object/{bucket}/{path}` con `x-upsert` | `mkdir -p` + `file_put_contents` bajo `writable/uploads/storage/{bucket}/` |
+| `descargar()` | `GET` binario vía cURL | `file_get_contents()` de la ruta resuelta |
+| `urlFirmada()` | `POST /object/sign/...` (token emitido por Supabase) | URL propia con **firma HMAC-SHA256** y caducidad |
+| `eliminar()` | `DELETE` con arreglo JSON de rutas | `unlink()` recursivo por lista |
+| `existe()` | `HEAD /object/info/...` | `is_file()` |
+| `listar()` | `POST /object/list` con paginación | `scandir()` + corte por límite/desplazamiento |
+
+#### 3.5.1. Firmas de URL en Modo Local (`ArchivosLocalesController`)
+
+Renunciar a Supabase no puede significar renunciar al control de acceso. Como el disco local no emite tokens, el sistema se los fabrica: `SupabaseStorage::urlFirmada()` construye un enlace de un solo uso y `App\Controllers\ArchivosLocalesController::servir()` lo verifica antes de entregar un byte.
+
+```php
+// Generación (SupabaseStorage::firmaLocal)
+hash_hmac('sha256', $bucket . '|' . $path . '|' . $expira, $this->secretoLocal());
+
+// Validación (ArchivosLocalesController::servir)
+if (! $storage->esLocal() || $path === '' || $expira < time()
+    || ! hash_equals($storage->firmaLocal($bucket, $path, $expira), $firma)) {
+    return $this->response->setStatusCode(403)->setBody('Enlace inválido o caducado.');
+}
+```
+
+Decisiones de seguridad incorporadas:
+
+1. **Comparación en tiempo constante:** se usa `hash_equals()` en lugar de `==` para no filtrar la firma byte por byte mediante ataques de temporización.
+2. **Caducidad corta:** el parámetro `exp` (TTL de una hora) se incluye dentro del mensaje firmado, así que alterarlo invalida la firma.
+3. **Recorrido de ruta contenido (no path traversal):** `rutaArchivoLocal()` rechaza buckets no permitidos, rutas absolutas, bytes nulos y segmentos `..`, y solo responde dentro de `WRITEPATH`.
+4. **Carpeta fuera del *document root*:** el depósito vive en `writable/`, que en Vercel y en Apache no es alcanzable por URL directa; el único camino de lectura es el controlador firmado.
+5. **Cabeceras de entrega endurecidas:** `X-Content-Type-Options: nosniff`, `Cache-Control: private, max-age=300` y mapa estricto de MIME (`pdf`, `jpg`, `jpeg`, `png`); cualquier otra extensión se sirve como `application/octet-stream` para evitar ejecución de contenidos subidos por terceros.
+
+> **Consecuencia metodológica:** al ser la misma fachada, ningún controlador del portal ni del panel contiene un `if (¿hay Supabase?)`. Alta de trámites, descarga de expedientes y borrado de evidencias funcionan idénticos en ambos backends, lo que además hizo posible correr la suite de pruebas completa contra SQLite sin red.
+
+---
+
 ## 4. Seguridad y Control de Acceso Basado en Roles (RBAC)
 
 ### 4.1. Matriz de Control de Acceso por Rol
@@ -371,12 +444,89 @@ public array $globals = [
    Acepta una lista delimitada por comas de roles permitidos como parámetro del filtro (ej. `role:administrador,operador_ventanilla` o `role:ciudadano`). Consulta el rol activo del usuario en la sesión y, en caso de discrepancia, deniega la ejecución emitiendo un código de estado `HTTP 403 Forbidden` o redireccionando al entorno autorizado.
 3. **`AdminRedirectFilter` (`app/Filters/AdminRedirectFilter.php`):**
    Intercepta las rutas públicas del portal ciudadano (`portal/*`). Si detecta que el usuario autenticado posee rol de `administrador` u `operador_ventanilla`, lo redirige de inmediato al panel administrativo (`admin/dashboard`), evitando que servidores públicos operen inadvertidamente sobre la interfaz ciudadana.
+4. **`PermisoOperadorFilter` (`app/Filters/PermisoOperadorFilter.php`):**
+   Aplica la permisología configurable de la ventanilla sobre **todo el prefijo del panel** (`admin`, `admin/*`). Está registrado en `app/Config/Filters.php` y su comportamiento se detalla en la sección 4.4.
+5. **`AgenteTokenFilter` (`app/Filters/AgenteTokenFilter.php`):**
+   Protege los endpoints REST de sincronización móvil (`api/infracciones/*`, `api/boletas/*`) exigiendo un token de portador válido emitido por `AgenteTokenService` y persistido en `agentes_transito_tokens`.
+6. **`secureheaders` / `cors`:** Emiten las cabeceras de blindaje del navegador (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Strict-Transport-Security`, `Permissions-Policy`) definidas también en `vercel.json` para cubrir la capa de borde.
 
 ### 4.3. Mitigación de Vulnerabilidades Web (CSRF, XSS, SQLi)
 
 * **Cross-Site Request Forgery (CSRF):** El filtro nativo de CSRF de CodeIgniter protege todos los formularios web enviados por método `POST`, `PUT` o `DELETE`. Se inyecta un campo oculto con token criptográfico generado por sesión (`csrf_field()`), regenerándose periódicamente para evitar ataques de fijación de sesión.
 * **Cross-Site Scripting (XSS):** Todas las variables dinámicas impresas en las vistas HTML son procesadas a través del helper nativo `esc($variable, 'html')`, neutralizando caracteres como `<`, `>`, `"` y `'` mediante entidades HTML seguras.
 * **Inyección SQL (SQLi):** No se realiza concatenación manual de cadenas en sentencias SQL. La interacción con la base de datos se ejecuta exclusivamente mediante el Query Builder de CodeIgniter 4, el cual utiliza sentencias preparadas de **PDO** con vinculación estricta de parámetros (*Prepared Statements*).
+
+### 4.4. Permisos Configurables del Operador de Ventanilla (Autorización de Grano Fino)
+
+La matriz de la sección 4.1 define el RBAC **por rol** (dos niveles: ciudadano / personal del panel). En operación real apareció un segundo requerimiento: el rol `operador_ventanilla` agrupa perfiles muy distintos (quien solo recibe trámites, quien además cobra, quien da de alta cuentas), y el administrador necesitaba **encender o apagar secciones del panel por funcionario sin escribir código ni crear roles nuevos**.
+
+Se resolvió con un modelo de autorización de grano fino construido sobre la librería `App\Libraries\PermisosOperador`, deliberadamente sin tablas nuevas.
+
+#### 4.4.1. Catálogo de Permisos
+
+El catálogo vive declarativamente en el código (`private const CATALOGO`), lo que garantiza que una ruta no pueda quedar protegida por una clave inexistente. Cada permiso define nombre, descripción, icono y **prefijos de URI** que protege:
+
+| Clave | Sección que protege | Prefijo de URI |
+|---|---|---|
+| `solicitudes` | Solicitudes y trámites (cambio de estatus, validación de pago, descargas) | `admin/solicitudes` |
+| `usuarios` | Altas y edición de cuentas de ciudadanos | `admin/usuarios` |
+| `tarifas` | Catálogo de tarifario | `admin/tarifas` |
+| `concesiones` | Padrón de concesiones | `admin/concesiones` |
+| `formatos` | Formatos descargables del portal | `admin/formatos` |
+| `auditoria` | Bitácora de auditoría | `admin/auditoria` |
+| `convocatorias` | Evaluación de convocatorias UR-01 | `admin/convocatorias` |
+| `app_transito_config` | Parámetros, UMA y altas de agentes | `admin/app-transito` |
+| `app_transito_boletas` | Consulta y edición de boletas de campo | `admin/app-transito/boletas` |
+| `app_transito_catalogo` | Catálogo de faltas y sus UMA | `admin/app-transito/catalogo` |
+
+#### 4.4.2. Persistencia sin Migraciones
+
+El mapa se serializa como JSON en la tabla ya existente `parametros_app`, bajo la clave `permisos_operador_ventanilla`. La elección es metodológica: un cambio de política de permisos **no debe requerir despliegue de esquema**, y la pantalla de configuración puede escribirse reutilizando `ParametroAppModel::setValor()`.
+
+```php
+$guardado = (new ParametroAppModel())->getValor(self::CLAVE_PARAMETRO);
+// Sin fila guardada => todo permitido (comportamiento histórico de la ventanilla).
+```
+
+`guardar()` trata el mapa como **completo**: toda clave del catálogo que no llegue en el `POST` se almacena como bloqueada. El formulario envía exactamente los interruptores encendidos, de modo que desmarcar una sección no depende de que el navegador mande un `false` (los checkboxes no enviados son la falla clásica de este tipo de pantallas).
+
+#### 4.4.3. Resolución de Permiso por URI (Prefijo Más Largo)
+
+`requeridoParaUri()` devuelve la clave aplicable a una URI eligiendo **el prefijo más largo que coincida**, no el primero declarado. Esto es lo que permite que `admin/app-transito/boletas` se governe por `app_transito_boletas` aunque `app_transito_config` declara el prefijo genérico `admin/app-transito`:
+
+```php
+foreach (self::CATALOGO as $clave => $def) {
+    foreach ($def['rutas'] as $prefijo) {
+        if (strlen($prefijo) > $largo && str_starts_with($uri, $prefijo)) {
+            $mejor = $clave;
+            $largo = strlen($prefijo);
+        }
+    }
+}
+```
+
+Consecuencia práctica para nuevas funcionalidades: **Registrar una ruta bajo un prefijo ya catalogado la protege automáticamente**, sin tocar el filtro. Es el caso del módulo de radicación presencial (sección 7.6), que al vivir en `admin/solicitudes/nueva` quedó sujeto al permiso `solicitudes` sin código adicional.
+
+#### 4.4.4. Aplicación en Dos Capas (Defensa en Profundidad)
+
+1. **Capa servidor (obligatoria):** `PermisoOperadorFilter` corre `before` en `admin` y `admin/*`. Su lógica de exclusión es deliberadamente angosta:
+   ```php
+   if (in_array('administrador', $roles, true))          return null; // nunca se filtra
+   if (!in_array('operador_ventanilla', $roles, true))   return null; // lo resuelven auth/role
+   $clave = PermisosOperador::requeridoParaUri(uri_string());
+   if ($clave === null || PermisosOperador::activo($clave)) return null;
+   $session->setFlashdata('error', 'No tienes permiso para usar "' . $def['nombre'] . '"...');
+   return redirect()->to('/admin/dashboard')->setStatusCode(302);
+   ```
+   El bloqueo responde con **redirección 302 y mensaje explicativo**, no con `403`: el operador no técnico entiende "pide al administrador habilitarlo en Permisos del Operador" mejor que un código de error HTTP.
+2. **Capa vista (usabilidad):** el *layout* del panel (`app/Views/layouts/admin.php`) construye una clausura `$permitido()` a partir de `PermisosOperador::todos()` y **omite los enlaces no concedidos** en la barra lateral, agrupando secciones completas (`$hayCatalogos`, `$hayAppTransito`) cuando todos sus hijos están apagados. Ocultar es cosmético; el filtro es lo que protege.
+
+#### 4.4.5. Invariantes de Seguridad
+
+* **El administrador nunca se filtra**, ni siquiera si una política futura lo intentara.
+* **Las bajas definitivas no son configurables.** `usuarios/eliminar`, `app-transito/*/eliminar` y la pantalla `permisos-operador` se declararon en un grupo de ruta aparte con `filter: role:administrador`, fuera del alcance de la ventanilla. Un permiso mal activado no puede habilitar borrados.
+* **Fallos abiertos intencionales:** sin fila guardada todo está permitido (`activo()` devuelve `true` por omisión). Un parámetro corrupto o no sembrado no deja al municipio sin poder trabajar.
+* **Caché de vida útil por petición** (`private static ?array $cache`): en Vercel cada invocación es un proceso efímero, así que la caché no puede ser de larga duración ni en disco; se reinicia explícitamente al guardar (`reiniciarCache()`) y en `setUp()`/`tearDown()` de las pruebas.
 
 ---
 
@@ -513,6 +663,72 @@ El flujo de pago del portal ciudadano simula una pasarela de comercio electróni
 * **Módulo "Mis Solicitudes":** Permite al ciudadano visualizar en una tabla responsiva todos sus trámites iniciados, filtrados por folio, fecha y estado actual, incorporando insignias de color (*status badges*) y accesos directos al detalle del expediente.
 * **Módulo "Mi Perfil" (`app/Views/portal/mi_perfil.php`):** Centraliza los datos generales del ciudadano (CURP, RFC, dirección física, teléfono) y permite la carga perenne de su Identificación Oficial (INE), facilitando que en trámites futuros el documento pueda ser referenciado automáticamente sin obligar al usuario a digitalizarlo repetidamente.
 
+### 6.5. Autorregistro de Ciudadanos y Recuperación de Cuenta
+
+El portal ciudadano es autosuficiente: **una persona puede crear su propia cuenta sin intermediario**, requisito indispensable para que la ventanilla digital descongestione la atención presencial.
+
+#### 6.5.1. Privilegio del Autorregistro por Tipo de Cuenta
+
+La regla de negocio que gobierna este módulo es asimétrica y está explícita en el controlador:
+
+| Tipo de cuenta | ¿Puede crearse desde `auth/register`? | Responsable del alta |
+|---|:---:|---|
+| `ciudadano` | **Sí** | El propio interesado |
+| `operador_ventanilla` | No | El `administrador` desde `/admin/usuarios` |
+| `administrador` | No | El `administrador` existente |
+| Agente de tránsito | No | El `administrador` desde `/admin/app-transito` |
+
+```php
+// AuthController::attemptRegister()
+// El autorregistro SOLO produce cuentas de ciudadano; nunca de agente,
+// operador o administrador (esos los da de alta el personal).
+if ($this->userModel->asignarRol($userId, 'ciudadano')) {
+    $this->auditoriaModel->registrar('users', $userId, 'asignar_rol', null, ['rol' => 'ciudadano']);
+}
+```
+
+El rol **no se recibe por `POST`**: se asigna hardcodeado en el servidor. Un atacante que inyecte `rol=administrador` en el formulario simplemente no será escuchado. El registro público de agentes de tránsito fue evaluado y **retirado** del sistema: al ser funcionarios con capacidad de sanción (multas en UMA), su identidad debe ser verificada físicamente y dada de alta por la Dirección.
+
+#### 6.5.2. Validación Estructural de Identidad
+
+El formulario no se limita a campos obligatorios; verifica la **sintaxis oficial** de los identificadores gubernamentales mexicanos:
+
+```php
+'curp'  => 'required|exact_length[18]|regex_match[/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]{2}\d$/]',
+'rfc'   => 'permit_empty|exact_length[13]|regex_match[/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/]',
+'email' => 'required|valid_email|max_length[180]|is_unique[users.email]',
+'password' => 'required|min_length[8]|max_length[100]|regex_match[/^(?=.*[A-Za-z])(?=.*\d).+$/',
+```
+
+* La CURP se normaliza a mayúsculas (`strtoupper`) antes de persistir, y su expresión regular respeta el patrón oficial de la RENAPO (bloque de letras, fecha de nacimiento, estado, sexo y dígito único).
+* La contraseña exige **al menos una letra y un dígito** y se almacena con `password_hash(..., PASSWORD_DEFAULT)` (bcrypt con salt automático), nunca reversible.
+* El RFC y las fotografías del INE son `permit_empty`: opcionales, pero validados en tipo y tamaño (`image/jpeg|image/png`, 5 MB) si el ciudadano decide adjuntarlos durante el alta.
+* `is_unique[users.email]` y `is_unique[users.username]` impiden cuentas duplicadas, lo que a su vez protege la unicidad del expediente administrativo.
+* Se exige `acepto_terminos`, enlazando a las vistas `auth/terminos` y `auth/privacidad` (avisos de privacidad bajo la normativa de protección de datos personales).
+
+#### 6.5.3. Límite de Alta Automatizada Resiliente al Entorno Serverless
+
+El mecanismo habitual de CodeIgniter (`Throttler`) depende de la caché de la aplicación. En Vercel esa caché corre en modo `Dummy` (sin persistencia entre invocaciones), por lo que el limitador **nunca acumularía conteo** y dejaría pasar cualquier avalancha de registros. El blindaje se diseñó entonces sobre la base de datos, que sí es compartida:
+
+```php
+$ip = $this->request->getIPAddress();
+// Anti abuso: frena el alta automatizada masiva desde una misma IP.
+if (ENVIRONMENT !== 'testing' && $this->auditoriaModel->registrosPorIp($ip) >= 5) {
+    return redirect()->back()->withInput()->with('errors', [
+        'registro' => 'Has enviado demasiados registros seguidos. Espera un momento o acude a la ventanilla.',
+    ]);
+}
+```
+
+Tres criterios de diseño justificables:
+1. **Fuente de verdad persistente:** el conteo sale de la tabla `auditoria`, no de memoria volátil, así que resiste la naturaleza efímera de la función serverless.
+2. **Mensaje orientado al servicio:** la respuesta no revela el umbral exacto ni el mecanismo de detección, y ofrece el canal alternativo (la ventanilla física), coherente con el enfoque híbrido de la sección 7.6.
+3. **Exención en pruebas:** la condición `ENVIRONMENT !== 'testing'` evita que la suite de integración se autobloquee entre casos, sin debilitar la regla en producción.
+
+#### 6.5.4. Recuperación de Acceso
+
+El flujo `auth/forgot` → `auth/reset/(:any)` permite restablecer la contraseña sin exponer la existente. El token de restablecimiento viaja ligado a la cuenta y se consume en la propia ruta, y el mensaje al usuario no distingue entre "el correo existe" y "no existe", para no convertir el formulario en un oráculo de enumeración de cuentas.
+
 ---
 
 ## 7. Lógica de Negocio del Panel Administrativo
@@ -558,6 +774,162 @@ Cada alteración sensible realizada desde el panel administrativo es interceptad
 * **Catálogo de Concesiones (`CatalogoConcesionesController`):** Registro del padrón municipal de concesiones de transporte público, vinculación de números económicos, rutas asignadas, datos de la unidad vehicular (placas, serie), vigencia de la concesión y control de estatus (`vigente`, `vencida`, `suspendida`, `cancelada`).
 * **Módulo de Formatos Oficiales (`AdminController::formatos`):** Repositorio institucional para la subida y sustitución de formatos editables y solicitudes oficiales que los ciudadanos pueden descargar desde el portal web.
 * **Consola de Configuración de Tránsito (`AppTransitoController`):** Módulo administrativo que permite actualizar el valor de la UMA vigente, configurar las reglas fotográficas de la aplicación móvil de agentes de tránsito, dar de alta fundamentos legales en el catálogo de infracciones y auditar el historial de boletas levantadas en vía pública.
+
+### 7.6. Radicación Presencial de Solicitudes desde Ventanilla (Canal Híbrido)
+
+#### 7.6.1. Justificación del Módulo
+
+Un portal ciudadano que solo admite captura en línea desplaza la fila de ventanilla al teléfono y al correo electrónico, y deja fuera a quien no tiene cuenta bancaria para pagar en línea, sin escáner o sin confianza digital. Para un municipio como Uriangato, donde una parte relevante de los concesionarios es persona física de edad avanzada, **el canal presencial no es un complemento: es la vía principal**.
+
+El módulo `App\Controllers\Admin\SolicitudPresencialController` permite que el funcionario **radique la solicitud en nombre del ciudadano** que acudió físicamente, con la misma validez jurídica, el mismo folio, el mismo tarifario y la misma máquina de estados que una captura hecha desde el portal.
+
+> **Principio rector del módulo:** el canal presencial no es un sistema paralelo ni una tabla de "capturas pendientes". Escribe en `solicitudes`, `solicitud_datos`, `historial_estatus` y `auditoria` exactamente las mismas estructuras que el portal, por lo que desde el momento de su creación la solicitud vive el resto del ciclo de vida sin saber cómo nació.
+
+#### 7.6.2. Modelo de Datos Declarativo (Un Solo Catálogo para 7 Trámites)
+
+En lugar de siete controladores y siete vistas espejo del flujo ciudadano, el módulo define **un catálogo de campos por trámite** (`private const CAMPOS_TRAMITE`) de donde se derivan automáticamente el formulario HTML, las reglas de validación y el paquete de metadatos EAV:
+
+```php
+'UR-TT-T-05' => [
+    ['name' => 'nombre_solicitante', 'label' => 'Nombre del solicitante', 'type' => 'text',  'required' => true, 'max_length' => 180],
+    ['name' => 'fecha_cierre',       'label' => 'Fecha del cierre',      'type' => 'date',  'required' => true],
+    ['name' => 'tipo_cierre',        'label' => 'Tipo de cierre',        'type' => 'select','required' => true,
+     'options' => ['parcial' => 'Parcial', 'total' => 'Total']],
+    // ...
+],
+```
+
+| Trámite | Campos capturados | Tipos presentes |
+|---|:---:|---|
+| UR-TT-T-01 Concesión de Transporte | 6 | `text`, `select`, `number` |
+| UR-TT-T-02 Constancia de Despintado | 5 | `text`, `textarea` |
+| UR-TT-T-03 Orden de Plaqueo | 6 | `text`, `select` |
+| UR-TT-T-04 Permiso Eventual | 12 | `text`, `select`, `textarea`, `number` |
+| UR-TT-T-05 Cierre de Calle | 10 | `text`, `date`, `time`, `select`, `textarea` |
+| UR-TT-T-06 Cesión de Concesión | 6 | `text`, `select` |
+| UR-TT-T-07 Carga y Descarga | 10 | `text`, `select`, `time`, `number` |
+| **Total** | **55** | 6 variantes de control |
+
+La validación se **genera** desde ese mismo catálogo, de modo que la interfaz y el servidor no pueden desincronizarse (la falla clásica de formularios duplicados portal/panel):
+
+```php
+foreach (self::CAMPOS_TRAMITE[$tramite] as $campo) {
+    $ruleStr = $campo['required'] ? 'required' : 'permit_empty';
+    if (isset($campo['max_length']))              $ruleStr .= '|max_length[' . $campo['max_length'] . ']';
+    if ($campo['type'] === 'select')              $ruleStr .= '|in_list[' . implode(',', array_keys($campo['options'])) . ']';
+    if ($campo['type'] === 'date')                $ruleStr .= '|valid_date[Y-m-d]';
+    if ($campo['type'] === 'number' && $campo['required']) $ruleStr .= '|is_natural_no_zero';
+    $rules[$campo['name']] = ['rules' => $ruleStr, 'label' => $campo['label']];
+}
+```
+
+Notable: `in_list[...]` se construye con las **claves** del `options` del catálogo, no con el texto visible. Un operador que altere el `POST` para enviar un valor inventado en `tipo_cesion` recibe error de validación, no un catálogo contaminado.
+
+#### 7.6.3. Flujo de Asistente en Dos Pasos
+
+```mermaid
+flowchart LR
+    A["/admin/solicitudes/nueva<br/>Paso 1"] -->|Buscar por nombre,<br/>usuario o correo| B[Seleccionar ciudadano]
+    A -->|Seleccionar tipo| C["/admin/solicitudes/nueva/UR-TT-T-0N<br/>Paso 2: formulario dinámico"]
+    B --> C
+    C -->|POST con validación| D["/admin/solicitudes/folio<br/>Expediente ya radicado"]
+```
+
+1. **Paso 1 (`index()`):** muestra los trámites disponibles y un buscador de ciudadano. La búsqueda filtra `activo = 1`, limita a 20 resultados y ordena por nombre, usando `like` sobre `nombre_completo`, `username` y `email` agrupados con `groupStart()/groupEnd()` (los paréntesis importan: sin ellos, el `where('activo',1)` dejaría de aplicarse a las alternativas `orLike`).
+2. **Buscador asincrónico (`buscarCiudadano()`):** endpoint `POST` que responde JSON con `id`, `nombre`, `email` y `rfc` a partir de **2 caracteres** como mínimo. Exigir un umbral corta de raíz exploraciones vacías que drenen el padrón de datos personales.
+3. **Paso 2 (`formulario($tramite)`):** renderiza `admin/solicitudes_presenciales/formulario.php` recorriendo el catálogo del trámite, con el monto de tarifa visible antes de guardar.
+
+#### 7.6.4. Transacción y Orden de Escritura
+
+La radicación escribe en cuatro destinos. Hacerlo sin atomicidad produciría expedientes huérfanos (folio sin datos, o solicitud sin trazabilidad), así que el bloque se envuelve en transacción:
+
+```php
+$db = $solicitudModel->db;
+$db->transStart();
+
+$folio = FolioGenerator::generar();                       // 1. folio (UUIDv4 -> 20 hex)
+$solicitudId = $solicitudModel->([... 'estatus' => 'Recibido', 'monto' => $monto]);
+if ($solicitudId === false) { $db->transRollback(); return ...; }
+(new SolicitudDatoModel())->guardarDatos($solicitudId, $datosGuardar);  // 2. EAV
+(new HistorialEstatusModel())->insert([...]);                          // 3. trazabilidad
+$documentosSubidos = $this->manejarDocumentosOpcionales(...);          // 4. archivos
+
+$db->transComplete();
+if ($db->transStatus() === false) { return ...; }
+(new AuditoriaModel())->registrar('solicitudes', $solicitudId, 'creada_presencial', ...); // fuera de la transacción
+```
+
+La **auditoría se escribe deliberadamente después** de `transComplete()`: es una bitácora de seguridad, no parte del expediente. Si el expediente se revirtió, la auditoría debe quedar constando el intento fallido con su payload, no desaparecer con él.
+
+#### 7.6.5. Trazado del Origen sin Alterar el Esquema
+
+En lugar de agregar una columna `canal` a `solicitudes` (que habría requerido migración en CI4 **y** en los scripts de Supabase, más la actualización de vistas y consultas), el origen se registra como un par EAV más:
+
+```php
+$datosGuardar = ['origen' => 'presencial'];
+```
+
+Y en el historial de estatus, un comentario legible para el ciudadano:
+
+```php
+'comentario' => 'Solicitud registrada presencialmente por ventanilla.',
+```
+
+Consecuencia: el ciudadano que acudió físicamente **ve su expediente en el portal web** con su folio, puede consultar estatus, subsanar prevenciones y pagar en línea, sin que nadie haya duplicado su registro. El módulo presencial y el portal son dos puertas al mismo expediente.
+
+#### 7.6.6. Casos de Uso Cubiertos por Trámite
+
+| # | Caso de uso presencial | Comportamiento implementado |
+|:---:|---|---|
+| 1 | Ciudadano **sin cuenta** en el portal | Se **requiere** seleccionar un ciudadano existente (`ciudadano_id > 0`) porque la FK es `NOT NULL`. El mensaje no solo rechaza: **redirige al alta** — "créela primero en Usuarios y ciudadanos". Ver §7.6.7. |
+| 2 | UR-01 sin **convocatoria vigente** | Se valida `ConvocatoriaModel::vigente($id)`; si no hay ninguna, la vista muestra advertencia y el paso queda bloqueado. |
+| 3 | UR-02/03/06 con **número de título de concesión** | Se resuelve la FK automáticamente con `ConcesionModel::findByNumeroTitulo()` y se asienta `concesion_id`; la coincidencia se busca por número de título, no por ID interno que el operador no conoce. |
+| 4 | UR-06 con **función deshabilitada** | Se consulta `FeatureFlags::habilitarUrTtT06()` en **tres puntos**: listado, GET del formulario y POST de guardado. Bloquear solo el listado sería eludirlo escribiendo la URL directa. |
+| 5 | UR-07 con **monto dinámico** | Se calcula con `TarifarioService::calcularMontoUrTtT07($tipoSolicitante, $periodo, $numCamiones)`, multiplicando por el número de camiones (`max(1, ...)` para que 0 o vacío no produzca monto cero). |
+| 6 | Trámite **sin tarifa configurada** | Se niega la radicación con diagnóstico accionable: "Configúrala primero en Tarifario". No se crean solicitudes con `monto = 0` disfrazadas de exentas. |
+| 7 | Ciudadano **sin documentos a la mano** | Los documentos son **opcionales** en ventanilla: se admiten con `doc_` como prefijo de campo, y el expediente queda radicado. La prevención documental ocurre después, en revisión. |
+| 8 | Operador que **escanea los documentos en el momento** | Cada archivo pasa por `DocumentoUploader` (validación MIME + UUID + SHA-256), mismo pipeline del portal (sección 3.3). |
+| 9 | Intento de **inyectar un trámite inexistente** | `$_POST['tramite']` se valida contra `isset(self::CAMPOS_TRAMITE[...])`; un valor espurio aborta sin escribir nada. |
+| 10 | Solicitud **ya radicada que requiere corrección** | Al concluir se redirige a `/admin/solicitudes/{folio}`, donde aplica la máquina de estados y las prevenciones ya documentadas (§7.2 y §7.3). |
+
+#### 7.6.7. Decisiones de Diseño Discutidas y Descartadas
+
+* **¿Por qué no permitir `ciudadano_id` nulo para "un transeúnte sin registro"?**
+  La columna tiene restricción `NOT NULL REFERENCES users(id)` definida tanto en la migración de CI4 como en el esquema de Supabase. Hacerla nullable habría exigido: migración nueva + script paralelo en Supabase + relajar el modelo de permisos del portal + resolver quién consulta después un expediente sin dueño. Se optó por **exigir la cuenta y guiar su creación**, que además beneficia al ciudadano (recibe trazabilidad en línea). En SQLite ni siquiera se puede *relajar* una columna: el motor no soporta `ALTER COLUMN`, por lo que una migración de ese tipo sería imposible en las pruebas.
+* **¿Por qué documentos opcionales si el portal los exige?**
+  Porque son canales con distinta física. El portal recibe el archivo digital del interesado; la ventanilla recibe una persona que puede traer la documentación en papel al día siguiente. Endurecer el canal presencial empujaría al ciudadano al portal, que es justo lo que el módulo evita.
+* **¿Por qué no reutilizar `TramitesController::crear()`?**
+  Su API básica solo cubre T-01, T-02 y T-03 y no modela los campos propios de T-04 a T-07. Forzarla habría implicado agregarle bifurcaciones, en lugar de un catálogo declarativo nuevo que describe los 7.
+
+### 7.7. Gestión del Padrón de Cuentas desde el Panel
+
+Complemento necesario del módulo presencial: para radicarse una solicitud debe existir una cuenta. `Admin\UsuariosController` expone `/admin/usuarios` con alta, edición, alternado de activos (`toggle`) y búsqueda, gobernado por el permiso configurable `usuarios`.
+
+* **La baja definitiva es exclusiva del administrador** (`POST usuarios/eliminar/(:num)` está en el grupo `role:administrador`), para que un operador no pueda eliminar expedientes de ciudadanos de tajo.
+* **Roles asignables desde el panel:** `ciudadano`, `operador_ventanilla`, `administrador` (sembrados por `RolesSeeder`). Los **agentes de tránsito no se gestionan aquí sino en `/admin/app-transito`**, porque pertenecen a `agentes_transito` con placa, sector y rol operativo propio de la aplicación móvil.
+* Toda operación sensible (alta, edición, cambio de estado, asignación de rol) se asienta en `auditoria`, incluida la del autorregistro (§6.5.1).
+
+### 7.8. Mapa Maestro de Rutas y Módulos del Panel
+
+La superficie completa del panel, declarada en `app/Config/Routes.php` dentro del grupo `admin` con `filter: auth`:
+
+| Módulo | Rutas principales | Filtro de acceso |
+|---|---|---|
+| Dashboard | `GET admin/dashboard` | `role:administrador,operador_ventanilla` + permiso libre |
+| Solicitudes | `GET admin/solicitudes`, `GET admin/solicitudes/(:segment)` | permiso `solicitudes` |
+| **Radicación presencial** | `GET admin/solicitudes/nueva`, `GET admin/solicitudes/nueva/(:segment)`, `POST admin/solicitudes/nueva/guardar`, `POST admin/solicitudes/nueva/buscar-ciudadano` | permiso `solicitudes` |
+| Dictaminación | `POST admin/solicitudes/cambiar-estatus/(:num)`, `ur04/evaluacion`, `ur05/validacion`, `dictamen-ur02` | permiso `solicitudes` |
+| Descarga documental | `GET admin/solicitudes/descargar-documento/(:num)` | permiso `solicitudes` |
+| Tarifario | `admin/tarifas` (listar, nuevo, guardar, editar, actualizar, eliminar) | permiso `tarifas` (eliminar: solo admin) |
+| Concesiones | `admin/concesiones` (CRUD completo) | permiso `concesiones` (eliminar: solo admin) |
+| Convocatorias | `admin/convocatorias/(:num)/evaluacion`, `seleccionar` | permiso `convocatorias` |
+| Formatos | `admin/formatos`, `subir`, `eliminar` | permiso `formatos` |
+| Usuarios | `admin/usuarios` (index, nuevo, guardar, editar, actualizar, toggle) | permiso `usuarios` |
+| **Permisos del operador** | `GET admin/permisos-operador`, `POST admin/permisos-operador/guardar` | **solo `administrador`** |
+| App Tránsito | `admin/app-transito` + `boletas`, `catalogo` | permisos `app_transito_*` |
+| Auditoría | `GET admin/auditoria` | permiso `auditoria` |
+
+**Detalle técnico que evitó un defecto de enrutamiento:** la ruta literal `solicitudes/nueva` se declaró **antes** del patrón comodín `solicitudes/(:segment)`. CodeIgniter 4 evalúa patrones en orden de declaración, así que sin ese orden `nueva` habría sido interpretado como un folio inexistente. Como salvaguarda adicional está activo `setPrioritize(true)`.
 
 ---
 
@@ -609,10 +981,237 @@ El backend web expone rutas de API para interoperabilidad con clientes móviles 
 
 ---
 
-## 9. Conclusiones Técnicas de la Metodología
+## 9. Experiencia de Usuario y Diseño Responsivo Mobile-First
+
+La hipótesis de uso real del sistema es que **el ciudadano abre el portal desde el teléfono**, no desde el escritorio de su oficina, y que el operador de ventanilla trabaja con el mostrador abarrotado y una pantalla pequeña. El subsistema web se construyó entonces con una hoja de estilos *mobile-first* (`public/css/custom.css`) que gobierna portal y panel con el mismo sistema de diseño.
+
+### 9.1. Sistema de Diseño y Design Tokens
+
+Toda decisión visual se centraliza en variables CSS del `:root`, evitando valores mágicos dispersos por las vistas:
+
+```css
+:root {
+  --font-family: "Plus Jakarta Sans", "Inter", -apple-system, ... ;
+  --primary-color: #0d47a1;   /* Azul institucional */
+  --success-color: #0e9f6e;   /* Confirmación / pago */
+  --danger-color:  #dc2626;   /* Prevención y rechazo */
+  --radius-sm: 8px;  --radius-md: 12px;  --radius-lg: 16px;  --radius-pill: 9999px;
+  --shadow-sm: ...;  --shadow-md: ...;   --shadow-lg: ...;
+  --touch-target: 44px;   /* objetivo mínimo táctil */
+}
+```
+
+El token `--touch-target` es el más importante del sistema en móvil: **44 px es el mínimo que recomienda Apple HIG y WCAG** para un objetivo digital editable por un dedo. Al estar centralizado, cambiar la ergonomia de todo el sistema es una línea, no un barrido de cientos de reglas.
+
+### 9.2. Escala Tipográfica y Objetivos Táctiles
+
+```css
+@media (max-width: 768px) {
+  input, select, textarea, .form-control, .form-select {
+    font-size: 16px !important;      /* evita el zoom automático de iOS */
+    min-height: var(--touch-target);
+  }
+  .btn { min-height: var(--touch-target);
+         display: inline-flex; align-items: center; justify-content: center; }
+}
+```
+
+* **La corrección de `16px` no es estética:** iOS Safari aplica zoom incontrolable al enfocar un campo cuyo texto es menor a 16 px, rompiendo el encuadre del formulario y dejando al usuario navegando a ciegas. Fijar el tamaño neutraliza ese comportamiento.
+* **`touch-action: manipulation`** en botones e insumos desactiva el doble retardo de 300 ms que algunos navegadores aplican para distinguir pellizco de toque.
+* **`-webkit-tap-highlight-color: transparent`** elimina el sombreado gris residual al pulsar enlaces, y `scroll-behavior: smooth` unifica la navegación larga por expedientes.
+* La escala tipográfica se comprime en móvil (`h1` 1.45 rem, `display-5` 1.75 rem) para que ningún título obligue a hacer scroll horizontal con números de folio o razones sociales largas.
+
+### 9.3. Adaptación del Portal Ciudadano
+
+| Elemento | Escritorio | Móvil (≤ 767.98 px) |
+|---|---|---|
+| Navegación principal | horizontal en la barra superior | acordeón colapsado (`navbar-toggler`) con fondo sólido `#0d47a1`, separadores internos y enlaces de 0.75 rem |
+| Acceso a secciones | menú superior | **barra inferior fija tipo app** (`.mobile-bottom-bar`, 62 px) con icono + microtexto |
+| Contenido bajo la barra | sin ajuste | `body.has-mobile-bottom-nav { padding-bottom: 75px }` + margen inferior del pie |
+| Tarjetas de trámite | 2 columnas | 1 columna a todo el ancho, radios y separaciones reducidos |
+| Monto del trámite | texto grande | `clamp(1.4rem, 2.5vw, 2.2rem)` con `white-space: normal` y `word-break` |
+
+La barra inferior merece mención metodológica: en telefonos el pulgar no alcanza la parte superior de la pantalla (zona muerta), por eso las acciones frecuentes se mudan al borde inferior. La clase se aplica **solo cuando hay sesión** (`session('user_id')`), porque un visitante anónimo no tiene "mis solicitudes" a donde ir.
+
+> **`clamp()` y quiebre de palabras:** un monto en UMA o una razón social de persona moral sin separadores rompería el diseño en un móvil angosto. Permitir salto de línea y ruptura explícita evita que el contenido se desborde horizontalmente, que es la causa número uno de abandono en formularios gubernamentales móviles.
+
+### 9.4. Adaptación del Panel Administrativo
+
+El panel es un tablero denso: forzarlo a móvil con scroll horizontal lo vuelve inservible. La solución fue **convertir la barra lateral en gaveta (drawer)**:
+
+```css
+@media (max-width: 767.98px) {
+  .sidebar-admin { width: min(300px, 86vw); transform: translateX(-100%);
+                   box-shadow: 4px 0 20px rgba(0,0,0,.3); }
+  .sidebar-admin.show      { transform: translateX(0); }
+  .main-admin              { margin-left: 0 !important; width: 100% !important; }
+  .topbar-admin            { position: sticky; top: 0; z-index: 1000; }
+}
+```
+
+Cuatro decisiones de ingeniería de interfaz:
+
+1. **`min(300px, 86vw)` en lugar de un ancho fijo:** en pantallas de 320 px (teléfonos de entrada aún muy comunes en atención municipal) una gaveta de 300 px dejaría 20 px visibles, sin referencia de contexto. Al atarla al 86 % del ancho, siempre queda una franja de la página de fondo que el usuario interpreta como "hay algo detrás, puedo cerrarla".
+2. **El modo *colapsado* solo existe en escritorio:** en móvil el modificador `.collapsed` se neutraliza (`opacity: 1; white-space: normal; display: block`). Un panel colapsado a solo iconos es inviable en una gaveta de 300 px donde el funcionario no sabe qué está tocando.
+3. **Barra superior pegajosa:** `position: sticky` conserva la identidad del expediente y el botón de cierre al scrollear documentos largos.
+4. **Fondo oscurecido** (`.sidebar-backdrop`) que intercepta el toque fuera de la gaveta para cerrarla, patrón ya conocido del usuario de apps móviles.
+
+**Áreas seguras en dispositivos con muesca (notch):**
+
+```css
+@supports (padding: env(safe-area-inset-left)) {
+  @media (max-width: 767.98px) {
+    .topbar-admin { padding-top: calc(0.65rem + env(safe-area-inset-top)); }
+    .main-admin   { padding-left:  calc(0.75rem + env(safe-area-inset-left));
+                    padding-right: calc(0.75rem + env(safe-area-inset-right));
+                    padding-bottom:calc(0.75rem + env(safe-area-inset-bottom)); }
+  }
+}
+```
+
+Requiere el `viewport-fit=cover` declarado en el meta `viewport` de los tres *layouts*. Sin ese par (atributo + variable de entorno) el contenido queda tapado por la muesca o por la barra de gestos del iPhone.
+
+Se añade un tramo específico para pantallas ultrangostas (`max-width: 379.98px`) que ensancha la gaveta al 92 % de la venta y comprime aun más la barra superior.
+
+### 9.5. Portada Fotográfica: Composición, Velo de Contraste y Comportamiento en Retrato
+
+La portada del portal usa una fotografía institucional de Uriangato como fondo. Una foto de este tipo es un riesgo de legibilidad: compite con el texto. El diseño la encerró en una pila de tres capas con `isolation: isolate` para que sus `z-index` negativos no interfieran con el resto de la página:
+
+```css
+.inicio-hero          { position: relative; isolation: isolate; overflow: hidden; }
+.inicio-hero::before  { inset: -24px; z-index: -2;   /* la foto */
+                        background: #eef2f7 url('/uriangato.webp') center / cover no-repeat; }
+.inicio-hero::after   { inset: 0;     z-index: -1;   /* velo de contraste */
+                        background: linear-gradient(180deg, rgba(255,255,255,.82), ...);
+                        backdrop-filter: blur(7px); }
+```
+
+* **`inset: -24px` (desbordamiento negativo):** el desenfoque muestrea píxeles fuera del recuadro; sin esa holgura quedarían bordes vacíos translúcidos.
+* **El velo es obligatorio, no decorativo:** la cota de blanco semitransparente **garantiza el contraste del texto incluso en navegadores sin soporte de `backdrop-filter`**. El desenfoque degrada elegantemente; la legibilidad no depende de él.
+* **Comportamiento en móvil:** el fondo horizontal recortado con `cover` en una vista vertical (retrato) elimina justo el sujeto de la foto. Se corrige anclando la posición y bajando el costo gráfico:
+
+```css
+@media (max-width: 767.98px) {
+  .inicio-hero-logo  { height: 60px; }                     /* antes 96px fijo */
+  .inicio-hero::before { background-position: center 35%; } /* conserva el sujeto */
+  .inicio-hero::after  { background: linear-gradient(180deg, rgba(255,255,255,.9), ...);
+                         backdrop-filter: blur(2px); }      /* velo fuerte + blur ligero */
+  .inicio-hero .tramite-card { backdrop-filter: none; }     /* elimina capas de composición */
+}
+```
+
+Subir la opacidad del velo y bajar el desenfoque a 2 px es un **intercambio deliberado**: se gana rendimiento en gama baja de teléfono (donde el desenfoque a pantalla completa es la causa típica de scroll entrecortado) y se conserva contraste, que en móvil se prioriza sobre el efecto visual.
+
+* **Logo responsivo por clase, no en línea:** el alto antes estaba fijado con `style="height: 96px"`, un estilo en línea que ninguna media query puede pisar sin `!important`. Se sustituyó por `.inicio-hero-logo` con alto por breakpoint.
+
+### 9.6. Identidad Visual, Favicones y Recursos Estáticos en el Edge
+
+Un defecto observado en producción: la imagen de portada devolvía `404` y el navegador pedía `/favicon.ico` sin existir. La causa no era del CSS sino de la **capa de borde de Vercel**.
+
+En `vercel.json` las rutas se evalúan en orden, y la última es un comodín que entrega **todas** las peticiones no reconocidas a la función PHP:
+
+```json
+{ "src": "/(favicon\\.ico|robots\\.txt|.*\\.webp)", "dest": "/public/$1" },
+{ "src": "/(.*)", "dest": "/api/index.php" }
+```
+
+El patrón whitelistaba `logo-uri.webp` de forma **literal**, así que la segunda imagen agregada a la raíz (`uriangato.webp`) no tenía ruta propia y caía en el comodín: la petición llegaba a CodeIgniter, que no sirve binarios, y respondía 404. La corrección fue generalizar el patrón a `.*\\.webp`.
+
+> **Lección metodológica registrada:** en este despliegue **añadir un archivo a `public/` no basta**; hay que declararlo en `vercel.json`. La validación de cualquier cambio de recursos estáticos debe incluir la prueba de la URL ya desplegada, no solo el funcionamiento en local (donde `spark serve` sí sirve todo el directorio).
+
+Para el icono se eliminó la petición por defecto del navegador enlazando el logotipo existente en los tres *layouts* (portal, panel y autenticación):
+
+```html
+<link rel="icon" type="image/webp" href="/logo-uri.webp">
+<link rel="apple-touch-icon" href="/logo-uri.webp">
+```
+
+Además, las cabeceras `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN` y `Permissions-Policy` se aplican en `vercel.json` para todo recurso estático, no solo a las respuestas PHP.
+
+### 9.7. Accesibilidad, Movimiento Reducido y Rendimiento
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-admin, .main-admin, .sidebar-backdrop, ... { transition: none !important; animation: none !important; }
+  html { scroll-behavior: auto; }
+  .ayuda-icon:hover, .btn-ayuda-rol:hover { transform: none; }
+}
+```
+
+* **`prefers-reduced-motion`:** respeto a la preferencia del sistema operativo para personas con vestibular o fotosensibilidad; las animaciones de la gaveta y los elevados de tarjeta se anulan.
+* **Foco visible:** `:focus-visible` con contorno `#60a5fa` y separación de 2 px en enlaces de la barra lateral, para navegación por teclado sin degradar el aspecto del clic de ratón.
+* **Jerarquía semántica:** los tres *layouts* declaran `<html lang="es">`, `meta viewport` con `viewport-fit=cover`, `theme-color` institucional y `alt` descriptivo en el logotipo; los botones de acordeón llevan `aria-controls`, `aria-expanded` y `aria-label="Abrir menú"`.
+* **Utilidades de impresión:** `@media print` oculta barra lateral, barra superior y pie (`display: none`) para que un expediente pueda imprimirse en papel sin ruido de interfaz, requisito operativo de la ventanilla física.
+* **Descarga en demanda:** tipografías desde CDN con `display=swap`, Bootstrap y sus iconos desde CDN, y una sola hoja propia; en móvil se suprimen las capas de `backdrop-filter` restantes para reducir composición.
+
+---
+
+## 10. Aseguramiento de la Calidad y Estrategia de Pruebas
+
+### 10.1. Suite Automatizada con PHPUnit y FeatureTestTrait
+
+El subsistema web está cubierto por una suite de **PHPUnit** (`vendor/bin/phpunit`, configuración en `phpunit.xml.dist`) que combina dos naturalezas de prueba:
+
+* **Pruebas unitarias de lógica de negocio** (`tests/app/Libraries/`): validan servicios puros sin HTTP — transiciones de estado, cálculo de tarifas, resolución de montos de infracción y almacenamiento de archivos.
+* **Pruebas de funcionalidad de extremo a extremo** (`tests/app/Controllers/`): usan `FeatureTestTrait` para despachar peticiones reales por el enrutador, con filtros, sesiones y validaciones incluidas, y asertar sobre la respuesta y las filas escritas en base de datos.
+
+**Estado verificable de la suite: 17 clases de prueba, 117 casos, 442 aserciones, todas en verde.**
+
+### 10.2. Matriz de Cobertura Funcional
+
+| Classe de prueba | Qué protege |
+|---|---|
+| `SolicitudPresencialTest` | Acceso por rol, formulario por trámite, creación T-03/T-05/T-07, monto dinámico (tarifa × camiones), rechazo sin ciudadano, campos obligatorios, trazas de auditoría e historial, buscador AJAX |
+| `PermisosOperadorTest` | Todo permitido sin configurar, prefijo más específico, mapa completo con claves omitidas, redirección de ventanilla bloqueada, **administrador nunca bloqueado** |
+| `UsuariosControllerTest` | Alta, edición y control de cuentas desde el panel |
+| `AppTransitoAdminTest` | Configuración de la app móvil, UMA y altas de agentes desde el panel |
+| `TramitesControllerTest`, `TramitesValidacionRedirectTest` | API de radicación y reenvío con errores de validación |
+| `TramiteConcesionTransporteControllerTest`, `TramiteDespintadoControllerTest`, `TramiteOrdenPlaqueoControllerTest` | Reglas propias de UR-01, UR-02 y UR-03 |
+| `TramiteCesionConcesionValidationTest`, `PortalTramitesT06ViewRenderTest` | Cesión de concesión y su bandera de función |
+| `EstadoSolicitudServiceTest` | Grafo de transiciones de la máquina de estados |
+| `TarifarioServiceTest`, `ResolverMontoInfraccionServiceTest` | Cálculo de derechos municipales y de multas en UMA |
+| `AlmacenamientoLocalTest` | Firma HMAC, caducidad, rechazo de travesía de ruta y buckets no permitidos |
+| `ApiAgentesTransitoYBoletasTest`, `InfraccionesApiControllerTest` | Endpoints REST y autenticación por token de agente |
+
+### 10.3. Harness de Pruebas Aislado en SQLite
+
+La suite **no toca la base de datos institucional**: corre contra SQLite en memoria con prefijo `db_` (configuración `database.tests`), de forma que un error de lógica jamás pueda borrar o ensuciar datos de producción.
+
+Elegir un motor distinto al de producción (PostgreSQL) tiene un costo real que se documentó y se pagó con conocimiento:
+
+* **SQLite anteriores a 3.35 no soportan `ALTER TABLE DROP COLUMN`.** El caso base `DatabaseTestCase` usa `$refresh = true`, que antes de cada prueba **revierte** todas las migraciones ejecutando sus métodos `down()`. Toda migración que hiciera `dropColumn()` fallaba en harness, produciendo ~95 falsos errores que no tenían nada que ver con la funcionalidad probada.
+* **Solución adoptada — guardia por conductor en el `down()`, no en el `up()`:**
+  ```php
+  public function down()
+  {
+      if ($this->db->DBDriver === 'SQLite3') {
+          return;   // SQLite no soporta DROP COLUMN; el esquema de prueba se descarta entero.
+      }
+      $this->forge->dropColumn('users', 'ine_frente');
+  }
+  ```
+  Omitir el retroceso en SQLite es inocuo porque la base de pruebas se reconstruye en memoria en cada corrida; lo que **no** puede omitirse es el retroceso real en PostgreSQL, que sí se conserva.
+* **Decisiones descartadas:** crear una migración que relajara columnas (imposible: SQLite tampoco soporta `ALTER COLUMN`), o heredar `$migrateOnce = true` en la clase de prueba (provocó error fatal por conflicto de declaración de tipo con el caso base).
+
+Otros dos ajustes del entorno de prueba:
+* **CSRF deshabilitado en entorno de pruebas**, para poder despachar `POST` sin extraer tokens de las vistas; la protección se verifica en cambio por inspección de las vistas (todas los formularios contienen `csrf_field()`).
+* **Excepciones del enrutador propagadas:** `FeatureTestTrait` deja que `PageNotFoundException` llegue a la prueba, por lo que un `assertStatus(404)` no basta; se declara `expectException(PageNotFoundException::class)`.
+
+### 10.4. Pruebas de Humo y Verificación en Producción
+
+Además de PHPUnit, el repositorio conserva utilitarias ejecutables para validación manual y en integración continua (`scripts/`), entre ellas `smoke_test_local.ps1`, `test-local.ps1`, `test_auth_and_users.php`, `verificar_montos_catalogo.php` y `probar_calculo_infracciones.php`.
+
+**Criterio de verificación en el navegador:** el entorno de desarrollo local (`spark serve`) sirve todo el contenido de `public/`, mientras que Vercel solo sirve lo declarado en `vercel.json`. Por eso los cambios de recursos estáticos, rutas y *headers* **deben comprobarse contra la URL desplegada**, no solo en local. La comprobación de las cabeceras de seguridad y de las rutas de la app móvil se hace sobre el dominio de producción.
+
+---
+
+## 11. Conclusiones Técnicas de la Metodología
 
 La arquitectura construida para el **Portal Ciudadano y Panel Administrativo Web** resolvió con éxito las demandas operativas y normativas de la Dirección de Movilidad y Transporte de Uriangato:
 
-1. **Robustez y Resiliencia:** La integración del patrón MVC con persistencia de sesiones en base de datos (`ci_sessions`) y el uso de Connection Pooling sobre PostgreSQL garantizó una operación 100% estable en un entorno Serverless moderno (Vercel).
-2. **Certeza Jurídica y Seguridad:** La inmutabilidad de los expedientes mediante hashing criptográfico SHA-256, el almacenamiento privado con firmas temporales en Supabase Storage y la rigurosidad de la matriz de control de acceso RBAC protegen los datos personales de la ciudadanía y blindan los actos de autoridad municipal.
-3. **Mantenibilidad y Escalabilidad:** El desacoplamiento mediante patrones de diseño (EAV para trámites heterogéneos, Feature Flags para control de versiones y Gateway para pagos) proporciona al H. Ayuntamiento una base tecnológica sólida, lista para escalar e integrar nuevos trámites y servicios en ejercicios fiscales futuros.
+1. **Robustez y Resiliencia:** La integración del patrón MVC con persistencia de sesiones en base de datos (`ci_sessions`) y el uso de Connection Pooling sobre PostgreSQL garantizó una operación 100% estable en un entorno Serverless moderno (Vercel). La fachada de almacenamiento con doble backend (nube y local firmado) sumó la capacidad de operar y probarse sin salida a internet.
+2. **Certeza Jurídica y Seguridad:** La inmutabilidad de los expedientes mediante hashing criptográfico SHA-256, el almacenamiento privado con firmas temporales, la matriz de control de acceso RBAC y la **permisología configurable de grano fino** (§4.4) protegen los datos personales de la ciudadanía y blindan los actos de autoridad municipal. La restricción inamovible de que el administrador nunca se autoexcluya y de que las bajas definitivas no sean configurables cierra la superficie de error administrativo.
+3. **Mantenibilidad y Escalabilidad:** El desacoplamiento mediante patrones de diseño (EAV para trámites heterogéneos, Feature Flags para control de versiones y Gateway para pagos) proporciona al H. Ayuntamiento una base tecnológica sólida. El catálogo declarativo de campos (§7.6.2) demostró su valor concreto: agregar un trámite nuevo al canal presencial es **añadir una entrada al arreglo**, no escribir un controlador y una vista nuevos.
+4. **Cobertura del Mundo Real (Canal Híbrido):** El sistema no asume un ciudadano digitalmente competente. La coexistencia del portal de autogestión (§6) y la radicación presencial con validez idéntica (§7.6), ambas escribiendo en el mismo expediente y compartiendo folio, tarifario y máquina de estados, es la decisión que convierte la plataforma en una herramienta **usable por la totalidad de la población** y no solo por su segmento conectado.
+5. **Usabilidad Multidispositiva como Requisito, no como Adorno:** El diseño *mobile-first* con objetivos táctiles de 44 px, navegación inferior en el portal, gaveta lateral con áreas seguras en el panel y una portada que degrada el desenfoque para priorizar contraste (§9) responde al dispositivo real con el que la gente tramita. La corrección del servidor de borde para recursos estáticos (§9.6) dejó registrada una restricción de arquitectura que de otra forma se manifestaría como fallos silenciosos en producción.
+6. **Calidad Comprobable:** La verificación no es una afirmación sino un resultado reproducible: **117 casos de prueba y 442 aserciones en verde** sobre un harness SQLite aislado de los datos institucionales (§10), con cobertura de permisos, estados, montos dinámicos, validaciones por trámite y blindajes de almacenamiento.
