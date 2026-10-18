@@ -285,7 +285,7 @@ class UsuariosController extends Controller
             'rfc'       => ['label' => 'RFC', 'rules' => 'permit_empty|min_length[12]|max_length[13]|regex_match[/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/]'],
             'email'     => ['label' => 'Correo electrónico', 'rules' => 'permit_empty|valid_email|max_length[255]|' . $unico('email')],
             'username'  => ['label' => 'Nombre de usuario', 'rules' => 'required|alpha_numeric|min_length[5]|max_length[100]|' . $unico('username')],
-            'password'  => ['label' => 'Contraseña', 'rules' => 'permit_empty|min_length[6]'],
+            'password'  => ['label' => 'Contraseña', 'rules' => 'permit_empty|min_length[8]|max_length[100]'],
             'telefono'  => ['label' => 'Teléfono', 'rules' => 'permit_empty|min_length[7]|max_length[20]'],
             'estado'    => ['label' => 'Estado', 'rules' => 'permit_empty|max_length[100]'],
             'ciudad'    => ['label' => 'Ciudad / Municipio', 'rules' => 'permit_empty|max_length[150]'],

@@ -149,7 +149,7 @@ class AppTransitoController extends Controller
 
         if ($esNuevo || !empty($this->request->getPost('password'))) {
             $rules['password'] = [
-                'rules' => 'required|min_length[4]|max_length[50]',
+                'rules' => 'required|min_length[8]|max_length[50]',
                 'label' => 'Contraseña de Acceso Móvil',
             ];
         }

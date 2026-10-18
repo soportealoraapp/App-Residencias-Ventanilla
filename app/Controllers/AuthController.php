@@ -47,8 +47,17 @@ class AuthController extends Controller
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
-        $username = $this->request->getPost('username');
-        $password = $this->request->getPost('password');
+        $username = (string) $this->request->getPost('username');
+        $password = (string) $this->request->getPost('password');
+        $ip       = $this->request->getIPAddress();
+
+        // Limita la fuerza bruta por IP. Se apoya en auditoria (BD) porque el
+        // Throttler de CI4 no persiste en entornos sin estado como Vercel.
+        if (ENVIRONMENT !== 'testing' && $this->auditoriaModel->intentosFallidosPorIp($ip) >= 8) {
+            return redirect()->back()->withInput()->with('errors', [
+                'credenciales' => 'Demasiados intentos fallidos. Espera unos minutos e inténtalo de nuevo.',
+            ]);
+        }
 
         $user = $this->userModel
             ->groupStart()
@@ -57,21 +66,31 @@ class AuthController extends Controller
             ->groupEnd()
             ->first();
 
-        if ($user === null || ! password_verify($password, $user->password_hash)) {
+        // Verifica siempre contra un hash (real o señuelo) para igualar el tiempo
+        // de respuesta y no delatar si el usuario existe.
+        $hashParaVerificar = $user?->password_hash
+            ?? '$2y$10$EHgK/vUWPycfFKsgTmpnZehdoMfpOuqjcMUd8T9wOebEyWhBKT3GO';
+
+        if ($user === null || ! password_verify($password, $hashParaVerificar)) {
             $this->auditoriaModel->registrar('users', null, 'login_fallido', null, [
                 'metodo' => 'username_o_email',
+                'ip'     => $ip,
             ]);
             return redirect()->back()->withInput()->with('errors', ['credenciales' => 'Usuario o contraseña incorrectos.']);
         }
 
         if (isset($user->activo) && (int) $user->activo !== 1) {
-            $this->auditoriaModel->registrar('users', (int) $user->id, 'login_cuenta_inactiva', null, []);
+            $this->auditoriaModel->registrar('users', (int) $user->id, 'login_cuenta_inactiva', null, [
+                'ip' => $ip,
+            ]);
             return redirect()->back()->withInput()->with('errors', ['credenciales' => 'Tu cuenta está desactivada. Acude a la ventanilla de Tránsito y Transporte.']);
         }
 
         $roles = $this->userModel->conRoles((int) $user->id);
 
         $session = Services::session();
+        // Previene la fijación de sesión: emite un nuevo ID al autenticarse.
+        $session->regenerate(true);
         $session->set([
             'user_id'        => (int) $user->id,
             'username'       => $user->username,
@@ -123,8 +142,9 @@ class AuthController extends Controller
             $token = bin2hex(random_bytes(20));
             $expira = date('Y-m-d H:i:s', time() + 86400);
 
+            // Se guarda solo el hash: una fuga de la BD no revelaría enlaces válidos.
             $this->userModel->update($user->id, [
-                'reset_token'   => $token,
+                'reset_token'   => hash('sha256', $token),
                 'reset_expira'  => $expira,
             ]);
 
@@ -168,7 +188,7 @@ class AuthController extends Controller
         $user = null;
         if ($token !== null) {
             $user = $this->userModel
-                ->where('reset_token', $token)
+                ->where('reset_token', hash('sha256', $token))
                 ->where('reset_expira >=', date('Y-m-d H:i:s'))
                 ->first();
         }
@@ -179,7 +199,7 @@ class AuthController extends Controller
             }
 
             $rules = [
-                'password'         => 'required|min_length[8]',
+                'password'         => 'required|min_length[8]|max_length[100]|regex_match[/^(?=.*[A-Za-z])(?=.*\d).+$/]',
                 'password_confirm' => 'required|matches[password]',
             ];
 

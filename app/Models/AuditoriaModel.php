@@ -59,6 +59,43 @@ class AuditoriaModel extends Model
             ->findAll();
     }
 
+    /**
+     * Cuenta inicios de sesión fallidos desde una IP en los últimos minutos.
+     *
+     * Se apoya en la tabla de auditoría (ya existente) para que el límite funcione
+     * en servidores sin estado como Vercel, donde la caché es efímera y el
+     * Throttler de CI4 no persiste entre instancias.
+     */
+    public function intentosFallidosPorIp(string $ip, int $minutos = 15): int
+    {
+        if ($ip === '') {
+            return 0;
+        }
+
+        $desde = date('Y-m-d H:i:s', time() - ($minutos * 60));
+
+        $filas = $this->select('detalle')
+            ->where('accion', 'login_fallido')
+            ->where('fecha >=', $desde)
+            ->orderBy('fecha', 'DESC')
+            ->limit(1000)
+            ->get()
+            ->getResult();
+
+        $total = 0;
+        foreach ($filas as $fila) {
+            $detalle = $fila->detalle ?? null;
+            if (is_string($detalle)) {
+                $detalle = json_decode($detalle, true);
+            }
+            if (is_array($detalle) && ($detalle['ip'] ?? null) === $ip) {
+                $total++;
+            }
+        }
+
+        return $total;
+    }
+
     public function buscar(array $filtros = []): array
     {
         if (! empty($filtros['entidad'])) {

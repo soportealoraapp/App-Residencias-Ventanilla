@@ -31,6 +31,9 @@ if (version_compare(PHP_VERSION, $minPhpVersion, '<')) {
 
 $rootDir = dirname(__DIR__);
 
+// Oculta la version de PHP en las respuestas.
+header_remove('X-Powered-By');
+
 define('FCPATH', $rootDir . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR);
 if (getcwd() . DIRECTORY_SEPARATOR !== FCPATH) {
     chdir(FCPATH);
