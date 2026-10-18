@@ -1,3 +1,25 @@
+<?php declare(strict_types=1);
+
+/**
+ * Variables inyectadas por Admin\UsuariosController::index() vía view(..., $data).
+ * Se leen desde get_defined_vars() para que Intelephense no las marque como
+ * "undefined" sin alterar el runtime de CI4.
+ */
+$__view = get_defined_vars();
+
+/** @var array<string, string> $filtros */
+$filtros = $__view['filtros'] ?? ['q' => '', 'rol' => '', 'estado' => ''];
+/** @var array<string, string> $roles */
+$roles = $__view['roles'] ?? [];
+/** @var array<int, object> $usuarios */
+$usuarios = $__view['usuarios'] ?? [];
+/** @var array<int, array<int, string>> $rolesPorId */
+$rolesPorId = $__view['rolesPorId'] ?? [];
+/** @var bool $esAdmin */
+$esAdmin = (bool) ($__view['esAdmin'] ?? false);
+/** @var object|null $pager */
+$pager = $__view['pager'] ?? null;
+?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('pageTitle') ?>Usuarios y ciudadanos<?= $this->endSection() ?>
 <?= $this->section('content') ?>

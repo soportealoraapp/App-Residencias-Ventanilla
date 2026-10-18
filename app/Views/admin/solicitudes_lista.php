@@ -1,4 +1,19 @@
-<?php declare(strict_types=1); ?>
+<?php declare(strict_types=1);
+
+/**
+ * Variables inyectadas por Admin\AdminController::listaSolicitudes() vía view(..., $data).
+ * Se leen desde get_defined_vars() para que Intelephense no las marque como
+ * "undefined" sin alterar el runtime de CI4.
+ */
+$__view = get_defined_vars();
+
+/** @var array<string, string> $filtros */
+$filtros = $__view['filtros'] ?? ['tramite' => '', 'estatus' => '', 'q' => ''];
+/** @var array<int, object> $solicitudes */
+$solicitudes = $__view['solicitudes'] ?? [];
+/** @var object $pager */
+$pager = $__view['pager'] ?? null;
+?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('pageTitle') ?>Listado de Solicitudes<?= $this->endSection() ?>
 <?= $this->section('content') ?>
