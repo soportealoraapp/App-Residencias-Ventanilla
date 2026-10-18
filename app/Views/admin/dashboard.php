@@ -9,6 +9,9 @@ $__view = get_defined_vars();
 
 /** @var array<string, int> $estadisticas */
 $estadisticas = $__view['estadisticas'] ?? [];
+
+/** @var array<string, int> $porTramite */
+$porTramite = $__view['estadisticas']['por_tramite'] ?? [];
 ?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('pageTitle') ?>Inicio<?= $this->endSection() ?>
@@ -140,14 +143,14 @@ function badge_color_estatus(string $estatus): string {
     </div>
 </div>
 
-<?php if (!empty($estadisticas['por_tramite'])): ?>
+<?php if (!empty($porTramite)): ?>
 <div class="card mb-3 mb-md-4 border-0 shadow-sm">
     <div class="card-header bg-white py-2">
         <h6 class="mb-0 small fw-bold"><i class="bi bi-pie-chart me-1 text-primary"></i>Conteo por trámite</h6>
     </div>
     <div class="card-body">
         <div class="row g-2 g-md-3">
-            <?php foreach ($estadisticas['por_tramite'] as $clave => $cantidad): ?>
+            <?php foreach ($porTramite as $clave => $cantidad): ?>
                 <div class="col-12 col-md-6 col-lg-4">
                     <div class="p-3 bg-light rounded-3 border">
                         <div class="small text-muted mb-1"><?= tramite_nombre($clave) ?></div>
