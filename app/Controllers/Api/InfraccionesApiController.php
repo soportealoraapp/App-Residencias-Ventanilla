@@ -4,27 +4,58 @@ namespace App\Controllers\Api;
 
 use App\Libraries\AgenteTokenService;
 use App\Models\BoletaChecklistItemModel;
-use App\Models\ParametroSistemaModel;
+use App\Models\CatalogoInfraccionAppModel;
+use App\Models\ParametroAppModel;
 use CodeIgniter\Controller;
 use CodeIgniter\HTTP\ResponseInterface;
 
 class InfraccionesApiController extends Controller
 {
     /**
-     * Retorna el checklist completo de la boleta física agrupado por categoría
-     * con los datos oficiales de catalogo_infracciones y montos calculados.
+     * Retorna el catálogo de infracciones que consume la app móvil.
      *
-     * Endpoint consumido por la app móvil agentes-transito.
+     * Fuente primaria: catálogo administrado desde el panel web
+     * (catalogo_infracciones_app), de modo que el alta/edición/baja que hace el
+     * administrador se refleje en la app. Si ese catálogo está vacío se usa el
+     * checklist oficial de la boleta física (boleta_checklist_item + catalogo_infracciones)
+     * como respaldo para no dejar la app sin faltas.
+     *
+     * El valor de la UMA se toma de parametros_app, la misma tabla que edita el panel.
      */
     public function checklist(): ResponseInterface
     {
-        $checklistModel = new BoletaChecklistItemModel();
-        $paramModel     = new ParametroSistemaModel();
+        $valorUma = (float) (new ParametroAppModel())->getValor('valor_uma_vigente', '117.31');
 
-        $valorUmaStr = $paramModel->getValor('valor_uma_vigente', '117.31');
-        $valorUma = (float) $valorUmaStr;
+        // 1. Fuente primaria: catálogo administrable desde el panel web.
+        $filasApp = (new CatalogoInfraccionAppModel())
+            ->where('activo', 1)
+            ->orderBy('orden', 'ASC')
+            ->orderBy('id', 'ASC')
+            ->findAll();
 
-        $items = $checklistModel->getChecklistCompleto();
+        if (! empty($filasApp)) {
+            $agrupado = [];
+            $total = 0;
+            foreach ($filasApp as $r) {
+                $cat = strtoupper(trim((string) ($r->categoria ?? ''))) ?: 'GENERAL';
+                if (! isset($agrupado[$cat])) {
+                    $agrupado[$cat] = [];
+                }
+                $agrupado[$cat][] = $this->formatearItemCatalogoApp($r, $valorUma);
+                $total++;
+            }
+
+            return $this->response->setJSON([
+                'success'           => true,
+                'fuente'            => 'catalogo_infracciones_app',
+                'valor_uma_vigente' => $valorUma,
+                'total_items'       => $total,
+                'categorias'        => $agrupado,
+            ]);
+        }
+
+        // 2. Respaldo: checklist oficial de la boleta física.
+        $items = (new BoletaChecklistItemModel())->getChecklistCompleto();
 
         $agrupado = [];
         $mapeados = 0;
@@ -62,12 +93,35 @@ class InfraccionesApiController extends Controller
 
         return $this->response->setJSON([
             'success'               => true,
+            'fuente'                => 'checklist_oficial',
             'valor_uma_vigente'     => $valorUma,
             'total_items'           => count($items),
             'total_mapeados'        => $mapeados,
             'total_sin_mapeo'       => $sinMapeo,
             'categorias'            => $agrupado,
         ]);
+    }
+
+    /**
+     * Adapta una fila del catálogo administrable (catalogo_infracciones_app) a la
+     * forma que la app móvil espera en /api/checklist-infracciones.
+     */
+    private function formatearItemCatalogoApp(object $fila, float $valorUma): array
+    {
+        $minUma = $fila->monto_min_uma !== null ? (float) $fila->monto_min_uma : null;
+        $maxUma = $fila->monto_max_uma !== null ? (float) $fila->monto_max_uma : null;
+
+        return [
+            'checklist_item_id'   => (int) $fila->id,
+            'etiqueta_casilla'    => $fila->fundamento_legal,
+            'fundamento_legal'    => $fila->fundamento_legal,
+            'descripcion_oficial' => $fila->descripcion,
+            'categoria_actor'     => $fila->categoria,
+            'monto_min_uma'       => $minUma,
+            'monto_max_uma'       => $maxUma,
+            'monto_min_pesos'     => $minUma !== null ? round($minUma * $valorUma, 2) : null,
+            'monto_max_pesos'     => $maxUma !== null ? round($maxUma * $valorUma, 2) : null,
+        ];
     }
 
     /**
