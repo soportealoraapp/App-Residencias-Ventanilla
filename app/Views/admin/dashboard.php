@@ -1,6 +1,6 @@
 <?php declare(strict_types=1); ?>
 <?= $this->extend('layouts/admin') ?>
-<?= $this->section('pageTitle') ?>Dashboard<?= $this->endSection() ?>
+<?= $this->section('pageTitle') ?>Inicio<?= $this->endSection() ?>
 <?= $this->section('content') ?>
 
 <?php

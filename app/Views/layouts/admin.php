@@ -34,7 +34,7 @@
         <div class="sidebar-section-title">Operaciones</div>
         <a href="/admin/dashboard" class="sidebar-link <?= uri_string() === 'admin/dashboard' || uri_string() === 'admin' ? 'active' : '' ?>">
             <i class="bi bi-speedometer2 me-2 sidebar-link-icon"></i>
-            <span class="sidebar-text">Dashboard</span>
+            <span class="sidebar-text">Inicio</span>
         </a>
         <a href="/admin/solicitudes" class="sidebar-link <?= $isAllSolicitudes ? 'active' : '' ?>">
             <i class="bi bi-folder2-open me-2 sidebar-link-icon"></i>

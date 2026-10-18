@@ -1,8 +1,9 @@
 {
   "expo": {
-    "name": "agentes-transito",
+    "name": "Agentes de Tránsito",
     "slug": "agentes-transito",
     "version": "1.0.0",
+    "description": "Sistema de boletas de infracción para los agentes de tránsito del Municipio de Uriangato.",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",

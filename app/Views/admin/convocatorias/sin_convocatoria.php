@@ -29,7 +29,7 @@
                     <i class="bi bi-folder2 me-1"></i>Ver Solicitudes UR-01
                 </a>
                 <a href="<?= site_url('/admin/dashboard') ?>" class="btn btn-primary">
-                    <i class="bi bi-speedometer2 me-1"></i>Volver al Dashboard
+                    <i class="bi bi-speedometer2 me-1"></i>Volver al inicio
                 </a>
             </div>
         </div>

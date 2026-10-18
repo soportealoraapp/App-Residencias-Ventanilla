@@ -7,7 +7,7 @@
     <div class="col">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb small">
-                <li class="breadcrumb-item"><a href="<?= site_url('/admin/dashboard') ?>">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="<?= site_url('/admin/dashboard') ?>">Inicio</a></li>
                 <li class="breadcrumb-item"><a href="<?= site_url('/admin/solicitudes?tramite=UR-TT-T-01') ?>">Solicitudes UR-01</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Convocatoria #<?= esc($convocatoria->id) ?></li>
             </ol>
