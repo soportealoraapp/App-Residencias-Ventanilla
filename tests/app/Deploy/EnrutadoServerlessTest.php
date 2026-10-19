@@ -5,6 +5,7 @@ namespace Tests\Deploy;
 use CodeIgniter\HTTP\SiteURIFactory;
 use CodeIgniter\Superglobals;
 use CodeIgniter\Test\CIUnitTestCase;
+use CodeIgniter\Test\FeatureTestTrait;
 use Config\App;
 
 /**
@@ -29,6 +30,8 @@ use Config\App;
  */
 final class EnrutadoServerlessTest extends CIUnitTestCase
 {
+    use FeatureTestTrait;
+
     /** @var array{server: array<string, mixed>, get: array<string, mixed>, post: array<string, mixed>, cookie: array<string, mixed>, files: array<string, mixed>, request: array<string, mixed>} */
     private array $superglobalesOriginales = [];
 
@@ -131,6 +134,24 @@ final class EnrutadoServerlessTest extends CIUnitTestCase
         $this->assertSame('login', $this->rutaDetectada('/login', '/index.php'));
         $this->assertSame('portal/tramites', $this->rutaDetectada('/portal/tramites', '/index.php'));
         $this->assertSame('/', $this->rutaDetectada('/', '/index.php'));
+    }
+
+    public function testLaRaizRespondeHeadAlSondeoDeConectividad(): void
+    {
+        // NetInfo, el detector de red que usa la app de agentes, solo da por buena
+        // la conexión si HEAD / responde 200. CI4 no resuelve HEAD con las rutas
+        // GET, así que el sondeo caía en el 404: la app se marcaba sin conexión y
+        // el auto-sincronizado al recuperar la red no llegaba a dispararse.
+        $coleccion = service('routes');
+        $coleccion->loadRoutes();
+
+        $this->assertArrayHasKey('/', $coleccion->getRoutes('HEAD'),
+            'HEAD / debe estar declarado; sin él el sondeo de NetInfo recibe 404.');
+
+        $respuesta = $this->call('HEAD', '/');
+        $respuesta->assertResponseOK();
+        $this->assertSame('', (string) $respuesta->response()->getBody(),
+            'El sondeo no debe arrastrar el HTML de la portada ni abrir sesión.');
     }
 
     public function testElFrontControllerServerlessDejaSCRIPTNameEnLaRaiz(): void

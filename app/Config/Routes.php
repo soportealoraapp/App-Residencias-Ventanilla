@@ -126,6 +126,15 @@ $routes->get('archivos/(:segment)', 'ArchivosLocalesController::servir/$1');
 
 $routes->get('/', 'Home::index');
 
+// Sondeo de conectividad de la app de agentes. NetInfo (@react-native-community)
+// pregunta HEAD / cada pocos segundos y solo considera que hay internet si
+// responde 200; CI4 no resuelve HEAD con las rutas GET, así que el sondeo caía en
+// el 404, la app se declaraba sin conexión y el auto-sincronizado al recuperar la
+// red no se disparaba. Se contesta vacío y sin pasar por un controlador para no
+// abrir sesión en cada sondeo. El cuerpo se deja vacío de forma explícita: una
+// respuesta HEAD no debe llevar HTML, y `response()` es un servicio compartido.
+$routes->head('/', static fn() => response()->setStatusCode(200)->setBody(''));
+
 // Atajos de acceso. Necesitan su propio nombre ('as') porque las rutas cortas
 // coinciden con los nombres ya asignados arriba (login/register/logout en
 // auth/login, auth/register y auth/logout); sin 'as', CI4 descarta la definición
