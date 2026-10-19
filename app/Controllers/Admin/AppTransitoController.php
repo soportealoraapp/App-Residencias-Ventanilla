@@ -149,7 +149,7 @@ class AppTransitoController extends Controller
 
         if ($esNuevo || !empty($this->request->getPost('password'))) {
             $rules['password'] = [
-                'rules' => 'required|min_length[4]|max_length[50]',
+                'rules' => 'required|min_length[8]|max_length[50]',
                 'label' => 'Contraseña de Acceso Móvil',
             ];
         }
@@ -242,17 +242,27 @@ class AppTransitoController extends Controller
      */
     public function boletas()
     {
-        $placa = $this->request->getGet('placa') ?? '';
-        $fecha = $this->request->getGet('fecha') ?? '';
-        $q     = $this->request->getGet('q') ?? '';
+        $placa  = $this->request->getGet('placa') ?? '';
+        $fecha  = $this->request->getGet('fecha') ?? '';
+        $q      = $this->request->getGet('q') ?? '';
+        $estado = $this->request->getGet('estado') ?? '';
+        // Fundamento exacto: permite que el catálogo enlace las boletas de una falta.
+        $falta  = (string) ($this->request->getGet('falta') ?? '');
 
         $model = new BoletaInfraccionModel();
 
         if ($placa !== '') {
             $model->where('agente_placa', $placa);
         }
+        if ($falta !== '') {
+            $model->where('falta_fundamento_legal', $falta);
+        }
         if ($fecha !== '') {
             $model->where('fecha_infraccion', $fecha);
+        }
+        // Estado validado contra el catálogo interno: evita filtros inventados por URL.
+        if (array_key_exists($estado, self::ESTADOS_BOLETA)) {
+            $model->where('estado', $estado);
         }
         if ($q !== '') {
             $model->groupStart()
@@ -270,8 +280,9 @@ class AppTransitoController extends Controller
         return view('admin/app_transito/boletas', [
             'boletas'  => $boletas,
             'agentes'  => $agentes,
-            'filtros'  => ['placa' => $placa, 'fecha' => $fecha, 'q' => $q],
+            'filtros'  => ['placa' => $placa, 'fecha' => $fecha, 'q' => $q, 'estado' => $estado, 'falta' => $falta],
             'valorUma' => $valorUma,
+            'estados'  => self::ESTADOS_BOLETA,
         ]);
     }
 
@@ -374,13 +385,95 @@ class AppTransitoController extends Controller
      */
     public function catalogo()
     {
-        $items = $this->catalogoModel->orderBy('orden', 'ASC')->findAll();
+        $q         = (string) ($this->request->getGet('q') ?? '');
+        $categoria = (string) ($this->request->getGet('categoria') ?? '');
+        $estado    = (string) ($this->request->getGet('estado') ?? '');
+
+        $model = new CatalogoInfraccionAppModel();
+
+        if ($q !== '') {
+            $model->groupStart()
+                ->like('fundamento_legal', $q)
+                ->orLike('descripcion', $q)
+                ->groupEnd();
+        }
+        if ($categoria !== '') {
+            $model->where('categoria', $categoria);
+        }
+        if ($estado === 'activa') {
+            $model->where('activo', 1);
+        } elseif ($estado === 'inactiva') {
+            $model->where('activo', 0);
+        } else {
+            $estado = '';
+        }
+
+        $items = $model->orderBy('orden', 'ASC')->findAll();
         $valorUma = (float)$this->paramModel->getValor('valor_uma_vigente', '117.31');
+        $conteos  = $this->conteosCatalogo();
+
+        // Categorías con su cantidad real, ordenadas para el filtro rápido.
+        $categorias = $conteos['por_categoria'];
+        ksort($categorias);
 
         return view('admin/app_transito/catalogo', [
-            'items'    => $items,
-            'valorUma' => $valorUma,
+            'items'           => $items,
+            'valorUma'        => $valorUma,
+            'filtros'         => ['q' => $q, 'categoria' => $categoria, 'estado' => $estado],
+            'categorias'      => $categorias,
+            'conteos'         => $conteos,
+            'boletasPorFalta' => $this->boletasPorFalta(),
         ]);
+    }
+
+    /**
+     * Totales del catálogo: sirven para que cada filtro rápido muestre su
+     * cantidad real y para detectar faltas capturadas pero inactivas.
+     *
+     * @return array{total: int, activas: int, inactivas: int, por_categoria: array<string, int>}
+     */
+    private function conteosCatalogo(): array
+    {
+        $db = \Config\Database::connect();
+
+        $porCategoria = [];
+        $filas = $db->table('catalogo_infracciones_app')
+            ->select('categoria, COUNT(*) AS total')
+            ->groupBy('categoria')
+            ->get()
+            ->getResultArray();
+        foreach ($filas as $fila) {
+            $porCategoria[(string) $fila['categoria']] = (int) $fila['total'];
+        }
+
+        return [
+            'total'         => $db->table('catalogo_infracciones_app')->countAllResults(),
+            'activas'       => $db->table('catalogo_infracciones_app')->where('activo', 1)->countAllResults(),
+            'inactivas'     => $db->table('catalogo_infracciones_app')->where('activo', 0)->countAllResults(),
+            'por_categoria' => $porCategoria,
+        ];
+    }
+
+    /**
+     * Cuántas boletas se emitieron con cada fundamento legal. Así el catálogo
+     * no es solo un formulario: revela qué faltas se están usando en el campo.
+     *
+     * @return array<string, int>
+     */
+    private function boletasPorFalta(): array
+    {
+        $conteo = [];
+        $filas = \Config\Database::connect()->table('boletas_infracciones')
+            ->select('falta_fundamento_legal, COUNT(*) AS total')
+            ->where('falta_fundamento_legal IS NOT NULL', null, false)
+            ->groupBy('falta_fundamento_legal')
+            ->get()
+            ->getResultArray();
+        foreach ($filas as $fila) {
+            $conteo[(string) $fila['falta_fundamento_legal']] = (int) $fila['total'];
+        }
+
+        return $conteo;
     }
 
     /**

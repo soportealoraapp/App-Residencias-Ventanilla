@@ -1,4 +1,12 @@
 <?php declare(strict_types=1);
+// Variables que inyecta el controlador al renderizar la vista. Se leen del
+// ambito real para que el analisis estatico no las marque como indefinidas; en
+// runtime el valor enviado por TramiteCargaDescargaController::formulario() es
+// el que queda.
+$__view     = get_defined_vars();
+/** @var array<string, string> $periodos */
+$periodos   = $__view['periodos'] ?? [];
+
 $validation = \Config\Services::validation();
 $oldTipo = old('tipo_solicitante', 'particular');
 $oldRazon = old('razon_social_o_nombre', '');
@@ -66,14 +74,14 @@ $oldMudanza = old('es_mudanza') !== null;
                                 <label for="razon_social_o_nombre" class="form-label fw-semibold">
                                     <span id="lblNombre">Nombre completo</span> <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" class="form-control" id="razon_social_o_nombre" name="razon_social_o_nombre" required maxlength="180" value="<?= esc($oldRazon) ?>" placeholder="Ingresa nombre completo o razón social">
+                                <input type="text" class="form-control" id="razon_social_o_nombre" name="razon_social_o_nombre" required maxlength="180" value="<?= esc($oldRazon) ?>" placeholder="Ingresa nombre completo o razón social" autocomplete="name" enterkeyhint="next">
                                 <?php if ($validation->getError('razon_social_o_nombre')): ?>
                                     <div class="text-danger small mt-1"><?= $validation->getError('razon_social_o_nombre') ?></div>
                                 <?php endif; ?>
                             </div>
                             <div class="col-md-4">
                                 <label for="rfc" class="form-label fw-semibold">RFC <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control text-uppercase" id="rfc" name="rfc" required minlength="12" maxlength="13" pattern="[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}" title="12 caracteres (persona moral) o 13 (persona física)" value="<?= esc($oldRfc) ?>" placeholder="Ej. GODE561231GR8">
+                                <input type="text" class="form-control text-uppercase" id="rfc" name="rfc" required minlength="12" maxlength="13" pattern="[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}" title="12 caracteres (persona moral) o 13 (persona física)" value="<?= esc($oldRfc) ?>" placeholder="Ej. GODE561231GR8" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next">
                                 <?php if ($validation->getError('rfc')): ?>
                                     <div class="text-danger small mt-1"><?= $validation->getError('rfc') ?></div>
                                 <?php endif; ?>
@@ -90,7 +98,7 @@ $oldMudanza = old('es_mudanza') !== null;
 
                         <div class="mt-3" id="div_num_camiones" style="display: <?= $oldTipo === 'empresa' ? 'block' : 'none' ?>">
                             <label for="num_camiones" class="form-label fw-semibold">Número de camiones <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="num_camiones" name="num_camiones" min="1" max="15" value="<?= esc($oldNumCam) ?>" placeholder="1 a 15">
+                            <input type="number" class="form-control" id="num_camiones" name="num_camiones" min="1" max="15" value="<?= esc($oldNumCam) ?>" placeholder="1 a 15" inputmode="numeric">
                             <?php if ($validation->getError('num_camiones')): ?>
                                 <div class="text-danger small mt-1"><?= $validation->getError('num_camiones') ?></div>
                             <?php endif; ?>

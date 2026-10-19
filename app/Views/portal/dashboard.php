@@ -1,4 +1,14 @@
-<?php declare(strict_types=1); ?>
+<?php declare(strict_types=1);
+// Variables inyectadas por el controlador: se leen del ambito real para que el
+// analisis estatico no las marque como indefinidas; en runtime gana el valor enviado.
+$__view = get_defined_vars();
+/** @var array $stats */
+$stats = $__view['stats'] ?? [];
+/** @var bool $habilitaT06 */
+$habilitaT06 = $__view['habilitaT06'] ?? false;
+/** @var array<int, object> $ultimasSolicitudes */
+$ultimasSolicitudes = $__view['ultimasSolicitudes'] ?? [];
+?>
 <?= $this->extend('layouts/portal') ?>
 <?= $this->section('title') ?>Panel de Inicio - Portal Ciudadano Uriangato<?= $this->endSection() ?>
 <?= $this->section('content') ?>
@@ -27,62 +37,35 @@
 </div>
 
 <!-- TARJETAS DE MÉTRICAS / ESTADÍSTICAS RÁPIDAS -->
+<?php
+// Cada tarjeta abre «Mis solicitudes» con ese filtro puesto, así el número y la
+// lista siempre dicen lo mismo.
+$metricas = [
+    ['label' => 'Total Solicitudes', 'valor' => (int) ($stats['total'] ?? 0),       'icono' => 'bi-folder2-open',      'tono' => 'primary', 'grupo' => 'todos'],
+    ['label' => 'En Trámite',        'valor' => (int) ($stats['en_proceso'] ?? 0),  'icono' => 'bi-hourglass-split',   'tono' => 'info',    'grupo' => 'revision'],
+    ['label' => 'Concluidos',        'valor' => (int) ($stats['concluidos'] ?? 0),  'icono' => 'bi-check-circle',      'tono' => 'success', 'grupo' => 'aprobado'],
+    ['label' => 'Pago Pendiente',    'valor' => (int) ($stats['pendientes'] ?? 0),  'icono' => 'bi-cash-stack',        'tono' => 'warning', 'grupo' => 'pago'],
+];
+?>
 <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm h-100 bg-white">
-            <div class="card-body p-3 d-flex align-items-center gap-3">
-                <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-3 flex-shrink-0">
-                    <i class="bi bi-folder2-open fs-4"></i>
+    <?php foreach ($metricas as $m): ?>
+        <div class="col-6 col-md-3">
+            <a class="card border-0 shadow-sm h-100 bg-white text-decoration-none tramite-card"
+               href="<?= site_url('/portal/mis-solicitudes?grupo=' . $m['grupo']) ?>"
+               aria-label="Ver solicitudes: <?= esc($m['label']) ?>">
+                <div class="card-body p-3 d-flex align-items-center gap-3">
+                    <div class="bg-<?= $m['tono'] ?> bg-opacity-10 text-<?= $m['tono'] ?> p-3 rounded-3 flex-shrink-0">
+                        <i class="bi <?= $m['icono'] ?> fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1 overflow-hidden">
+                        <div class="text-muted small fw-medium"><?= esc($m['label']) ?></div>
+                        <div class="fs-4 fw-bold text-dark"><?= $m['valor'] ?></div>
+                    </div>
+                    <i class="bi bi-chevron-right ms-auto text-muted small align-self-center" aria-hidden="true"></i>
                 </div>
-                <div>
-                    <div class="text-muted small fw-medium">Total Solicitudes</div>
-                    <div class="fs-4 fw-bold text-dark"><?= (int)($stats['total'] ?? 0) ?></div>
-                </div>
-            </div>
+            </a>
         </div>
-    </div>
-
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm h-100 bg-white">
-            <div class="card-body p-3 d-flex align-items-center gap-3">
-                <div class="bg-info bg-opacity-10 text-info p-3 rounded-3 flex-shrink-0">
-                    <i class="bi bi-hourglass-split fs-4"></i>
-                </div>
-                <div>
-                    <div class="text-muted small fw-medium">En Trámite</div>
-                    <div class="fs-4 fw-bold text-dark"><?= (int)($stats['en_proceso'] ?? 0) ?></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm h-100 bg-white">
-            <div class="card-body p-3 d-flex align-items-center gap-3">
-                <div class="bg-success bg-opacity-10 text-success p-3 rounded-3 flex-shrink-0">
-                    <i class="bi bi-check-circle fs-4"></i>
-                </div>
-                <div>
-                    <div class="text-muted small fw-medium">Concluidos</div>
-                    <div class="fs-4 fw-bold text-dark"><?= (int)($stats['concluidos'] ?? 0) ?></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm h-100 bg-white">
-            <div class="card-body p-3 d-flex align-items-center gap-3">
-                <div class="bg-warning bg-opacity-10 text-warning p-3 rounded-3 flex-shrink-0">
-                    <i class="bi bi-cash-stack fs-4"></i>
-                </div>
-                <div>
-                    <div class="text-muted small fw-medium">Pago Pendiente</div>
-                    <div class="fs-4 fw-bold text-dark"><?= (int)($stats['pendientes'] ?? 0) ?></div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <?php endforeach; ?>
 </div>
 
 <!-- SECCIÓN: TRÁMITES DESTACADOS DISPONIBLES -->
@@ -111,7 +94,7 @@
                     <p class="card-text small text-muted mb-3">Postulación de expediente técnico bajo Convocatoria Pública ($9,055.20).</p>
                 </div>
                 <div>
-                    <a href="<?= site_url('/portal/tramites/concesion-transporte') ?>" class="btn btn-success btn-sm w-100 shadow-sm fw-semibold">
+                    <a href="<?= site_url('/portal/tramites/concesion-transporte') ?>" class="btn btn-success btn-sm w-100 shadow-sm fw-semibold stretched-link">
                         <i class="bi bi-play-circle me-1"></i>Ver Convocatoria
                     </a>
                 </div>
@@ -136,7 +119,7 @@
                     <p class="card-text small text-muted mb-3">Constancia e inspección física presencial de despintado de unidades ($64.90).</p>
                 </div>
                 <div>
-                    <a href="<?= site_url('/portal/tramites/constancia-despintado') ?>" class="btn btn-primary btn-sm w-100 shadow-sm fw-semibold">
+                    <a href="<?= site_url('/portal/tramites/constancia-despintado') ?>" class="btn btn-primary btn-sm w-100 shadow-sm fw-semibold stretched-link">
                         <i class="bi bi-play-circle me-1"></i>Iniciar trámite
                     </a>
                 </div>
@@ -161,7 +144,7 @@
                     <p class="card-text small text-muted mb-3">Orden oficial para asignación y alta de placas de servicio público ($50.00).</p>
                 </div>
                 <div>
-                    <a href="<?= site_url('/portal/tramites/orden-plaqueo') ?>" class="btn btn-primary btn-sm w-100 shadow-sm fw-semibold">
+                    <a href="<?= site_url('/portal/tramites/orden-plaqueo') ?>" class="btn btn-primary btn-sm w-100 shadow-sm fw-semibold stretched-link">
                         <i class="bi bi-play-circle me-1"></i>Iniciar trámite
                     </a>
                 </div>
@@ -186,7 +169,7 @@
                     <p class="card-text small text-muted mb-3">Permiso temporal para cubrir necesidad del servicio por descompostura ($156.94).</p>
                 </div>
                 <div>
-                    <a href="<?= site_url('/portal/tramites/permiso-eventual') ?>" class="btn btn-primary btn-sm w-100 shadow-sm fw-semibold">
+                    <a href="<?= site_url('/portal/tramites/permiso-eventual') ?>" class="btn btn-primary btn-sm w-100 shadow-sm fw-semibold stretched-link">
                         <i class="bi bi-play-circle me-1"></i>Iniciar trámite
                     </a>
                 </div>
@@ -211,7 +194,7 @@
                     <p class="card-text small text-muted mb-3">Permiso para cierre parcial o total de calle por evento, vigencia de un día ($287.00).</p>
                 </div>
                 <div>
-                    <a href="<?= site_url('/portal/tramites/cierre-calle') ?>" class="btn btn-primary btn-sm w-100 shadow-sm fw-semibold">
+                    <a href="<?= site_url('/portal/tramites/cierre-calle') ?>" class="btn btn-primary btn-sm w-100 shadow-sm fw-semibold stretched-link">
                         <i class="bi bi-play-circle me-1"></i>Iniciar trámite
                     </a>
                 </div>
@@ -237,7 +220,7 @@
                     <p class="card-text small text-muted mb-3">Transferencia de derechos y obligaciones de una concesión de transporte.</p>
                 </div>
                 <div>
-                    <a href="<?= site_url('/portal/tramites/cesion-concesion') ?>" class="btn btn-success btn-sm w-100 shadow-sm fw-semibold">
+                    <a href="<?= site_url('/portal/tramites/cesion-concesion') ?>" class="btn btn-success btn-sm w-100 shadow-sm fw-semibold stretched-link">
                         <i class="bi bi-play-circle me-1"></i>Iniciar trámite
                     </a>
                 </div>
@@ -263,7 +246,7 @@
                     <p class="card-text small text-muted mb-3">Autorización para operaciones de carga y descarga en vía pública municipal.</p>
                 </div>
                 <div>
-                    <a href="<?= site_url('/portal/tramites/carga-descarga/formulario') ?>" class="btn btn-primary btn-sm w-100 shadow-sm fw-semibold">
+                    <a href="<?= site_url('/portal/tramites/carga-descarga/formulario') ?>" class="btn btn-primary btn-sm w-100 shadow-sm fw-semibold stretched-link">
                         <i class="bi bi-play-circle me-1"></i>Iniciar trámite
                     </a>
                 </div>
@@ -305,7 +288,7 @@
                             </div>
                             <div class="d-flex justify-content-between align-items-center mt-2 small text-muted">
                                 <div><i class="bi bi-calendar3 me-1"></i><?= formatear_fecha($s->fecha_solicitud) ?></div>
-                                <a href="<?= site_url('/portal/solicitud/' . $s->folio) ?>" class="btn btn-sm btn-outline-primary py-0">Ver detalle</a>
+                                <a href="<?= site_url('/portal/solicitud/' . $s->folio) ?>" class="btn btn-sm btn-outline-primary px-3">Ver detalle</a>
                             </div>
                         </div>
                     <?php endforeach; ?>

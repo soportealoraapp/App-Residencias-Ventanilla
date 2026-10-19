@@ -1,4 +1,15 @@
-<?php declare(strict_types=1); $labels = ['nombre_solicitante' => 'Nombre', 'domicilio' => 'Domicilio', 'fecha_cierre' => 'Fecha del cierre', 'hora_inicio' => 'Hora de inicio', 'hora_fin' => 'Hora de término', 'calle_tramo' => 'Calle o tramo', 'colonia' => 'Colonia', 'tipo_cierre' => 'Tipo de cierre', 'motivo_evento' => 'Motivo o evento', 'descripcion_evento' => 'Descripción']; ?>
+<?php declare(strict_types=1);
+// Variables inyectadas por el controlador: se leen del ambito real para que el
+// analisis estatico no las marque como indefinidas; en runtime gana el valor enviado.
+$__view = get_defined_vars();
+/** @var object $solicitud */
+$solicitud = $__view['solicitud'] ?? null;
+/** @var array<string, string> $datos */
+$datos = $__view['datos'] ?? [];
+/** @var array<int, object> $documentos */
+$documentos = $__view['documentos'] ?? [];
+
+$labels = ['nombre_solicitante' => 'Nombre', 'domicilio' => 'Domicilio', 'fecha_cierre' => 'Fecha del cierre', 'hora_inicio' => 'Hora de inicio', 'hora_fin' => 'Hora de término', 'calle_tramo' => 'Calle o tramo', 'colonia' => 'Colonia', 'tipo_cierre' => 'Tipo de cierre', 'motivo_evento' => 'Motivo o evento', 'descripcion_evento' => 'Descripción']; ?>
 <?= $this->extend('layouts/portal') ?>
 <?= $this->section('title') ?>Resumen UR-TT-T-05 - <?= esc($solicitud->folio) ?><?= $this->endSection() ?>
 <?= $this->section('content') ?>

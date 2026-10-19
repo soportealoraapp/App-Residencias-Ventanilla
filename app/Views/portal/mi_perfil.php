@@ -1,4 +1,10 @@
-<?php declare(strict_types=1); ?>
+<?php declare(strict_types=1);
+// Variables inyectadas por el controlador: se leen del ambito real para que el
+// analisis estatico no las marque como indefinidas; en runtime gana el valor enviado.
+$__view = get_defined_vars();
+/** @var object $usuario */
+$usuario = $__view['usuario'] ?? null;
+?>
 <?= $this->extend('layouts/portal') ?>
 <?= $this->section('title') ?>Mi Perfil - Ventanilla Digital Uriangato<?= $this->endSection() ?>
 <?= $this->section('content') ?>
@@ -27,31 +33,34 @@
                 <label for="curp" class="form-label small fw-semibold">CURP <span class="text-danger">*</span></label>
                 <div class="input-group">
                     <span class="input-group-text bg-light text-muted"><i class="bi bi-person-vcard"></i></span>
-                    <input type="text" class="form-control text-uppercase" id="curp" name="curp" value="<?= esc(old('curp', $usuario->curp ?? '')) ?>" maxlength="18" required>
+                    <input type="text" class="form-control text-uppercase" id="curp" name="curp" value="<?= esc(old('curp', $usuario->curp ?? '')) ?>" maxlength="18" required
+                           autocomplete="off" autocapitalize="characters" spellcheck="false">
                 </div>
             </div>
 
             <div class="row g-2 mb-3">
                 <div class="col-sm-6">
                     <label for="nombre" class="form-label small fw-semibold">Nombre(s) <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="nombre" name="nombre" value="<?= esc(old('nombre', explode(' ', $usuario->nombre_completo ?? '')[0] ?? '')) ?>" required>
+                    <input type="text" class="form-control" id="nombre" name="nombre" value="<?= esc(old('nombre', explode(' ', $usuario->nombre_completo ?? '')[0] ?? '')) ?>" required autocomplete="given-name">
                 </div>
                 <div class="col-sm-6">
                     <label for="apellido" class="form-label small fw-semibold">Apellido(s) <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="apellido" name="apellido" value="<?= esc(old('apellido', $usuario->apellido ?? '')) ?>" required>
+                    <input type="text" class="form-control" id="apellido" name="apellido" value="<?= esc(old('apellido', $usuario->apellido ?? '')) ?>" required autocomplete="family-name">
                 </div>
             </div>
 
             <div class="row g-2 mb-3">
                 <div class="col-sm-6">
                     <label for="rfc" class="form-label small fw-semibold">RFC <span class="text-muted">(opcional)</span></label>
-                    <input type="text" class="form-control text-uppercase" id="rfc" name="rfc" placeholder="Ej. GODE561231GR8" value="<?= esc(old('rfc', $usuario->rfc ?? '')) ?>" maxlength="13">
+                    <input type="text" class="form-control text-uppercase" id="rfc" name="rfc" placeholder="Ej. GODE561231GR8" value="<?= esc(old('rfc', $usuario->rfc ?? '')) ?>" maxlength="13"
+                           autocomplete="off" autocapitalize="characters" spellcheck="false">
                 </div>
                 <div class="col-sm-6">
                     <label for="email" class="form-label small fw-semibold">Correo electrónico <span class="text-danger">*</span></label>
                     <div class="input-group">
                         <span class="input-group-text bg-light text-muted"><i class="bi bi-envelope"></i></span>
-                        <input type="email" class="form-control" id="email" name="email" value="<?= esc(old('email', $usuario->email ?? '')) ?>" required>
+                        <input type="email" class="form-control" id="email" name="email" value="<?= esc(old('email', $usuario->email ?? '')) ?>" required
+                               autocomplete="email" inputmode="email" spellcheck="false">
                     </div>
                 </div>
             </div>
@@ -60,7 +69,8 @@
                 <label for="telefono" class="form-label small fw-semibold">Teléfono <span class="text-danger">*</span></label>
                 <div class="input-group">
                     <span class="input-group-text bg-light text-muted"><i class="bi bi-telephone"></i></span>
-                    <input type="text" class="form-control" id="telefono" name="telefono" value="<?= esc(old('telefono', $usuario->telefono ?? '')) ?>" required>
+                    <input type="tel" class="form-control" id="telefono" name="telefono" value="<?= esc(old('telefono', $usuario->telefono ?? '')) ?>" required
+                           autocomplete="tel" inputmode="tel">
                 </div>
             </div>
 
@@ -134,11 +144,11 @@
             <div class="row g-2 mb-3">
                 <div class="col-sm-6">
                     <label for="estado" class="form-label small fw-semibold">Estado <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="estado" name="estado" value="<?= esc(old('estado', $usuario->estado ?? 'Guanajuato')) ?>" required>
+                    <input type="text" class="form-control" id="estado" name="estado" value="<?= esc(old('estado', $usuario->estado ?? 'Guanajuato')) ?>" required autocomplete="address-level1">
                 </div>
                 <div class="col-sm-6">
                     <label for="ciudad" class="form-label small fw-semibold">Ciudad / Municipio <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="ciudad" name="ciudad" value="<?= esc(old('ciudad', $usuario->ciudad ?? 'Uriangato')) ?>" required>
+                    <input type="text" class="form-control" id="ciudad" name="ciudad" value="<?= esc(old('ciudad', $usuario->ciudad ?? 'Uriangato')) ?>" required autocomplete="address-level2">
                 </div>
             </div>
 
@@ -146,7 +156,7 @@
                 <label for="domicilio" class="form-label small fw-semibold">Dirección <span class="text-danger">*</span></label>
                 <div class="input-group">
                     <span class="input-group-text bg-light text-muted"><i class="bi bi-geo-alt"></i></span>
-                    <input type="text" class="form-control" id="domicilio" name="domicilio" value="<?= esc(old('domicilio', $usuario->domicilio ?? '')) ?>" required>
+                    <input type="text" class="form-control" id="domicilio" name="domicilio" value="<?= esc(old('domicilio', $usuario->domicilio ?? '')) ?>" required autocomplete="street-address">
                 </div>
             </div>
 

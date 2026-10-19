@@ -11,6 +11,7 @@ class ConvocatoriasSeeder extends Seeder
         $exists = $this->db->table('convocatorias')->countAllResults();
         if ($exists === 0) {
             $this->db->table('convocatorias')->insert([
+                'titulo' => 'Convocatoria de prueba para UR-01',
                 'fecha_publicacion' => date('Y-m-d', strtotime('-7 days')),
                 'periodo_registro_inicio' => date('Y-m-d', strtotime('-2 days')),
                 'periodo_registro_fin' => date('Y-m-d', strtotime('+30 days')),

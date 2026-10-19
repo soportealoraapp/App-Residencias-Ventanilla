@@ -4,14 +4,14 @@
 **Gobierno Municipal de Uriangato, Guanajuato**  
 **Dirección de Movilidad y Transporte**  
 **Versión del Backend:** 2.5.0  
-**Stack Principal:** PHP 8.2+ | CodeIgniter 4.5.8 | PostgreSQL 15+ (Supabase) | Supabase Storage  
+**Stack Principal:** PHP 8.2+ | CodeIgniter 4.7.4 | PostgreSQL 15+ (Supabase) | Supabase Storage  
 **Fecha de Actualización:** Octubre 2026  
 
 ---
 
 ## 1. Visión General de la Arquitectura Backend
 
-El backend del sistema actúa como el motor transaccional, normativo y de seguridad para todos los procesos de la Dirección de Movilidad y Transporte de Uriangato. Está implementado sobre **CodeIgniter 4.5.8** con tipado estricto en PHP 8.2 (`declare(strict_types=1)`), estructurado bajo el patrón clásico **Modelo-Vista-Controlador (MVC)** y optimizado para ejecutarse en entornos serverless (**Vercel**) conectado a un clúster de alta disponibilidad en **PostgreSQL (Supabase)**.
+El backend del sistema actúa como el motor transaccional, normativo y de seguridad para todos los procesos de la Dirección de Movilidad y Transporte de Uriangato. Está implementado sobre **CodeIgniter 4.7.4** con tipado estricto en PHP 8.2 (`declare(strict_types=1)`), estructurado bajo el patrón clásico **Modelo-Vista-Controlador (MVC)** y optimizado para ejecutarse en entornos serverless (**Vercel**) conectado a un clúster de alta disponibilidad en **PostgreSQL (Supabase)**.
 
 ```mermaid
 graph TD
@@ -71,76 +71,116 @@ graph TD
 ---
 
 ## 2. Estructura de Directorios app/
-├── Common.php                 # Funciones helper globales del sistema
-├── Config/                    # Configuraciones de la aplicación
-│   ├── App.php                # Configuración base (baseURL, encoding, CSP)
+
+```text
+├── Config/                    # Configuraciones de la aplicación (44 archivos CI4)
 │   ├── Database.php           # Conexión a PostgreSQL (PgBouncer en 6543)
-│   ├── Filters.php            # Registro y alias de filtros de seguridad (exención CSRF en api/*)
+│   ├── Filters.php            # Registro y alias de los cinco filtros de seguridad
 │   ├── Routes.php             # Definición canónica de rutas Web y API
 │   ├── Security.php           # Configuración de tokens CSRF y cookies
-│   └── Session.php            # Configuración de sesiones en base de datos (ci_sessions)
-├── Controllers/               # Controladores MVC y API REST
-│   ├── Admin/                 # Panel administrativo, bandeja de solicitudes, dictámenes
-│   │   ├── AdminController.php
-│   │   └── CatalogoTarifasController.php
+│   └── Session.php            # Sesiones en base de datos (tabla ci_sessions)
+├── Controllers/               # 26 controladores MVC y API REST
+│   ├── Admin/                 # 12 controladores del panel administrativo
+│   │   ├── AdminController.php              # Tablero, bandeja de solicitudes y dictamen
+│   │   ├── AppTransitoController.php        # Agentes, boletas y catálogo de infracciones
+│   │   ├── CatalogoConcesionesController.php# Padrón de concesiones (borrado RESTRICT)
+│   │   ├── CatalogoTarifasController.php    # Tarifario dinámico y valor de la UMA
+│   │   ├── ConvocatoriasController.php      # CRUD T-01, bases, evaluación y ganadores
+│   │   ├── DesgloseController.php           # Desglose navegable de todas las métricas
+│   │   ├── DocumentosController.php         # Visor y descarga de expedientes
+│   │   ├── PermisosController.php           # Permisología configurable del operador
+│   │   ├── SesionesAppController.php        # Sesiones/tokens activos de la app móvil
+│   │   ├── SolicitudPresencialController.php# Radicación en ventanilla (los 7 trámites)
+│   │   ├── UsuariosController.php           # Cuentas de ciudadanos y funcionarios
+│   │   └── VerificacionesController.php     # Citas de inspección física (T-02)
 │   ├── Api/                   # Endpoints REST para la App Móvil de Tránsito
-│   │   ├── AgentesTransitoApiController.php # Login seguro (BCrypt/Bearer) y registro de agentes
-│   │   └── InfraccionesApiController.php    # Parámetros, checklist 80 fracciones, sincronización y evidencias
-│   ├── Ciudadano/             # Portal ciudadano, mis solicitudes, seguimiento, pagos
-│   │   ├── PortalController.php
-│   │   └── Tramite*.php       # Controladores de trámites individuales
-│   ├── Home.php               # Portada de ventanilla única
-│   └── AuthController.php     # Autenticación, registro, recuperación y cierre de sesión web
-├── Database/                  # Migraciones y semillas de datos
-│   ├── Migrations/            # Migraciones Spark para estructura relacional
-│   │   └── 2026-09-26-000021_CreateAppTransitoTables.php # Tablas: agentes, boletas, catálogos y parámetros
-│   └── Seeds/                 # Semillas de inicialización
-│       ├── AgentesTransitoSeeder.php # Oficiales demo (AGT-204, AGT-107, JEF-001)
-│       └── DatabaseSeeder.php # Orquestador general de seeds
-├── Filters/                   # Middlewares y filtros de seguridad
-│   ├── AdminRedirectFilter.php# Redirección contextual según el rol autenticado
-│   ├── AuthFilter.php         # Barrera de acceso para usuarios sin sesión activa
-│   └── RoleFilter.php         # Validación de permisos basados en roles (RBAC)
-├── Helpers/                   # Funciones de conveniencia (formatos, monedas, fechas)
-│   ├── general_helper.php
-│   └── tramites_helper.php
-├── Libraries/                 # Servicios de negocio y utilerías
-│   ├── AuditService.php       # Registro de auditoría con IP y usuario
+│   │   ├── AgentesTransitoApiController.php # Login seguro (BCrypt/Bearer); sin registro público de agentes
+│   │   └── InfraccionesApiController.php    # Parámetros, checklist, sincronización y evidencias
+│   ├── Ciudadano/             # 9 controladores del portal
+│   │   ├── PortalController.php             # Dashboard, mis solicitudes, expediente, perfil
+│   │   ├── TramitesController.php           # Catálogo de trámites y API de radicación
+│   │   └── Tramite*Controller.php           # Un controlador por trámite (UR-TT-T-01 a 07)
+│   ├── ArchivosLocalesController.php        # Sirve el almacenamiento local con URL firmada
+│   ├── AuthController.php      # Autenticación, registro, recuperación y cierre de sesión
+│   └── Home.php                 # Portada de ventanilla única (redirige según sesión)
+├── Database/
+│   ├── Migrations/             # 24 migraciones Spark (la 000024 cambia la FK a RESTRICT)
+│   └── Seeds/                  # 9 semillas: roles, usuarios demo, tarifas, concesiones,
+│                               # convocatorias, catálogo de infracciones, boletas y agentes
+├── Entities/
+│   └── Solicitud.php            # Entidad del expediente maestro
+├── Filters/                    # Los cinco middlewares del sistema
+│   ├── AdminRedirectFilter.php  # Funcionario que entra a la portada → su panel
+│   ├── AgenteTokenFilter.php    # Token de portador para los endpoints de sincronización
+│   ├── AuthFilter.php            # Barrera de acceso: sin sesión redirige a /auth/login
+│   ├── PermisoOperadorFilter.php # Secciones del panel activas/apagadas por prefijo de URI
+│   └── RoleFilter.php            # Validación de roles (aborta con 302, no con 403)
+├── Helpers/
+│   └── url_helper_custom.php     # Utilerías propias de URLs, normalización y formato
+├── Interfaces/
+│   └── PaymentGatewayInterface.php # Contrato de pasarela de pago (implementa el mock)
+├── Language/es/
+│   └── Validation.php            # Mensajes de validación en español
+├── Libraries/                    # 11 servicios de negocio
+│   ├── AgenteTokenService.php     # Emisión y caducidad de tokens de la app móvil
+│   ├── BanbajioMockGateway.php    # Pasarela de pago simulada para el flujo de pruebas
+│   ├── DesgloseSistema.php        # Agregación de métricas del desglose del tablero
+│   ├── DocumentoUploader.php      # Validación de subida (tamaño, MIME, errores de PHP)
 │   ├── EstadoSolicitudService.php # Máquina de estados y reglas de transición
-│   ├── FeatureFlags.php       # Flags de activación de trámites (ej. UR-TT-T-06)
-│   ├── PdfGeneratorService.php# Generación de resoluciones y dictámenes oficiales
-│   ├── StorageService.php     # Cliente HTTP REST para Supabase Storage
-│   └── TarifasService.php     # Cálculo dinámico de costos y conversión en UMA
-├── Models/                    # Modelos relacionales y de negocio
-│   ├── AgenteTransitoModel.php# Padrón de oficiales de tránsito
-│   ├── AuditoriaModel.php     # Bitácora de operaciones del sistema
-│   ├── BoletaInfraccionModel.php # Boletas levantadas por agentes
-│   ├── CatalogoInfraccionModel.php # Catálogo de infracciones del reglamento
-│   ├── ParametrosAppModel.php # Parámetros globales (UMA, fotos obligatorias)
-│   ├── SolicitudDatoModel.php # Datos específicos de trámite (almacenamiento EAV)
-│   ├── SolicitudDocumentoModel.php # Metadatos de expedientes y hash SHA-256
-│   ├── SolicitudHistorialModel.php # Historial inmutable de estados de trámite
-│   └── SolicitudModel.php     # Maestro de solicitudes y generación de foliosos globales (UMA, fotos obligatorias)
-│   ├── SolicitudDatoModel.php # Datos específicos de trámite (almacenamiento EAV)
-│   ├── SolicitudDocumentoModel.php # Metadatos de expedientes y hash SHA-256
-│   ├── SolicitudHistorialModel.php # Historial inmutable de estados de trámite
-│   ├── SolicitudModel.php     # Maestro de solicitudes y generación de folios
-│   ├── UserModel.php          # Cuentas ciudadanas y administrativas
-│   └── VerificacionDespintadoModel.php # Citas de despintado (T-02)
-└── Views/                     # Vistas Blade-like de CodeIgniter
-    ├── admin/                 # Pantallas del panel administrativo
-    ├── auth/                  # Pantallas de login, registro, recuperación
-    ├── errors/                # Pantallas de error HTTP 404, 403, 500
-    ├── layouts/               # Plantillas base (admin.php, portal.php, auth.php)
-    └── portal/                # Pantallas del portal ciudadano y trámites
+│   ├── FeatureFlags.php           # Flags de activación de trámites (ej. UR-TT-T-06)
+│   ├── FolioGenerator.php         # Folio institucional único
+│   ├── PermisosOperador.php       # Catálogo de secciones y resolución por prefijo
+│   ├── ResolverMontoInfraccionService.php # Cálculo del monto de infracción en UMA
+│   ├── SupabaseStorage.php         # Fachada nube/local con firma HMAC-SHA256
+│   └── TarifarioService.php        # Cálculo dinámico de costos y conversión en UMA
+├── Models/                         # 20 modelos relacionales
+│   ├── SolicitudModel.php          # Maestro de solicitudes y generación de folios
+│   ├── SolicitudDatoModel.php      # Datos específicos de trámite (almacenamiento EAV)
+│   ├── DocumentoModel.php          # Metadatos de expedientes y hash SHA-256
+│   ├── HistorialEstatusModel.php   # Historial inmutable de estados de trámite
+│   ├── ConvocatoriaModel.php       # T-01: ventanas de registro, estatus y postulaciones
+│   ├── ConcesionModel.php          # Padrón de títulos de concesión
+│   ├── UserModel.php / RoleModel.php # Cuentas y los tres roles del sistema
+│   ├── AgenteTransitoModel.php / AgenteTokenModel.php # Oficiales y sus tokens
+│   ├── BoletaInfraccionModel.php / BoletaChecklistItemModel.php # Boletas y checklist
+│   ├── CatalogoInfraccionModel.php / CatalogoInfraccionAppModel.php # Tipificación del reglamento
+│   ├── TarifaModel.php / ParametroAppModel.php / ParametroSistemaModel.php # Tarifario y parámetros
+│   ├── FormatoTramiteModel.php / VerificacionFisicaModel.php # Formatos e inspecciones
+│   └── AuditoriaModel.php          # Bitácora de operaciones del sistema
+└── Views/                          # 62 vistas PHP con la convención /** @var */
+    ├── admin/                      # Pantallas del panel (incluye convocatorias/, catálogos/,
+    │                               # usuarios/ y solicitudes_presenciales/)
+    ├── auth/                       # Login, registro, recuperación, términos y privacidad
+    ├── errors/                     # Páginas propias de 400, 404, excepción y producción
+    ├── layouts/                    # Plantillas base (admin.php, portal.php) y partiales
+    └── portal/                     # Portal ciudadano y los formularios de los 7 trámites
 ```
+
+> La otra mitad del esquema vive en `supabase/migrations/` (10 archivos SQL que se aplican a mano en el **SQL Editor**). Ese doble camino es la causa del *drift* documentado en `DOC_METODOLOGIA_PORTAL_PANEL.md` §11.3.4: `php spark migrate` no los ve, así que hay que cotejarlos con `scripts/verificar_esquema_bd.php`.
 
 ---
 
 ## 3. Capa de Controladores (Controllers) al Detalle
 
 ### 3.1. `AuthController.php`
-* **Rutas Gestionadas:** `/login`, `/registro`, `/logout`, `/olvide-password`, `/restablecer-password`.
+* **Rutas Gestionadas** (declaración literal en `app/Config/Routes.php`, líneas 15-26 y 133-135):
+
+  | Verbo | Ruta | Acción | `as` |
+  |---|---|---|---|
+  | GET | `auth/login` | `login` | `login` |
+  | POST | `auth/attempt-login` | `attemptLogin` | — |
+  | GET | `auth/register` | `register` | `register` |
+  | POST | `auth/attempt-register` | `attemptRegister` | — |
+  | GET | `auth/logout` | `logout` | `logout` |
+  | GET | `auth/forgot` | `forgot` | — |
+  | POST | `auth/attempt-forgot` | `attemptForgot` | — |
+  | GET/POST | `auth/reset/(:any)` | `reset/$1` | — |
+  | GET | `auth/terminos` | `terminos` | — |
+  | GET | `auth/privacidad` | `privacidad` | — |
+  | GET | `login` · `register` · `logout` | las tres mismas acciones | `acceso` · `registro` · `salida` |
+
+  Las rutas cortas `/login`, `/register` y `/logout` no son pantallas nuevas: son **atajos** al mismo controlador que ya atiende `auth/login`, `auth/register` y `auth/logout`. Cada una necesita un nombre propio (`acceso`, `registro`, `salida`) por la trampa descrita en §7.1.
+* **Registro público:** solo de **ciudadanos**. Los agentes de tránsito los crea el administrador desde el panel; no existe autorregistro de personal con capacidad de sanción.
 * **Lógica Operativa:**
   * Valida credenciales contra `UserModel` utilizando hashing seguro de contraseñas de PHP (`password_verify` con compatibilidad para `bcrypt` y `Argon2id`).
   * En inicio de sesión exitoso, regenera el ID de sesión para prevenir Session Fixation y establece los datos en `ci_sessions`.
@@ -174,10 +214,11 @@ graph TD
   * `/admin/despintado`: Módulo especializado para agendar citas de inspección física en patio municipal para el trámite UR-TT-T-02.
   * `/admin/infracciones`: Visor administrativo de boletas de infracción levantadas por los agentes viales en la app móvil.
 
-### 3.5. `AgentesApiController.php`
+### 3.5. `AgentesTransitoApiController.php` / `InfraccionesApiController.php`
 * **Rutas Gestionadas:**
-  * `POST /api/agentes/registro`: Endpoint seguro para el enrolamiento de oficiales de tránsito en el padrón municipal. Valida unicidad de placa, nombre y genera hash de contraseña seguro.
-  * `GET /api/checklist-infracciones`: Entrega el catálogo normativo de infracciones tipificadas y parámetros de la UMA en formato JSON para el consumo de la app móvil.
+  * `POST /api/agentes/login`: único punto de acceso de la app móvil; valida placa y contraseña contra `agentes_transito` con BCrypt y emite token de portador con caducidad.
+  * `GET /api/checklist-infracciones`: entrega el catálogo normativo de infracciones tipificadas y los parámetros de la UMA en formato JSON para el consumo de la app móvil.
+  * **No existe `POST /api/agentes/registro`.** Los agentes de tránsito tienen capacidad de sanción y por eso **no se autorregistran**: solo el administrador los da de alta desde `/admin/app-transito` (`app-transito/agentes/guardar`, protegido por `role:administrador`). Cualquier documento anterior que mencionara ese endpoint está desactualizado.
 * **Lógica Operativa:**
   * Respuestas normalizadas con encabezados `Content-Type: application/json` y códigos HTTP RFC estándar (`200 OK`, `201 Created`, `400 Bad Request`, `409 Conflict`, `500 Internal Server Error`).
 
@@ -259,9 +300,11 @@ En arquitecturas serverless como Vercel, el sistema de archivos del servidor es 
 * Cada petición recupera y persiste la sesión directamente desde la tabla `ci_sessions` en PostgreSQL, garantizando continuidad absoluta entre invocaciones independientes de funciones serverless.
 
 ### 6.2. Filtros de Seguridad (Middlewares)
-* **`AuthFilter`:** Intercepta todas las rutas bajo `/portal/*` y `/admin/*`. Si no existe `usuario_id` en la sesión, redirige inmediatamente a `/login` con mensaje de alerta.
-* **`RoleFilter`:** Verifica que el usuario autenticado posea el rol necesario (`admin` o `superadmin`) para acceder a rutas de gestión interna en `/admin/*`. Si un ciudadano intenta ingresar, el filtro aborta con código HTTP 403 Forbidden.
-* **`AdminRedirectFilter`:** Si un administrador accede a `/login` o a la raíz, lo redirige automáticamente a su panel de control.
+* **`AuthFilter` (`auth`):** intercepta los grupos de rutas `/portal/*` y `/admin/*`. Si no existe `user_id` en la sesión, fija un mensaje flash (`Acceso denegado: debes iniciar sesión`) y **redirige a `/auth/login`** con 302 — no a `/login`, que solo es un atajo.
+* **`RoleFilter` (`role:rol1,rol2`):** verifica que la cuenta autenticada posea alguno de los roles del argumento (`administrador`, `operador_ventanilla`). **No responde 403**: sin sesión manda a `/auth/login` y con sesión sin rol suficiente aborta con **302 a `/`** más un mensaje flash. Es una decisión de diseño: el ciudadano no debe ver códigos de infraestructura ni confirmar que la sección existe.
+* **`AdminRedirectFilter` (`adminRedirect`):** si la sesión ya trae un rol que contenga `admin` u `operador`, redirige a `/admin/dashboard` al intentar abrir la portada de acceso.
+* **`PermisoOperadorFilter` (`permisoOperador`):** declarado sobre `admin` y `admin/*`, baja secciones concretas del panel para el operador según el mapa JSON de `parametros_app`. La coincidencia es por **prefijo de URI más largo**.
+* **`AgenteTokenFilter` (`agenteToken`):** protege los endpoints de sincronización de la app móvil con token de portador y caducidad.
 
 ### 6.3. Protección CSRF
 * Configurado con cookies `SameSite=Lax` y modo estricto en formularios POST. Cada formulario incluye la directiva `<?= csrf_field() ?>`.
@@ -272,21 +315,45 @@ En arquitecturas serverless como Vercel, el sistema de archivos del servidor es 
 
 | Método | Ruta | Controlador / Acción | Filtros | Descripción |
 |---|---|---|---|---|
-| **POST** | `/api/agentes/registro` | `Api\AgentesTransitoApiController::registrar` | Ninguno | Enrolamiento de agentes de tránsito desde la app móvil. |
-| **POST** | `/api/agentes/login` | `Api\AgentesTransitoApiController::login` | Ninguno | Autenticación de oficiales con validación BCrypt y token Bearer. |
-| **GET** | `/api/checklist-infracciones`| `Api\InfraccionesApiController::checklist` | Ninguno | Descarga del catálogo normativo de 80 infracciones clasificadas y valor UMA. |
-| **GET** | `/api/parametros` | `Api\InfraccionesApiController::parametros` | Ninguno | Parámetros operativos (valor UMA, mínimo de fotos obligatorias). |
-| **POST** | `/api/infracciones/sincronizar` | `Api\InfraccionesApiController::sincronizar` | Ninguno | Recepción y almacenamiento de boletas levantadas en campo en `boletas_infracciones`. |
-| **POST** | `/api/infracciones/evidencias` | `Api\InfraccionesApiController::subirEvidencia` | Ninguno | Recepción multipart (`FormData`) de fotografías de evidencia asociadas al folio. |
+| **POST** | `/api/agentes/login` | `Api\AgentesTransitoApiController::login` | Ninguno (autentica en el controlador) | Autenticación de oficiales con validación BCrypt y token Bearer. |
+| **GET** | `/api/checklist-infracciones`| `Api\InfraccionesApiController::checklist` | Ninguno | Descarga del catálogo normativo de infracciones clasificadas y valor UMA. |
+| **GET** | `/api/parametros` | `Api\InfraccionesApiController::parametros` | Ninguno | Parámetros operativos (valor UMA, mínimo de fotos obligatorias, versión de la app). |
+| **POST** | `/api/infracciones/sincronizar` | `Api\InfraccionesApiController::sincronizar` | **`agenteToken`** | Recepción y almacenamiento de boletas levantadas en campo en `boletas_infracciones`. |
+| **POST** | `/api/infracciones/evidencias` | `Api\InfraccionesApiController::subirEvidencia` | **`agenteToken`** | Recepción multipart (`FormData`) de fotografías de evidencia asociadas al folio. |
 | **GET** | `/portal/dashboard` | `Ciudadano\PortalController::dashboard` | `auth` | Dashboard ciudadano. |
 | **GET** | `/portal/mis-solicitudes` | `Ciudadano\PortalController::misSolicitudes`| `auth` | Listado y búsqueda de trámites del ciudadano. |
 | **GET** | `/portal/solicitud/{folio}`| `Ciudadano\PortalController::verSolicitud` | `auth` | Expediente y evolución del trámite. |
 | **POST** | `/portal/tramites/{tipo}/guardar`| `Ciudadano\TramitesController::guardar` | `auth, csrf` | Recepción y procesamiento de solicitud. |
-| **GET** | `/admin/dashboard` | `Admin\AdminController::dashboard` | `auth, role:admin` | Dashboard general de supervisión municipal. |
-| **GET** | `/admin/solicitudes` | `Admin\AdminController::solicitudes` | `auth, role:admin` | Bandeja maestra de expedientes con filtros. |
-| **POST** | `/admin/solicitudes/cambiar-estatus`| `Admin\AdminController::cambiarEstatus`| `auth, role:admin, csrf`| Cambio regulado de estatus con observaciones. |
-| **GET** | `/admin/infracciones` | `Admin\AdminController::infracciones`| `auth, role:admin` | Monitoreo de boletas levantadas en campo. |
-| **GET** | `/admin/auditoria` | `Admin\AdminController::auditoria` | `auth, role:superadmin` | Bitácora de eventos y auditoría. |
+| **GET** | `/admin/dashboard` | `Admin\AdminController::dashboard` | `auth`, `role:administrador,operador_ventanilla` | Dashboard general de supervisión municipal. |
+| **GET** | `/admin/solicitudes` | `Admin\AdminController::solicitudes` | `auth`, grupo `role:administrador,operador_ventanilla` | Bandeja maestra de expedientes con filtros. |
+| **POST** | `/admin/solicitudes/cambiar-estatus`| `Admin\AdminController::cambiarEstatus`| `auth`, rol del grupo, CSRF global | Cambio regulado de estatus con observaciones. |
+| **GET** | `/admin/infracciones` | `Admin\AdminController::infracciones`| `auth`, rol del grupo | Monitoreo de boletas levantadas en campo. |
+| **GET** | `/admin/auditoria` | `Admin\AdminController::auditoria` | `auth`, `role:administrador` | Bitácora de eventos y auditoría. |
+| **GET** | `/admin/convocatorias` | `Admin\ConvocatoriasController::index` | grupo `auth` + `role:administrador,operador_ventanilla`, `permisoOperador` | Listado del módulo T-01 (`as: admin.convocatorias`). |
+| **GET / POST** | `/admin/convocatorias/nueva`, `/admin/convocatorias/guardar` | `ConvocatoriasController::formNuevo` / `guardar` | igual que el listado, más CSRF global | Alta de convocatoria con carga de bases al almacén. |
+| **GET / POST** | `/admin/convocatorias/editar/(:num)`, `/admin/convocatorias/actualizar/(:num)` | `formEditar` / `actualizar` | igual que el listado | Edición de título, periodos de registro, estatus y bases. |
+| **GET** | `/admin/convocatorias/(:num)/bases` | `ConvocatoriasController::bases` | igual que el listado | Descarga del PDF de bases (URL firmada). |
+| **GET / POST** | `/admin/convocatorias/(:num)/evaluacion`, `/admin/convocatorias/(:num)/seleccionar` | `evaluacion` / `seleccionar` | igual que el listado | Cuadro comparativo de postulantes y designación de ganador. |
+| **POST** | `/admin/convocatorias/eliminar/(:num)` | `ConvocatoriasController::eliminar` | **`role:administrador`** (grupo exclusivo, línea 111) | Baja definitiva; se niega si hay postulaciones ligadas. |
+| **GET** | `/login`, `/register`, `/logout` | `AuthController::login` / `register` / `logout` | Ninguno | Atajos públicos; ver §7.1. |
+
+**Notas sobre esta tabla:**
+
+* El filtro de rol **no se declara ruta por ruta**: se aplica en los dos grupos de `app/Config/Routes.php` —`role:administrador,operador_ventanilla` para casi todo el panel y `role:administrador` para las rutas exclusivas del administrador (líneas 45–46 y 111). Sobrescribirlo por ruta solo se hace cuando una acción debe quedar fuera del alcance del operador.
+* Encima del rol actúa `PermisoOperadorFilter`, declarado sobre `admin` y `admin/*`, que puede bloquear secciones concretas para el operador según el mapa JSON guardado en `parametros_app`.
+* El CSRF está exento en `api/*` (la app móvil no maneja tokens de formulario) y **activo** en todo lo demás, incluyendo los `POST` del portal y del panel.
+* Las rutas `OPTIONS` de `/api/agentes/login`, `/api/parametros`, `/api/infracciones/sincronizar` y `/api/boletas/sincronizar` están declaradas explícitamente para responder al *preflight* del navegador cuando la app móvil se sirve como SPA web. Existe además el alias `POST /api/boletas/sincronizar`, que resuelve a la misma acción `sincronizar`.
+
+### 7.1. Trampa de enrutamiento: una ruta declarada no es una ruta registrada
+
+CodeIgniter 4 descarta **en silencio** (sin excepción, sin aviso en el arranque y sin línea en los logs) cualquier ruta cuyo `from` coincida con el **nombre** ya asignado con `['as' => …]` a otra ruta: en `RouteCollection::_setRoute()` el `from` se usa como clave de búsqueda y, si `isset($this->routesNames[$verbo][$nombre])` o la clave ya existe, la definición se ignora.
+
+Eso mantuvo muertos `/login`, `/register` y `/logout` **desde el commit inicial**: su `from` era idéntico a los nombres `login`, `register` y `logout` que ya estaban dados en `auth/login`, `auth/register` y `auth/logout`. Como la página 404 propia enlazaba a `/login`, el botón «Iniciar sesión» de la página de error llevaba a otra página de error, y ninguna prueba lo detectaba porque ninguna seguía ese enlace.
+
+**Cómo se comprueba y cómo se evita:**
+* `php spark routes` es la única autoridad: si el atajo no aparece en la tabla, no existe aunque esté escrito en `Routes.php`.
+* Todo atajo necesita su propio `as` (`acceso`, `registro`, `salida`), y el comentario de `app/Config/Routes.php` líneas 129-132 explica la razón para que nadie la quite.
+* La cobertura durable es `tests/app/Controllers/Views/EnlacesEstaticosTest.php`: recolecta los `href` literales de todas las vistas y exige que cada uno coincida con una ruta del mapa real o con un archivo físico bajo `public/`. El mapa se obtiene con `service('routes')->loadRoutes()` y `getRoutes('GET')` — **las claves de verbo van en mayúsculas** y el servicio llega sin leer `app/Config/Routes.php`; con `'get'` o sin `loadRoutes()` el mapa sale vacío y la prueba pasa en falso, por eso hay una salvaguarda que falla si el mapa viniera vacío. Método completo en `DOC_METODOLOGIA_PORTAL_PANEL.md` §10.7.
 
 ---
 
@@ -311,7 +378,7 @@ En arquitecturas serverless como Vercel, el sistema de archivos del servidor es 
    ```
 5. **Ejecución de Pruebas Unitarias Automatizadas (PHPUnit):**
    ```bash
-   # Suite completa (57 tests passing)
+   # Suite completa (247 casos / 931 aserciones en 27 clases)
    vendor/bin/phpunit
    
    # Pruebas exclusivas de la API de Tránsito y Sincronización de Boletas

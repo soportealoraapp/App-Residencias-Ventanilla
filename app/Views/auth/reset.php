@@ -1,4 +1,12 @@
-<?php declare(strict_types=1); ?>
+<?php declare(strict_types=1);
+// Variables inyectadas por el controlador: se leen del ambito real para que el
+// analisis estatico no las marque como indefinidas; en runtime gana el valor enviado.
+$__view = get_defined_vars();
+/** @var object|null $user */
+$user = $__view['user'] ?? null;
+/** @var string $token */
+$token = $__view['token'] ?? '';
+?>
 <?= $this->extend('auth/layout_auth') ?>
 <?= $this->section('title') ?>Restablecer Contraseña - Ventanilla Digital Uriangato<?= $this->endSection() ?>
 <?= $this->section('content') ?>
@@ -38,14 +46,14 @@
                 <label for="password" class="form-label small fw-semibold">Nueva contraseña</label>
                 <div class="input-group">
                     <span class="input-group-text bg-light text-muted"><i class="bi bi-lock"></i></span>
-                    <input type="password" class="form-control" id="password" name="password" placeholder="Mínimo 8 caracteres" required autofocus>
+                    <input autocomplete="new-password" type="password" class="form-control" id="password" name="password" placeholder="Mínimo 8 caracteres" required autofocus>
                 </div>
             </div>
             <div class="mb-4">
                 <label for="password_confirm" class="form-label small fw-semibold">Confirmar nueva contraseña</label>
                 <div class="input-group">
                     <span class="input-group-text bg-light text-muted"><i class="bi bi-lock-fill"></i></span>
-                    <input type="password" class="form-control" id="password_confirm" name="password_confirm" placeholder="Repite tu contraseña" required>
+                    <input autocomplete="new-password" type="password" class="form-control" id="password_confirm" name="password_confirm" placeholder="Repite tu contraseña" required>
                 </div>
             </div>
             <div class="d-grid gap-2">

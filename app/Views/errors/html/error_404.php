@@ -1,84 +1,70 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="utf-8">
-    <title><?= lang('Errors.pageNotFound') ?></title>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>Página no encontrada · Ventanilla Única Municipal</title>
     <style>
-        div.logo {
-            height: 200px;
-            width: 155px;
-            display: inline-block;
-            opacity: 0.08;
-            position: absolute;
-            top: 2rem;
-            left: 50%;
-            margin-left: -73px;
-        }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; margin: 0; }
         body {
-            height: 100%;
-            background: #fafafa;
-            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-            color: #777;
-            font-weight: 300;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #f1f5f9;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
         }
-        h1 {
-            font-weight: lighter;
-            letter-spacing: normal;
-            font-size: 3rem;
-            margin-top: 0;
-            margin-bottom: 0;
-            color: #222;
-        }
-        .wrap {
-            max-width: 1024px;
-            margin: 5rem auto;
-            padding: 2rem;
-            background: #fff;
+        .tarjeta {
+            max-width: 560px;
+            width: 100%;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 40px 32px;
             text-align: center;
-            border: 1px solid #efefef;
-            border-radius: 0.5rem;
-            position: relative;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
         }
-        pre {
-            white-space: normal;
-            margin-top: 1.5rem;
+        .codigo {
+            font-size: 64px;
+            font-weight: 800;
+            line-height: 1;
+            color: #1d4ed8;
+            margin: 0 0 8px;
         }
-        code {
-            background: #fafafa;
-            border: 1px solid #efefef;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            display: block;
+        h1 { font-size: 22px; font-weight: 700; margin: 0 0 12px; }
+        p { font-size: 16px; line-height: 1.6; color: #475569; margin: 0 0 28px; }
+        .acciones { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .boton {
+            display: inline-block;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 15px;
+            padding: 12px 22px;
+            border-radius: 10px;
+            transition: opacity .15s ease;
         }
-        p {
-            margin-top: 1.5rem;
-        }
-        .footer {
-            margin-top: 2rem;
-            border-top: 1px solid #efefef;
-            padding: 1em 2em 0 2em;
-            font-size: 85%;
-            color: #999;
-        }
-        a:active,
-        a:link,
-        a:visited {
-            color: #dd4814;
-        }
+        .boton:hover { opacity: .9; }
+        .boton-primario { background: #1d4ed8; color: #ffffff; }
+        .boton-secundario { background: #eef2ff; color: #1e293b; }
+        .pie { margin-top: 32px; font-size: 13px; color: #94a3b8; }
     </style>
 </head>
 <body>
-    <div class="wrap">
-        <h1>404</h1>
-
+    <main class="tarjeta">
+        <p class="codigo">404</p>
+        <h1>No encontramos esta página</h1>
         <p>
-            <?php if (ENVIRONMENT !== 'production') : ?>
-                <?= nl2br(esc($message)) ?>
-            <?php else : ?>
-                <?= lang('Errors.sorryCannotFind') ?>
-            <?php endif; ?>
+            La dirección que escribiste ya no existe o cambió de lugar.
+            Revisa que esté bien escrita o regresa al inicio para continuar tu trámite.
         </p>
-    </div>
+        <div class="acciones">
+            <a class="boton boton-primario" href="/">Ir al inicio</a>
+            <a class="boton boton-secundario" href="/login">Iniciar sesión</a>
+        </div>
+        <div class="pie">Ventanilla Única Municipal · Municipio de Uriangato</div>
+    </main>
 </body>
 </html>

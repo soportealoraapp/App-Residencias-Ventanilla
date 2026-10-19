@@ -29,7 +29,7 @@ graph TD
     subgraph CAPA_INTERFAZ_USUARIO [Capa de Interfaz & Vistas - app/]
         IDX[index.tsx\nBienvenida y Modo]
         LOG[login.tsx\nInicio de Turno]
-        REG[registro.tsx\nEnrolamiento de Oficial]
+        REG[+not-found.tsx\nPantalla de Ruta Inexistente]
         DASH[dashboard.tsx\nCentro de Mando del Turno]
         NUEV[nueva-infraccion.tsx\nFormulario Integral de Infracción]
         BOL[boletas.tsx\nHistorial y Detalle de Infracciones]
@@ -48,7 +48,7 @@ graph TD
     end
 
     subgraph BACKEND_MUNICIPAL_CI4 [Backend Institucional - CodeIgniter 4]
-        BACK_AUTH[POST /api/agentes/login\nPOST /api/agentes/registro]
+        BACK_AUTH[POST /api/agentes/login]
         BACK_CAT[GET /api/checklist-infracciones\nGET /api/parametros]
         BACK_SYNC[POST /api/infracciones/sincronizar\nPOST /api/infracciones/evidencias]
         CI4_DB[(Base de Datos Municipal\nboletas_infracciones / agentes_transito)]
@@ -88,7 +88,7 @@ mobile/agentes-transito/
 │   ├── _layout.tsx               # Layout raíz: proveedores de contexto (Theme, Auth, Infracciones)
 │   ├── index.tsx                 # Pantalla inicial de bienvenida y verificación de estado
 │   ├── login.tsx                 # Inicio de turno del oficial (placa y contraseña)
-│   ├── registro.tsx              # Registro de nuevo oficial de tránsito con toggles de contraseña
+│   ├── +not-found.tsx            # Ruta no declarada; los agentes no se autorregistran
 │   ├── dashboard.tsx             # Panel de mando: turno activo, métricas y botón de nueva infracción
 │   ├── nueva-infraccion.tsx      # Formulario de captura: cámara, GPS, catálogo y garantías
 │   └── boletas.tsx               # Historial de infracciones con filtros y visor de evidencias
@@ -139,14 +139,12 @@ mobile/agentes-transito/
   * Consulta prioritaria contra la API del backend institucional (`POST /api/agentes/login`) validando contra la tabla `agentes_transito` con hash BCrypt y entrega de Bearer token.
   * En éxito, persiste el estado de sesión en `AsyncStorage` (`@agente_sesion_activa_v1`) y redirige a `dashboard.tsx`.
 
-### 4.3. `app/registro.tsx` (Enrolamiento de Nuevos Agentes)
-* **Propósito:** Registro guiado de oficiales para su incorporación al padrón municipal.
-* **Características de UX:**
-  * Campos: Placa / Credencial, Nombre Completo, Contraseña y Confirmación de Contraseña.
-  * Indicadores visuales y toggles independientes para ver u ocultar ambas contraseñas.
-  * Validación contra `POST /api/agentes/registro`.
-  * Mensajes de error claros e informativos (por ejemplo, placa duplicada, contraseñas no coincidentes, o error de conectividad).
-  * En éxito, muestra banner de confirmación y redirige al login.
+### 4.3. `app/+not-found.tsx` (Ruta Inexistente) y `app/perfil.tsx`
+
+* **`+not-found.tsx`:** pantalla de cierre para cualquier ruta no declarada del enrutador por archivos de Expo Router. Existe porque el enrutador de Expo **no admite `+unmatched.tsx`** con los símbolos que genera `createRootNavigator`; la convención correcta es `+not-found.tsx`. Ofrece enlace explícito de regreso al turno.
+* **`perfil.tsx`:** identidad del oficial en turno —placa, nombre, sector y cierre de sesión— leídos de la sesión local, sin consulta nueva al backend.
+
+> **Decisión de seguridad documentada (y corrección a esta guía):** la app **no tiene pantalla de autorregistro**. Los agentes de tránsito tienen capacidad de sanción, por lo que solo el administrador los da de alta desde el panel (`/admin/app-transito`, ruta `app-transito/agentes/guardar`). El endpoint `POST /api/agentes/registro` y la pantalla `registro.tsx` que describían versiones anteriores de este documento **ya no existen** en el código ni en `app/Config/Routes.php`; el registro público quedó restringido a ciudadanos.
 
 ### 4.4. `app/dashboard.tsx` (Centro de Mando de Turno)
 * **Propósito:** Pantalla principal durante la jornada de trabajo del oficial.
@@ -292,3 +290,47 @@ El archivo `.apk` resultante se instala directamente en los dispositivos de camp
    * Activa el "Modo Avión" o desconecta la red en la pestaña Network de DevTools.
    * Levanta una boleta completa y pulsa guardar: se validará el aviso "Infracción guardada localmente (pendiente de sincronización)".
    * Reconecta la red y presiona "Sincronizar": la boleta pasará automáticamente al estado "Sincronizada".
+
+### 8.1. Verificación Automatizada del Cliente (sin Expo ni dispositivo)
+
+La app incluye un verificador de flujo de autenticación ejecutable con Node puro, sin levantar Metro ni require un teléfono:
+
+```bash
+cd mobile/agentes-transito
+node tests/auth-flow.test.cjs     # 18 casos
+npx tsc --noEmit                  # tipos del cliente; debe salir limpio
+```
+
+Los 18 casos cubren, entre otros: inicio de turno con placa y PIN, emisión y **caducidad del token de portador**, persistencia de la cola local, y —el caso más importante operacionalmente— que **un `401` al sincronizar no destruya trabajo**: las boletas aceptadas antes del error quedan sincronizadas, el resto permanece pendiente y la app pide volver a iniciar sesión en lugar de descartar el turno. También se verifica que otros errores (500, sin red) **no** fuercen un cierre de sesión espurio.
+
+> `package.json` no declara un script `test` ni `typecheck`; hay que invocar los dos comandos anteriores directamente. Si se prefiere integrarlos en CI, agregar `"test": "node tests/auth-flow.test.cjs"` y `"typecheck": "tsc --noEmit"` es el cambio mínimo.
+
+### 8.2. Verificación de Sincronía con el Backend
+
+Cuando el backend o el panel reciben cambios, la pregunta no es "¿la app funciona?" sino "¿sigue alineada con el contrato vigente?". El procedimiento, con su resultado a la última verificación:
+
+| # | Verificación | Método | Resultado |
+|---|---|---|---|
+| 1 | **Contrato de API** | Cotejar las rutas invocadas por `src/services/` y `src/api/` contra `app/Config/Routes.php` | Coincidencia exacta en los cinco endpoints: `/api/agentes/login`, `/api/checklist-infracciones`, `/api/parametros`, `/api/infracciones/sincronizar`, `/api/infracciones/evidencias`; las dos de escritura protegidas por el filtro `agenteToken` |
+| 2 | **Ausencia de ruptura de contrato** | `git show --stat <últimos commits>` restringido a los archivos que la app consume | Los tres commits más recientes del backend tocaron `app/Config/Routes.php` (los tres atajos públicos de acceso, fuera de `api/*`), controladores y vistas del **panel** y una llave foránea de `solicitudes`. **Ninguno** toca los cinco endpoints, `AgenteTokenModel`, `boletas_infracciones`, `catalogo_infracciones*` ni `parametros_app`: el contrato queda intacto |
+| 3 | **Versión publicada** | Comparar `package.json`, `app.json` y el valor por defecto del parámetro `app_version` | `1.0.0` en los tres sitios, y el panel muestra ese mismo valor en "Configuración App Agentes de Tránsito" |
+| 4 | **Entorno del cliente** | Revisar `mobile/agentes-transito/.env` | `EXPO_PUBLIC_API_BASE_URL=https://app-residencias.vercel.app` y `APP_ENV=production` |
+| 5 | **Estado del código** | `git status` sobre `mobile/` | Sin cambios sin compitear |
+| 6 | **Haz servido en `/agentes`** | `git status` tras reexportar, más sondeo de la URL de producción | Reexportar con `scripts/exportar_agentes_web.ps1` dejó `public/agentes` **sin un solo cambio** (salida idéntica byte a byte) y el dominio de producción sirve el mismo `entry-*.js` del repositorio, con `lang="es"` y sin cadenas en inglés dentro del bundle |
+
+> **Cómo se usó esta tabla para descartar un reporte equivocado:** se reportó que la versión publicada seguía mostrando un botón en inglés "Crear una cuenta" porque "el bundle desplegado es viejo". Las filas 5 y 6 lo niegan con evidencia: la cadena no existe en el repositorio, el reexport no produce diferencia y el haz desplegado en producción es idéntico al commiteado. El defecto real estaba en otro lado y sí era propio del código: los atajos `/login`, `/register` y `/logout` de las vistas PHP estaban muertos por una colisión de nombre con las rutas de autenticación. **Consecuencia metodológica:** antes de reconstruir algo que "se ve viejo", comprobar primero que el fuente no contenga el síntoma; reexportar un haz correcto solo refuerza la falsa idea de que el despliegue no propaga los cambios.
+
+**Regla práctica para no perder la sincronía:** cualquier cambio en `mobile/agentes-transito/` queda **invisible en producción** hasta que se vuelve a exportar el haz web. Use el script del repositorio, no el comando suelto:
+
+```powershell
+cd mobile/agentes-transito
+..\..\scripts\exportar_agentes_web.ps1
+```
+
+El script hace tres pasos que un `npx expo export` a secas no cubre: exporta el haz, **repone los 19 archivos `.ttf`** que el exportador elimina de `public/agentes/fonts/` y **localiza el shell** (`public/agentes/index.html`), que Expo genera en inglés: `lang="en"`, el `<title>`, el aviso de *"necesitas habilitar JavaScript"* y los comentarios de plantilla. `scripts/localizar_shell_agentes.php` sustituye esas cinco cadenas y **falla si sobrevive alguna**, de modo que un cambio de redacción en Expo se detecta en el build en lugar de publicarse. Omitir la reposición de fuentes o la localización produce tipografía caída y shell en inglés publicado.
+
+> El shell **no** contiene textos de las pantallas: cadenas como el botón de crear cuenta viven dentro del `entry-*.js`, en el fuente React de `app/` y `src/`. Por eso un botón en inglés visible en producción se diagnostica buscando la cadena en el repositorio y en el bundle servido, no reescribiendo el shell.
+
+Un repositorio con el fuente modificado y el `public/agentes` antiguo produce el peor de los fallos: la app de demostración funciona distinto a la app instalada en el teléfono del agente.
+
+> **Precisión importante sobre las dos superficies móviles del proyecto:** `/agentes` es una **SPA de Expo con su propio CSS**, mientras que el portal y el panel son **vistas PHP con `public/css/custom.css`**. Por eso las correcciones de desbordamiento horizontal del panel **no** afectan a la app móvil, y viceversa: reexportar la app no arregla nada del portal. Confundirlas lleva a los dos errores clásicos: editar CSS esperando que cambie la app, o reexportar la app creyendo que así se arregla el portal.

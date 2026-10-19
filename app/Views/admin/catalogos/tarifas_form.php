@@ -1,3 +1,14 @@
+<?php
+// Variables inyectadas por el controlador: se leen del ambito real para que el
+// analisis estatico no las marque como indefinidas; en runtime gana el valor enviado.
+$__view = get_defined_vars();
+/** @var string $modo */
+$modo = $__view['modo'] ?? 'nuevo';
+/** @var object $tarifa */
+$tarifa = $__view['tarifa'] ?? null;
+/** @var array $tramites */
+$tramites = $__view['tramites'] ?? [];
+?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('pageTitle') ?><?= $modo === 'nuevo' ? 'Nueva Tarifa' : 'Editar Tarifa #' . $tarifa->id ?><?= $this->endSection() ?>
 <?= $this->section('content') ?>
@@ -39,7 +50,7 @@
 
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Criterio <span class="text-danger">*</span></label>
-                    <input type="text" name="criterio" class="form-control" maxlength="50" required
+                    <input autocomplete="off" autocapitalize="words" spellcheck="false" type="text" name="criterio" class="form-control" maxlength="50" required
                         value="<?= esc(old('criterio', $tarifa->criterio)) ?>"
                         placeholder="ej: particular_dia o cesion_concesion_base">
                     <div class="form-text small">Identificador único del concepto de cobro.</div>
@@ -49,7 +60,7 @@
                     <label class="form-label fw-semibold">Monto <span class="text-danger">*</span></label>
                     <div class="input-group">
                         <span class="input-group-text">$</span>
-                        <input type="number" name="monto" class="form-control" step="0.01" min="0" required
+                        <input inputmode="decimal" type="number" name="monto" class="form-control" step="0.01" min="0" required
                             value="<?= esc(old('monto', $tarifa->monto)) ?>"
                             placeholder="0.00">
                     </div>

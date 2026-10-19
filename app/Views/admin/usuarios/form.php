@@ -1,3 +1,16 @@
+<?php
+// Variables inyectadas por el controlador: se leen del ambito real para que el
+// analisis estatico no las marque como indefinidas; en runtime gana el valor enviado.
+$__view = get_defined_vars();
+/** @var string $modo */
+$modo = $__view['modo'] ?? 'nuevo';
+/** @var object $usuario */
+$usuario = $__view['usuario'] ?? null;
+/** @var string $rolActual */
+$rolActual = $__view['rolActual'] ?? 'ciudadano';
+/** @var array<string, string> $roles */
+$roles = $__view['roles'] ?? [];
+?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('pageTitle') ?><?= $modo === 'nuevo' ? 'Nueva cuenta' : 'Editar cuenta #' . (int) $usuario->id ?><?= $this->endSection() ?>
 <?= $this->section('content') ?>
@@ -16,39 +29,39 @@
         <div class="row g-3 mb-4">
             <div class="col-md-4">
                 <label for="nombre" class="form-label fw-semibold">Nombre(s) <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="nombre" name="nombre" required maxlength="90" value="<?= esc(old('nombre', $usuario->nombre ?? '')) ?>" placeholder="Ej. María Fernanda">
+                <input autocomplete="off" autocapitalize="words" spellcheck="false" type="text" class="form-control" id="nombre" name="nombre" required maxlength="90" value="<?= esc(old('nombre', $usuario->nombre ?? '')) ?>" placeholder="Ej. María Fernanda">
             </div>
             <div class="col-md-4">
                 <label for="apellido" class="form-label fw-semibold">Apellido(s) <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="apellido" name="apellido" required maxlength="120" value="<?= esc(old('apellido', $usuario->apellido ?? '')) ?>" placeholder="Ej. López García">
+                <input autocomplete="off" autocapitalize="words" spellcheck="false" type="text" class="form-control" id="apellido" name="apellido" required maxlength="120" value="<?= esc(old('apellido', $usuario->apellido ?? '')) ?>" placeholder="Ej. López García">
             </div>
             <div class="col-md-4">
                 <label for="curp" class="form-label fw-semibold">CURP</label>
-                <input type="text" class="form-control text-uppercase font-monospace" id="curp" name="curp" maxlength="18" minlength="18" value="<?= esc(old('curp', $usuario->curp ?? '')) ?>" placeholder="Ej. LOGM900101MGTPRR05">
+                <input autocomplete="off" autocapitalize="characters" spellcheck="false" type="text" class="form-control text-uppercase font-monospace" id="curp" name="curp" maxlength="18" minlength="18" value="<?= esc(old('curp', $usuario->curp ?? '')) ?>" placeholder="Ej. LOGM900101MGTPRR05">
             </div>
             <div class="col-md-4">
                 <label for="rfc" class="form-label fw-semibold">RFC</label>
-                <input type="text" class="form-control text-uppercase font-monospace" id="rfc" name="rfc" minlength="12" maxlength="13" value="<?= esc(old('rfc', $usuario->rfc ?? '')) ?>" placeholder="Ej. LOGM900101AB1">
+                <input autocomplete="off" autocapitalize="characters" spellcheck="false" type="text" class="form-control text-uppercase font-monospace" id="rfc" name="rfc" minlength="12" maxlength="13" value="<?= esc(old('rfc', $usuario->rfc ?? '')) ?>" placeholder="Ej. LOGM900101AB1">
             </div>
             <div class="col-md-4">
                 <label for="telefono" class="form-label fw-semibold">Teléfono</label>
-                <input type="tel" class="form-control" id="telefono" name="telefono" maxlength="20" value="<?= esc(old('telefono', $usuario->telefono ?? '')) ?>" placeholder="Ej. 445 123 4567">
+                <input autocomplete="off" inputmode="tel" type="tel" class="form-control" id="telefono" name="telefono" maxlength="20" value="<?= esc(old('telefono', $usuario->telefono ?? '')) ?>" placeholder="Ej. 445 123 4567">
             </div>
             <div class="col-md-4">
                 <label for="email" class="form-label fw-semibold">Correo electrónico</label>
-                <input type="email" class="form-control" id="email" name="email" maxlength="255" value="<?= esc(old('email', $usuario->email ?? '')) ?>" placeholder="Ej. maria@correo.com">
+                <input autocomplete="off" inputmode="email" spellcheck="false" type="email" class="form-control" id="email" name="email" maxlength="255" value="<?= esc(old('email', $usuario->email ?? '')) ?>" placeholder="Ej. maria@correo.com">
             </div>
             <div class="col-md-6">
                 <label for="domicilio" class="form-label fw-semibold">Domicilio</label>
-                <input type="text" class="form-control" id="domicilio" name="domicilio" maxlength="250" value="<?= esc(old('domicilio', $usuario->domicilio ?? '')) ?>" placeholder="Calle, número, colonia, CP">
+                <input autocomplete="off" autocapitalize="words" spellcheck="false" type="text" class="form-control" id="domicilio" name="domicilio" maxlength="250" value="<?= esc(old('domicilio', $usuario->domicilio ?? '')) ?>" placeholder="Calle, número, colonia, CP">
             </div>
             <div class="col-md-3">
                 <label for="ciudad" class="form-label fw-semibold">Ciudad / Municipio</label>
-                <input type="text" class="form-control" id="ciudad" name="ciudad" maxlength="150" value="<?= esc(old('ciudad', $usuario->ciudad ?? '')) ?>">
+                <input autocomplete="off" autocapitalize="words" type="text" class="form-control" id="ciudad" name="ciudad" maxlength="150" value="<?= esc(old('ciudad', $usuario->ciudad ?? '')) ?>">
             </div>
             <div class="col-md-3">
                 <label for="estado" class="form-label fw-semibold">Estado</label>
-                <input type="text" class="form-control" id="estado" name="estado" maxlength="100" value="<?= esc(old('estado', $usuario->estado ?? '')) ?>">
+                <input autocomplete="off" autocapitalize="words" type="text" class="form-control" id="estado" name="estado" maxlength="100" value="<?= esc(old('estado', $usuario->estado ?? '')) ?>">
             </div>
         </div>
 
@@ -56,7 +69,7 @@
         <div class="row g-3 mb-4">
             <div class="col-md-4">
                 <label for="username" class="form-label fw-semibold">Nombre de usuario <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="username" name="username" required minlength="5" maxlength="100" pattern="[A-Za-z0-9]+" title="Solo letras y números, mínimo 5" value="<?= esc(old('username', $usuario->username ?? '')) ?>" placeholder="Ej. mlopez90">
+                <input autocomplete="off" spellcheck="false" type="text" class="form-control" id="username" name="username" required minlength="5" maxlength="100" pattern="[A-Za-z0-9]+" title="Solo letras y números, mínimo 5" value="<?= esc(old('username', $usuario->username ?? '')) ?>" placeholder="Ej. mlopez90">
             </div>
             <div class="col-md-4">
                 <label for="password" class="form-label fw-semibold">Contraseña</label>

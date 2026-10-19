@@ -1,11 +1,12 @@
 <?= $this->extend('layouts/portal') ?>
 <?= $this->section('title') ?>Inicio - Ventanilla Digital de Movilidad Uriangato<?= $this->endSection() ?>
 <?= $this->section('content') ?>
+<div class="inicio-hero">
 <div class="row justify-content-center align-items-center py-3 py-md-5">
     <div class="col-lg-10 text-center">
         <div class="mb-4 mb-md-5">
             <div class="mb-3 mb-md-4">
-                <img src="<?= base_url('logo-uri.webp') ?>" alt="Logo H. Ayuntamiento de Uriangato" style="height: 96px;">
+                <img src="<?= base_url('logo-uri.webp') ?>" alt="Logo H. Ayuntamiento de Uriangato" class="inicio-hero-logo">
             </div>
             <h1 class="display-5 fw-bold mb-2 mb-md-3">Ventanilla Digital de Movilidad</h1>
             <p class="lead text-muted mb-3 mb-md-4">Gobierno Digital del H. Ayuntamiento de Uriangato, Gto.</p>
@@ -41,13 +42,17 @@
                                 <i class="bi bi-building fs-2"></i>
                             </div>
                             <h3 class="card-title h4 mb-2">¿No tienes cuenta?</h3>
-                            <p class="text-muted small mb-0">Las cuentas de ciudadano se crean de forma presencial. Acude a la ventanilla de Tránsito y Transporte con tu identificación oficial (INE) y comprobante de domicilio; el personal te entregará tu usuario y contraseña.</p>
+                            <p class="text-muted small mb-0">Crea tu cuenta de ciudadano para iniciar tus trámites en línea. También puedes acudir a la ventanilla de Tránsito y Transporte con tu INE y comprobante de domicilio si prefieres atención presencial.</p>
                         </div>
+                        <a href="/auth/register" class="btn btn-primary btn-lg w-100 shadow-sm">
+                            <i class="bi bi-person-plus me-2"></i>Crear mi cuenta
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 </div>
 <?= $this->endSection() ?>
 

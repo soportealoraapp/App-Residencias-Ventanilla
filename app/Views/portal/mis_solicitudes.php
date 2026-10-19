@@ -2,6 +2,53 @@
 <?= $this->extend('layouts/portal') ?>
 <?= $this->section('title') ?>Mis Solicitudes - Portal Ciudadano Uriangato<?= $this->endSection() ?>
 <?= $this->section('content') ?>
+<?php
+/**
+ * Agrupaciones del filtro rápido.
+ *
+ * «revision» es el paraguas de todo lo que sigue esperando al personal, por eso
+ * no tiene lista propia: recibe los estatus que no coinciden con ningún otro.
+ * Un expediente ya pagado nunca debe contarse como «pago pendiente».
+ */
+$estatusPorGrupo = [
+    'pago'        => ['Pago pendiente'],
+    'aprobado'    => ['Aprobado', 'Dictaminado aprobado', 'Dictamen favorable', 'Verificado', 'Permiso emitido', 'Vigente', 'Seleccionado', 'Documentos completos', 'Pagado', 'Concluido'],
+    'observacion' => ['Prevención', 'Rechazado', 'Vencido', 'No seleccionado'],
+];
+
+$grupoDe = static function (string $estatus) use ($estatusPorGrupo): string {
+    foreach ($estatusPorGrupo as $grupo => $lista) {
+        if (in_array($estatus, $lista, true)) {
+            return $grupo;
+        }
+    }
+
+    return 'revision';
+};
+
+/** @var list<object> $solicitudes */
+$solicitudes = (array) (get_defined_vars()['solicitudes'] ?? []);
+$conteoGrupos = ['todos' => count($solicitudes), 'pago' => 0, 'revision' => 0, 'aprobado' => 0, 'observacion' => 0];
+foreach ($solicitudes as $s) {
+    $conteoGrupos[$grupoDe((string) $s->estatus)]++;
+}
+
+// El panel de inicio enlaza sus tarjetas con estos parámetros, así que el filtro
+// puede llegar por URL y no solo tocando la pantalla.
+$__reqPortal = \Config\Services::request();
+$grupoActivo = (string) ($__reqPortal->getGet('grupo') ?? '');
+if (! array_key_exists($grupoActivo, $conteoGrupos)) {
+    $grupoActivo = 'todos';
+}
+$busquedaActiva = trim((string) ($__reqPortal->getGet('q') ?? ''));
+$pills = [
+    ['clave' => 'todos',       'texto' => 'Todos',                  'icono' => ''],
+    ['clave' => 'pago',        'texto' => 'Pago pendiente',         'icono' => 'bi-cash-stack text-warning'],
+    ['clave' => 'revision',    'texto' => 'En revisión',            'icono' => 'bi-hourglass-split text-info'],
+    ['clave' => 'aprobado',    'texto' => 'Aprobados / Concluidos', 'icono' => 'bi-check-circle text-success'],
+    ['clave' => 'observacion', 'texto' => 'Observación / Rechazo',  'icono' => 'bi-exclamation-triangle text-danger'],
+];
+?>
 
 <div class="row mb-3 mb-md-4 align-items-center">
     <div class="col-12 col-sm-8 mb-2 mb-sm-0">
@@ -31,28 +78,21 @@
                     <span class="input-group-text bg-light border-end-0 text-muted">
                         <i class="bi bi-search"></i>
                     </span>
-                    <input type="text" id="busquedaSolicitudes" class="form-control border-start-0 bg-light"
+                    <input autocomplete="off" spellcheck="false" enterkeyhint="search" type="text" id="busquedaSolicitudes" class="form-control border-start-0 bg-light"
                            placeholder="Buscar por folio o nombre del trámite..."
-                           aria-label="Buscar solicitudes">
+                           aria-label="Buscar solicitudes"
+                           value="<?= esc($busquedaActiva) ?>">
                 </div>
             </div>
             <div class="col-12 col-md-7">
                 <div class="d-flex flex-wrap gap-1 justify-content-md-end" id="filtroEstatusPills">
-                    <button type="button" class="btn btn-sm btn-outline-primary active filtro-pill py-1 px-2" data-estatus="todos">
-                        Todos <span class="badge bg-secondary ms-1" id="count-todos"><?= count($solicitudes) ?></span>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary filtro-pill py-1 px-2" data-estatus="pago">
-                        <i class="bi bi-cash-stack me-1 text-warning"></i>Pago pendiente
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary filtro-pill py-1 px-2" data-estatus="revision">
-                        <i class="bi bi-hourglass-split me-1 text-info"></i>En revisión
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary filtro-pill py-1 px-2" data-estatus="aprobado">
-                        <i class="bi bi-check-circle me-1 text-success"></i>Aprobados / Concluidos
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary filtro-pill py-1 px-2" data-estatus="observacion">
-                        <i class="bi bi-exclamation-triangle me-1 text-danger"></i>Observación / Rechazo
-                    </button>
+                    <?php foreach ($pills as $p): $activo = $p['clave'] === $grupoActivo; ?>
+                        <button type="button" class="btn btn-sm filtro-pill py-1 px-2 <?= $activo ? 'btn-primary active' : 'btn-outline-secondary' ?>" data-estatus="<?= esc($p['clave']) ?>">
+                            <?php if ($p['icono'] !== ''): ?><i class="bi <?= esc($p['icono']) ?> me-1"></i><?php endif; ?>
+                            <?= esc($p['texto']) ?>
+                            <span class="badge <?= $activo ? 'bg-white text-primary' : 'bg-secondary' ?> ms-1"><?= (int) $conteoGrupos[$p['clave']] ?></span>
+                        </button>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </div>
@@ -78,21 +118,11 @@
         <?php else: ?>
         <!-- Mobile Card List (Visible on < 768px) -->
         <div class="d-block d-md-none" id="contenedorCardsMovil">
-            <?php foreach ($solicitudes as $s): 
-                $estatusRaw = mb_strtolower((string)$s->estatus);
-                $grupoEstatus = 'revision';
-                if (str_contains($estatusRaw, 'pago')) {
-                    $grupoEstatus = 'pago';
-                } elseif (str_contains($estatusRaw, 'aprobad') || str_contains($estatusRaw, 'concluid') || str_contains($estatusRaw, 'vigente') || str_contains($estatusRaw, 'pagado')) {
-                    $grupoEstatus = 'aprobado';
-                } elseif (str_contains($estatusRaw, 'prevenci') || str_contains($estatusRaw, 'rechazad') || str_contains($estatusRaw, 'vencid')) {
-                    $grupoEstatus = 'observacion';
-                }
-            ?>
-                <div class="p-3 border-bottom item-solicitud" 
-                     data-folio="<?= esc(mb_strtolower($s->folio)) ?>" 
-                     data-tramite="<?= esc(mb_strtolower(tramite_nombre($s->tramite))) ?>" 
-                     data-grupo="<?= $grupoEstatus ?>">
+            <?php foreach ($solicitudes as $s): ?>
+                <div class="p-3 border-bottom item-solicitud"
+                     data-folio="<?= esc(mb_strtolower($s->folio)) ?>"
+                     data-tramite="<?= esc(mb_strtolower(tramite_nombre($s->tramite))) ?>"
+                     data-grupo="<?= $grupoDe((string) $s->estatus) ?>">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
                             <div class="d-flex align-items-center gap-2">
@@ -145,21 +175,11 @@
                     </tr>
                 </thead>
                 <tbody id="solicitudesTbody">
-                <?php foreach ($solicitudes as $s): 
-                    $estatusRaw = mb_strtolower((string)$s->estatus);
-                    $grupoEstatus = 'revision';
-                    if (str_contains($estatusRaw, 'pago')) {
-                        $grupoEstatus = 'pago';
-                    } elseif (str_contains($estatusRaw, 'aprobad') || str_contains($estatusRaw, 'concluid') || str_contains($estatusRaw, 'vigente') || str_contains($estatusRaw, 'pagado')) {
-                        $grupoEstatus = 'aprobado';
-                    } elseif (str_contains($estatusRaw, 'prevenci') || str_contains($estatusRaw, 'rechazad') || str_contains($estatusRaw, 'vencid')) {
-                        $grupoEstatus = 'observacion';
-                    }
-                ?>
-                    <tr class="item-solicitud" 
-                        data-folio="<?= esc(mb_strtolower($s->folio)) ?>" 
-                        data-tramite="<?= esc(mb_strtolower(tramite_nombre($s->tramite))) ?>" 
-                        data-grupo="<?= $grupoEstatus ?>">
+                <?php foreach ($solicitudes as $s): ?>
+                    <tr class="item-solicitud"
+                        data-folio="<?= esc(mb_strtolower($s->folio)) ?>"
+                        data-tramite="<?= esc(mb_strtolower(tramite_nombre($s->tramite))) ?>"
+                        data-grupo="<?= $grupoDe((string) $s->estatus) ?>">
                         <td>
                             <div class="d-inline-flex align-items-center gap-1">
                                 <code class="fw-bold text-primary fs-6"><?= esc($s->folio) ?></code>
@@ -226,6 +246,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnsCopiar = document.querySelectorAll('.btn-copiar-folio');
 
     let filtroEstatusActual = 'todos';
+    const pillActiva = document.querySelector('.filtro-pill.active');
+    if (pillActiva) {
+        filtroEstatusActual = pillActiva.getAttribute('data-estatus') || 'todos';
+    }
 
     // Funcionalidad copiar folio
     btnsCopiar.forEach(btn => {
@@ -314,6 +338,10 @@ document.addEventListener('DOMContentLoaded', function() {
             aplicarFiltros();
         });
     }
+
+    // Arranque: si llegamos con ?grupo= o ?q= desde el panel de inicio, el
+    // resultado debe verse filtrado desde el primer momento.
+    aplicarFiltros();
 });
 </script>
 <?= $this->endSection() ?>

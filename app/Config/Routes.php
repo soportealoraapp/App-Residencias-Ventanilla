@@ -14,6 +14,9 @@ $routes->setAutoRoute(false);
 
 $routes->get('auth/login', 'AuthController::login', ['as' => 'login']);
 $routes->post('auth/attempt-login', 'AuthController::attemptLogin');
+// Registro público SOLO de ciudadanos. Los agentes de tránsito los crea el admin.
+$routes->get('auth/register', 'AuthController::register', ['as' => 'register']);
+$routes->post('auth/attempt-register', 'AuthController::attemptRegister');
 $routes->get('auth/logout', 'AuthController::logout', ['as' => 'logout']);
 $routes->get('auth/forgot', 'AuthController::forgot');
 $routes->post('auth/attempt-forgot', 'AuthController::attemptForgot');
@@ -43,13 +46,21 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->group('', ['filter' => 'role:administrador,operador_ventanilla'], function($routes) {
         $routes->get('dashboard', 'Admin\\AdminController::dashboard', ['as' => 'admin.dashboard']);
         $routes->get('auditoria', 'Admin\\AdminController::auditoria', ['as' => 'admin.auditoria']);
+        $routes->get('documentos', 'Admin\\DocumentosController::index', ['as' => 'admin.documentos']);
+        $routes->get('verificaciones', 'Admin\\VerificacionesController::index', ['as' => 'admin.verificaciones']);
+        $routes->get('sesiones-app', 'Admin\\SesionesAppController::index', ['as' => 'admin.sesiones_app']);
         $routes->get('solicitudes', 'Admin\\AdminController::listaSolicitudes', ['as' => 'admin.solicitudes']);
+        $routes->get('solicitudes/nueva', 'Admin\\SolicitudPresencialController::index');
+        $routes->post('solicitudes/nueva/buscar-ciudadano', 'Admin\\SolicitudPresencialController::buscarCiudadano');
+        $routes->post('solicitudes/nueva/guardar', 'Admin\\SolicitudPresencialController::guardar');
+        $routes->get('solicitudes/nueva/(:segment)', 'Admin\\SolicitudPresencialController::formulario/$1');
         $routes->get('solicitudes/(:segment)', 'Admin\\AdminController::verSolicitud/$1', ['as' => 'admin.solicitud.ver']);
         $routes->post('solicitudes/cambiar-estatus/(:num)', 'Admin\\AdminController::cambiarEstatus/$1');
         $routes->post('solicitudes/ur04/evaluacion/(:num)', 'Admin\\AdminController::guardarEvaluacionUr04/$1');
         $routes->post('solicitudes/ur05/validacion/(:num)', 'Admin\\AdminController::validarCierreCalleUr05/$1');
         $routes->post('solicitudes/dictamen-ur02/(:num)', 'Admin\\AdminController::registrarDictamenUr02/$1');
         $routes->get('solicitudes/descargar-documento/(:num)', 'Admin\\AdminController::descargarDocumento/$1');
+        $routes->post('solicitudes/validar-documento/(:num)', 'Admin\\AdminController::validarDocumento/$1');
         $routes->get('tarifas', 'Admin\\CatalogoTarifasController::index');
         $routes->get('tarifas/nuevo', 'Admin\\CatalogoTarifasController::formNuevo');
         $routes->post('tarifas/guardar', 'Admin\\CatalogoTarifasController::guardar');
@@ -62,10 +73,17 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->get('concesiones/editar/(:num)', 'Admin\\CatalogoConcesionesController::formEditar/$1');
         $routes->post('concesiones/actualizar/(:num)', 'Admin\\CatalogoConcesionesController::actualizar/$1');
         $routes->post('concesiones/eliminar/(:num)', 'Admin\\CatalogoConcesionesController::eliminar/$1');
-        $routes->get('convocatorias/(:num)/evaluacion', 'Admin\\AdminController::evaluacionConvocatoria/$1');
-        $routes->post('convocatorias/(:num)/seleccionar', 'Admin\\AdminController::seleccionarGanadorConvocatoria/$1');
+        $routes->get('convocatorias', 'Admin\\ConvocatoriasController::index', ['as' => 'admin.convocatorias']);
+        $routes->get('convocatorias/nueva', 'Admin\\ConvocatoriasController::formNuevo');
+        $routes->post('convocatorias/guardar', 'Admin\\ConvocatoriasController::guardar');
+        $routes->get('convocatorias/editar/(:num)', 'Admin\\ConvocatoriasController::formEditar/$1');
+        $routes->post('convocatorias/actualizar/(:num)', 'Admin\\ConvocatoriasController::actualizar/$1');
+        $routes->get('convocatorias/(:num)/evaluacion', 'Admin\\ConvocatoriasController::evaluacion/$1', ['as' => 'admin.convocatoria.evaluacion']);
+        $routes->post('convocatorias/(:num)/seleccionar', 'Admin\\ConvocatoriasController::seleccionar/$1');
+        $routes->get('convocatorias/(:num)/bases', 'Admin\\ConvocatoriasController::bases/$1');
 
         $routes->get('formatos', 'Admin\\AdminController::formatos');
+        $routes->get('formatos/ver/(:segment)', 'Admin\\AdminController::verFormato/$1');
         $routes->post('formatos/subir', 'Admin\\AdminController::subirFormato');
         $routes->post('formatos/eliminar', 'Admin\\AdminController::eliminarFormato');
 
@@ -80,7 +98,7 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->get('app-transito/boletas/editar/(:num)', 'Admin\\AppTransitoController::editarBoleta/$1');
         $routes->post('app-transito/boletas/actualizar/(:num)', 'Admin\\AppTransitoController::actualizarBoleta/$1');
 
-        // Cuentas del portal: el registro público se retiró, la ventanilla da de alta a los ciudadanos.
+        // Cuentas del portal: el ciudadano puede autorregistrarse; la ventanilla también las gestiona aquí.
         $routes->get('usuarios', 'Admin\\UsuariosController::index');
         $routes->get('usuarios/nuevo', 'Admin\\UsuariosController::formNuevo');
         $routes->post('usuarios/guardar', 'Admin\\UsuariosController::guardar');
@@ -89,12 +107,17 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->post('usuarios/toggle/(:num)', 'Admin\\UsuariosController::toggleEstado/$1');
     });
 
-    // Bajas definitivas: solo administrador.
+    // Bajas definitivas y permisos del operador: solo administrador.
     $routes->group('', ['filter' => 'role:administrador'], function($routes) {
+        $routes->get('permisos-operador', 'Admin\\PermisosController::index');
+        $routes->post('permisos-operador/guardar', 'Admin\\PermisosController::guardar');
+        // Desglose global: todas las metricas del sistema con su desglose navegable.
+        $routes->get('desglose', 'Admin\\DesgloseController::index', ['as' => 'admin.desglose']);
         $routes->post('usuarios/eliminar/(:num)', 'Admin\\UsuariosController::eliminar/$1');
         $routes->post('app-transito/agentes/eliminar/(:num)', 'Admin\\AppTransitoController::eliminarAgente/$1');
         $routes->post('app-transito/boletas/eliminar/(:num)', 'Admin\\AppTransitoController::eliminarBoleta/$1');
         $routes->post('app-transito/catalogo/eliminar/(:num)', 'Admin\\AppTransitoController::eliminarCatalogo/$1');
+        $routes->post('convocatorias/eliminar/(:num)', 'Admin\\ConvocatoriasController::eliminar/$1');
     });
 });
 
@@ -102,8 +125,31 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
 $routes->get('archivos/(:segment)', 'ArchivosLocalesController::servir/$1');
 
 $routes->get('/', 'Home::index');
-$routes->get('login', 'AuthController::login');
-$routes->get('logout', 'AuthController::logout');
+
+// Sondeo de conectividad de la app de agentes. NetInfo (@react-native-community)
+// pregunta HEAD / cada pocos segundos y solo considera que hay internet si
+// responde 200; CI4 no resuelve HEAD con las rutas GET, así que el sondeo caía en
+// el 404, la app se declaraba sin conexión y el auto-sincronizado al recuperar la
+// red no se disparaba. Se contesta vacío y sin pasar por un controlador para no
+// abrir sesión en cada sondeo. El cuerpo se deja vacío de forma explícita: una
+// respuesta HEAD no debe llevar HTML, y `response()` es un servicio compartido.
+$routes->head('/', static fn() => response()->setStatusCode(200)->setBody(''));
+
+// Atajos de acceso. Necesitan su propio nombre ('as') porque las rutas cortas
+// coinciden con los nombres ya asignados arriba (login/register/logout en
+// auth/login, auth/register y auth/logout); sin 'as', CI4 descarta la definición
+// en silencio y el atajo responde 404.
+$routes->get('login', 'AuthController::login', ['as' => 'acceso']);
+$routes->get('register', 'AuthController::register', ['as' => 'registro']);
+$routes->get('logout', 'AuthController::logout', ['as' => 'salida']);
+
+// Fallback del enrutador de la app de agentes: /agentes/login y cualquier ruta
+// hija, para que un enlace directo o un F5 no caigan en el 404 de la plataforma
+// (ver AgentesWebController y EnrutadoServerlessTest). Las dos rutas apuntan al
+// mismo método, así que cada una necesita su propio nombre: si la segunda hereda
+// el de la primera, CI4 la descarta en silencio.
+$routes->get('agentes', 'AgentesWebController::shell', ['as' => 'agentes.inicio']);
+$routes->get('agentes/(:any)', 'AgentesWebController::shell', ['as' => 'agentes.ruta']);
 
 
 $routes->group('portal', ['filter' => 'auth'], static function ($routes) {

@@ -1,4 +1,24 @@
-<?php declare(strict_types=1); ?>
+<?php declare(strict_types=1);
+
+/**
+ * Variables inyectadas por Admin\AppTransitoController::boletas() vía view(..., $data).
+ * Se leen desde get_defined_vars() para que Intelephense no las marque como
+ * "undefined" sin alterar el runtime de CI4.
+ */
+$__view = get_defined_vars();
+
+/** @var list<object> $boletas */
+$boletas = $__view['boletas'] ?? [];
+/** @var list<object> $agentes */
+$agentes = $__view['agentes'] ?? [];
+/** @var array<string, string> $filtros */
+$filtros = $__view['filtros'] ?? ['placa' => '', 'fecha' => '', 'q' => '', 'estado' => '', 'falta' => ''];
+$filtros += ['placa' => '', 'fecha' => '', 'q' => '', 'estado' => '', 'falta' => ''];
+/** @var float $valorUma */
+$valorUma = (float) ($__view['valorUma'] ?? 0);
+/** @var array<string, string> $estados */
+$estados = $__view['estados'] ?? [];
+?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('pageTitle') ?>Boletas de Infracción de Campo<?= $this->endSection() ?>
 <?= $this->section('content') ?>
@@ -12,7 +32,7 @@
                 <span class="badge bg-primary-subtle text-primary">Sincronización en Campo</span>
             </div>
             <h2 class="h3 fw-bold mt-1 mb-0 text-dark">Registro de Boletas de Infracción</h2>
-            <p class="text-muted small mb-0">Boletas levantadas por agentes de tránsito y transmitidas a la base de datos de Supabase.</p>
+            <p class="text-muted small mb-0">Boletas levantadas por los agentes de tránsito desde el sitio.</p>
         </div>
         <div class="d-flex align-items-center gap-2">
             <span class="badge bg-light text-dark border p-2">
@@ -24,26 +44,54 @@
     <!-- Barra de Filtros y Accesos Rápidos -->
     <div class="card border-0 shadow-sm rounded-4 bg-white mb-4">
         <div class="card-body p-3">
-            <div class="d-flex flex-wrap gap-2 mb-3">
-                <a href="/admin/app-transito/boletas" class="btn btn-sm <?= empty($filtros['q']) && empty($filtros['placa']) && empty($filtros['fecha']) ? 'btn-primary' : 'btn-light border' ?>">
-                    <i class="bi bi-list-ul me-1"></i>Todas las boletas (<?= count($boletas) ?>)
+            <?php
+            // Las etiquetas conservan los demás filtros: cambiar de estado no
+            // borra el agente ni la fecha que ya se estaban revisando.
+            $urlBoletas = static function (array $cambios) use ($filtros): string {
+                $base = [
+                    'q'      => (string) ($filtros['q'] ?? ''),
+                    'placa'  => (string) ($filtros['placa'] ?? ''),
+                    'fecha'  => (string) ($filtros['fecha'] ?? ''),
+                    'estado' => (string) ($filtros['estado'] ?? ''),
+                    'falta'  => (string) ($filtros['falta'] ?? ''),
+                ];
+                $limpia = array_filter(array_merge($base, $cambios), static fn ($v): bool => $v !== '' && $v !== null);
+
+                return '/admin/app-transito/boletas' . ($limpia === [] ? '' : '?' . http_build_query($limpia));
+            };
+            $estadosDisponibles = $estados;
+            ?>
+            <div class="dgs-nav mb-3">
+                <a href="<?= $urlBoletas([]) ?>" class="dgs-nav-item <?= array_filter($filtros) === [] ? 'fw-bold' : '' ?>">
+                    <i class="bi bi-list-ul" aria-hidden="true"></i>Todas
                 </a>
-                <a href="/admin/app-transito/boletas?fecha=<?= date('Y-m-d') ?>" class="btn btn-sm <?= ($filtros['fecha'] ?? '') === date('Y-m-d') ? 'btn-primary' : 'btn-light border' ?>">
-                    <i class="bi bi-calendar-event me-1"></i>Boletas de hoy
+                <?php if ((string) $filtros['falta'] !== ''): ?>
+                    <!-- Llegamos del catálogo de faltas: el filtro debe verse y poder quitarse. -->
+                    <a href="<?= $urlBoletas(['falta' => '']) ?>" class="dgs-nav-item fw-bold bg-primary text-white border-0" title="Quitar el filtro de esta falta">
+                        <i class="bi bi-journal-text" aria-hidden="true"></i>Falta: <?= esc($filtros['falta']) ?>
+                        <i class="bi bi-x-lg small" aria-hidden="true"></i>
+                    </a>
+                <?php endif; ?>
+                <a href="<?= $urlBoletas(['fecha' => date('Y-m-d')]) ?>" class="dgs-nav-item <?= ($filtros['fecha'] ?? '') === date('Y-m-d') ? 'fw-bold' : '' ?>">
+                    <i class="bi bi-calendar-event" aria-hidden="true"></i>Las de hoy
                 </a>
-                <a href="/admin/app-transito/boletas?q=Conductor+Ausente" class="btn btn-sm <?= ($filtros['q'] ?? '') === 'Conductor Ausente' ? 'btn-primary' : 'btn-light border' ?>">
-                    <i class="bi bi-person-x me-1"></i>Conductor Ausente
-                </a>
+                <?php foreach ($estadosDisponibles as $claveEstado => $nombreEstado): ?>
+                    <a href="<?= $urlBoletas(['estado' => (string) $claveEstado]) ?>" class="dgs-nav-item <?= ($filtros['estado'] ?? '') === (string) $claveEstado ? 'fw-bold' : '' ?>">
+                        <?= esc($nombreEstado) ?>
+                    </a>
+                <?php endforeach; ?>
             </div>
 
             <form method="GET" action="/admin/app-transito/boletas" class="row g-2 align-items-center">
-                <div class="col-md-4">
+                <input type="hidden" name="estado" value="<?= esc($filtros['estado']) ?>">
+                <input type="hidden" name="falta" value="<?= esc($filtros['falta']) ?>">
+                <div class="col-12 col-md-4">
                     <div class="input-group">
                         <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" class="form-control border-start-0" name="q" placeholder="Buscar folio, placa o infractor..." value="<?= esc($filtros['q'] ?? '') ?>">
+                        <input autocomplete="off" spellcheck="false" enterkeyhint="search" type="text" class="form-control border-start-0" name="q" placeholder="Buscar folio, placa o infractor..." value="<?= esc($filtros['q'] ?? '') ?>">
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-12 col-md-3">
                     <select name="placa" class="form-select">
                         <option value="">-- Todos los agentes --</option>
                         <?php foreach ($agentes as $ag): ?>
@@ -53,12 +101,12 @@
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-6 col-md-3">
                     <input type="date" name="fecha" class="form-control" value="<?= esc($filtros['fecha'] ?? '') ?>" title="Filtrar por fecha">
                 </div>
-                <div class="col-md-2 d-flex gap-2">
+                <div class="col-6 col-md-2 d-flex gap-2">
                     <button type="submit" class="btn btn-primary w-100 fw-semibold">Filtrar</button>
-                    <?php if (!empty($filtros['q']) || !empty($filtros['placa']) || !empty($filtros['fecha'])): ?>
+                    <?php if (array_filter($filtros) !== []): ?>
                         <a href="/admin/app-transito/boletas" class="btn btn-outline-secondary" title="Limpiar"><i class="bi bi-x-lg"></i></a>
                     <?php endif; ?>
                 </div>
@@ -66,8 +114,56 @@
         </div>
     </div>
 
+    <!-- Boletas en teléfono: tarjetas apiladas, la tabla exige demasiado ancho -->
+    <div class="d-block d-md-none mb-3">
+        <?php if (empty($boletas)): ?>
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body text-center text-muted py-5">Sin boletas con los filtros seleccionados.</div>
+            </div>
+        <?php endif; ?>
+        <?php foreach ($boletas as $b): ?>
+            <?php
+                $minUmaM = (float) ($b->falta_monto_min_uma ?? 0);
+                $maxUmaM = (float) ($b->falta_monto_max_uma ?? 0);
+            ?>
+            <div class="card border-0 shadow-sm rounded-4 mb-2">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                        <span class="fw-bold font-monospace text-primary"><?= esc($b->folio) ?></span>
+                        <a href="<?= $urlBoletas(['estado' => (string) ($b->estado ?? 'recibida')]) ?>" class="badge bg-light text-dark border text-decoration-none">
+                            <?= esc(ucfirst((string) ($b->estado ?? 'recibida'))) ?>
+                        </a>
+                    </div>
+                    <div class="small text-muted mb-2">
+                        <?= esc($b->fecha_infraccion) ?> <?= esc(substr((string) $b->hora_infraccion, 0, 5)) ?> hrs
+                        · <a href="<?= $urlBoletas(['placa' => (string) $b->agente_placa]) ?>" class="text-decoration-none"><?= esc($b->agente_nombre ?? $b->agente_placa) ?></a>
+                    </div>
+                    <div class="small mb-1">
+                        <?php if (!empty($b->falta_fundamento_legal)): ?>
+                            <a class="text-decoration-none" href="<?= esc($urlBoletas(['falta' => (string) $b->falta_fundamento_legal])) ?>" title="Ver todas las boletas con esta falta"><?= esc($b->falta_fundamento_legal) ?></a>
+                        <?php endif; ?>
+                    </div>
+                    <div class="small text-muted mb-2">
+                        <?php if (!empty($b->vehiculo_placas)): ?>
+                            <a class="badge bg-dark font-monospace text-white me-1 text-decoration-none" href="<?= esc($urlBoletas(['q' => (string) $b->vehiculo_placas])) ?>" title="Buscar este vehículo"><?= esc($b->vehiculo_placas) ?></a>
+                        <?php else: ?>
+                            <span class="badge bg-dark font-monospace text-white me-1">S/P</span>
+                        <?php endif; ?>
+                        <?= esc($b->infractor_nombre ?: ($b->conductor_ausente ? 'Conductor ausente' : 'Sin nombre')) ?>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong class="small">$<?= number_format($minUmaM * $valorUma, 2) ?> - $<?= number_format($maxUmaM * $valorUma, 2) ?></strong>
+                        <a href="/admin/app-transito/boletas/editar/<?= (int) $b->id ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                            <i class="bi bi-eye me-1"></i>Abrir
+                        </a>
+                    </div>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+
     <!-- Lista de Boletas -->
-    <div class="card border-0 shadow-sm rounded-4 bg-white">
+    <div class="card border-0 shadow-sm rounded-4 bg-white d-none d-md-block">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0 table-sticky-header">
@@ -102,29 +198,40 @@
                                 <tr>
                                     <td class="ps-4">
                                         <div class="d-flex align-items-center gap-1">
-                                            <span class="fw-bold font-monospace text-primary"><?= esc($b->folio) ?></span>
+                                            <a class="fw-bold font-monospace text-primary text-decoration-none" href="/admin/app-transito/boletas/editar/<?= (int) $b->id ?>" title="Abrir la boleta"><?= esc($b->folio) ?></a>
                                             <button type="button" class="btn-copy" onclick="copiarFolio('<?= esc($b->folio) ?>', this)" title="Copiar Folio">
                                                 <i class="bi bi-clipboard"></i>
                                             </button>
                                         </div>
                                         <small class="text-muted"><?= esc($b->fecha_infraccion) ?> <?= esc(substr($b->hora_infraccion, 0, 5)) ?> hrs</small>
-                                        <span class="badge bg-light text-dark border small ms-1"><?= esc(ucfirst((string) ($b->estado ?? 'recibida'))) ?></span>
+                                        <a href="<?= $urlBoletas(['estado' => (string) ($b->estado ?? 'recibida')]) ?>"
+                                           class="badge bg-light text-dark border small ms-1 text-decoration-none">
+                                            <?= esc(ucfirst((string) ($b->estado ?? 'recibida')));
+                                        ?></a>
                                     </td>
                                     <td>
                                         <div class="fw-semibold text-dark small"><?= esc($b->agente_nombre ?? $b->agente_placa) ?></div>
-                                        <span class="badge bg-light text-muted border small"><?= esc($b->agente_placa) ?></span>
+                                        <a href="<?= $urlBoletas(['placa' => (string) $b->agente_placa]) ?>" class="badge bg-light text-muted border small text-decoration-none"><?= esc($b->agente_placa) ?></a>
                                     </td>
                                     <td>
                                         <div class="fw-semibold text-dark small">
                                             <?= $b->conductor_ausente ? '<span class="text-warning fw-normal"><i class="bi bi-exclamation-triangle"></i> Conductor Ausente</span>' : esc($b->infractor_nombre ?: 'Sin nombre') ?>
                                         </div>
                                         <div class="small text-muted">
-                                            <span class="badge bg-dark font-monospace text-white me-1"><?= esc($b->vehiculo_placas ?: 'S/P') ?></span>
+                                            <?php if (!empty($b->vehiculo_placas)): ?>
+                                                <a class="badge bg-dark font-monospace text-white me-1 text-decoration-none" href="<?= esc($urlBoletas(['q' => (string) $b->vehiculo_placas])) ?>" title="Buscar este vehículo"><?= esc($b->vehiculo_placas) ?></a>
+                                            <?php else: ?>
+                                                <span class="badge bg-dark font-monospace text-white me-1">S/P</span>
+                                            <?php endif; ?>
                                             <?= esc($b->vehiculo_marca) ?> <?= esc($b->vehiculo_linea) ?> (<?= esc($b->vehiculo_color) ?>)
                                         </div>
                                     </td>
                                     <td>
-                                        <div class="fw-semibold text-danger small"><?= esc($b->falta_fundamento_legal) ?></div>
+                                        <div class="fw-semibold text-danger small">
+                                            <?php if (!empty($b->falta_fundamento_legal)): ?>
+                                                <a class="text-decoration-none" href="<?= esc($urlBoletas(['falta' => (string) $b->falta_fundamento_legal])) ?>" title="Ver todas las boletas con esta falta"><?= esc($b->falta_fundamento_legal) ?></a>
+                                            <?php endif; ?>
+                                        </div>
                                         <div class="text-truncate text-muted small" style="max-width: 220px;"><?= esc($b->falta_descripcion) ?></div>
                                     </td>
                                     <td>

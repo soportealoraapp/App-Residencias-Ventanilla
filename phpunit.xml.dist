@@ -27,7 +27,9 @@
         <env name="database.tests.username" value=""/>
         <env name="database.tests.password" value=""/>
         <env name="database.tests.DBDriver" value="SQLite3"/>
-        <env name="database.tests.DBPrefix" value="db_"/>
+        <!-- Sin prefijo: reproduce el esquema real de produccion (DATABASE_DEFAULT_DBPREFIX esta vacio),
+             asi los filtros que usan nombres de tabla y columna literales funcionan igual en las pruebas. -->
+        <env name="database.tests.DBPrefix" value=""/>
         <env name="APP_ENABLE_UR_TT_T_06" value="true"/>
     </php>
 </phpunit>

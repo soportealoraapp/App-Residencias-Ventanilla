@@ -54,7 +54,8 @@
             <label for="username" class="form-label small fw-semibold">Usuario o Correo</label>
             <div class="input-group">
                 <span class="input-group-text bg-light text-muted"><i class="bi bi-person"></i></span>
-                <input type="text" class="form-control" id="username" name="username" value="<?= old('username') ?>" placeholder="admin o tu correo" required autofocus>
+                <input type="text" class="form-control" id="username" name="username" value="<?= old('username') ?>" placeholder="admin o tu correo" required autofocus
+                       autocomplete="username" inputmode="email" spellcheck="false" enterkeyhint="next">
             </div>
         </div>
         <div class="mb-3">
@@ -64,7 +65,8 @@
             </div>
             <div class="input-group mt-1">
                 <span class="input-group-text bg-light text-muted"><i class="bi bi-lock"></i></span>
-                <input type="password" class="form-control" id="password" name="password" placeholder="Tu contraseña" required>
+                <input type="password" class="form-control" id="password" name="password" placeholder="Tu contraseña" required
+                       autocomplete="current-password" enterkeyhint="go">
                 <button class="btn btn-outline-secondary" type="button" id="togglePasswordBtn" title="Mostrar/ocultar contraseña" tabindex="-1">
                     <i class="bi bi-eye" id="togglePasswordIcon"></i>
                 </button>
@@ -79,7 +81,7 @@
 
     <div class="mt-4 pt-3 border-top text-center small">
         <p class="mb-2 text-muted">
-            ¿No tienes cuenta? Acude a la <strong>ventanilla de Tránsito y Transporte</strong> con tu identificación oficial para que te demos de alta.
+            ¿No tienes cuenta? <a href="/auth/register" class="fw-semibold text-success text-decoration-none">Crea tu cuenta de ciudadano</a>
         </p>
         <p class="mb-0">
             <a href="/" class="text-muted text-decoration-none"><i class="bi bi-arrow-left me-1"></i>Volver al inicio</a>

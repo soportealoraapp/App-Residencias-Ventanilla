@@ -35,14 +35,33 @@ class TramiteConcesionTransporteController extends Controller
 
     public function formulario()
     {
-        $convocatoriaVigente = $this->convocatoriaModel->primeraVigente();
+        // El ciudadano elige a qué convocatoria postula. Antes se tomaba "la
+        // primera vigente" (la de ID más alto), lo que con dos ventanas abiertas
+        // inscribía al ciudadano en un concurso que no escogió.
+        $convocatorias = [];
+        try {
+            $convocatorias = $this->convocatoriaModel->abiertasHoy();
+        } catch (\Throwable $e) {
+            log_message('error', 'TramiteConcesionTransporteController::formulario no pudo leer convocatorias: ' . $e->getMessage());
+        }
+
+        $elegidaId   = (int) ($this->request->getGet('convocatoria') ?? 0);
+        $convocatoria = $convocatorias[0] ?? null;
+        foreach ($convocatorias as $c) {
+            if ((int) $c->id === $elegidaId) {
+                $convocatoria = $c;
+                break;
+            }
+        }
+
         $tarifaMonto = $this->tarifarioService->calcularMonto('UR-TT-T-01', 'base') ?? 9055.20;
         $esPlaceholder = $this->tarifarioService->esPlaceholder('UR-TT-T-01', 'base');
 
         return view('portal/tramites/concesion_transporte_form', [
-            'convocatoria'  => $convocatoriaVigente,
-            'tarifaMonto'   => $tarifaMonto,
-            'esPlaceholder' => $esPlaceholder,
+            'convocatoria'   => $convocatoria,
+            'convocatorias'  => $convocatorias,
+            'tarifaMonto'    => $tarifaMonto,
+            'esPlaceholder'  => $esPlaceholder,
         ]);
     }
 

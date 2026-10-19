@@ -4,14 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#111827">
-    <title><?= $this->renderSection('pageTitle') ? esc($this->renderSection('pageTitle')) . ' - Panel Admin' : 'Panel Administrativo - Ventanilla Uriangato' ?></title>
+<?php
+// renderSection() consume la seccion la primera vez que la lee. Se pide aqui con
+// $saveData = true para no dejar vacio el <h1> de la barra superior, que la
+// reutiliza mas abajo.
+$__tituloPagina = trim($this->renderSection('pageTitle', true));
+?>
+    <title><?= $__tituloPagina !== '' ? esc($__tituloPagina) . ' - Panel Admin' : 'Panel Administrativo - Ventanilla Uriangato' ?></title>
     <!-- Bootstrap 5.3 & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
     <!-- Custom Mobile-First Stylesheet -->
+    <link rel="icon" type="image/webp" href="/logo-uri.webp">
+    <link rel="apple-touch-icon" href="/logo-uri.webp">
     <link href="/css/custom.css" rel="stylesheet">
 </head>
-<body>
+<body class="has-admin-bottom-nav">
 
 <div class="admin-wrapper">
     <!-- Mobile Backdrop Overlay -->
@@ -30,15 +38,61 @@
         <?php
             $qTramite = $_GET['tramite'] ?? '';
             $isAllSolicitudes = uri_string() === 'admin/solicitudes' && $qTramite === '';
+
+            // Contexto de rol: separa con claridad Administrador vs Ventanilla.
+            $rolesUsuario = (array) (session('roles') ?? []);
+            $esAdministrador = in_array('administrador', $rolesUsuario, true);
+            $esVentanilla = in_array('operador_ventanilla', $rolesUsuario, true);
+            if ($esAdministrador) {
+                $rolChip = 'rol-admin';
+                $rolNombre = 'Administrador';
+                $rolAlcance = 'Acceso completo: operación, catálogos y configuración.';
+            } elseif ($esVentanilla) {
+                $rolChip = 'rol-ventanilla';
+                $rolNombre = 'Ventanilla';
+                $rolAlcance = 'Operación diaria según los permisos que te otorgó el administrador.';
+            } else {
+                $rolChip = 'rol-ciudadano';
+                $rolNombre = implode(', ', $rolesUsuario) ?: 'Usuario';
+                $rolAlcance = 'Sesión autenticada del panel.';
+            }
+
+            // Permisos del operador (los define el administrador en su pantalla).
+            $permisosOp = \App\Libraries\PermisosOperador::todos();
+            $permitido = static function (string $clave) use ($esAdministrador, $esVentanilla, $permisosOp): bool {
+                if ($esAdministrador || !$esVentanilla) {
+                    return true;
+                }
+                return $permisosOp[$clave] ?? true;
+            };
+            $hayAppTransito = $permitido('app_transito_config') || $permitido('app_transito_boletas') || $permitido('app_transito_catalogo') || $permitido('app_transito_sesiones');
+            $hayCatalogos = $permitido('tarifas') || $permitido('concesiones') || $permitido('formatos') || $permitido('auditoria') || $permitido('documentos') || $permitido('verificaciones') || $permitido('convocatorias');
         ?>
+
+        <div class="sidebar-alcance">
+            <span class="alcance-nombre rol-chip <?= $rolChip ?>"><?= esc($rolNombre) ?></span>
+            <p class="alcance-detalle"><?= esc($rolAlcance) ?></p>
+        </div>
+
         <div class="sidebar-section-title">Operaciones</div>
         <a href="/admin/dashboard" class="sidebar-link <?= uri_string() === 'admin/dashboard' || uri_string() === 'admin' ? 'active' : '' ?>">
             <i class="bi bi-speedometer2 me-2 sidebar-link-icon"></i>
-            <span class="sidebar-text">Dashboard</span>
+            <span class="sidebar-text">Inicio</span>
         </a>
+        <?php if ($esAdministrador): ?>
+        <a href="/admin/desglose" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/desglose') ? 'active' : '' ?>">
+            <i class="bi bi-graph-up-arrow me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Desglose del sistema</span>
+        </a>
+        <?php endif; ?>
+        <?php if ($permitido('solicitudes')): ?>
         <a href="/admin/solicitudes" class="sidebar-link <?= $isAllSolicitudes ? 'active' : '' ?>">
             <i class="bi bi-folder2-open me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Todas las solicitudes</span>
+        </a>
+        <a href="/admin/solicitudes/nueva" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/solicitudes/nueva') ? 'active' : '' ?>">
+            <i class="bi bi-plus-circle me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Nueva solicitud presencial</span>
         </a>
         <a href="/admin/solicitudes?tramite=UR-TT-T-01" class="sidebar-link ms-2 small <?= $qTramite === 'UR-TT-T-01' ? 'active' : '' ?>">
             <i class="bi bi-award me-2 sidebar-link-icon"></i>
@@ -70,53 +124,102 @@
             <i class="bi bi-truck me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">T-07: Carga/Descarga</span>
         </a>
+        <?php endif; ?>
 
+        <?php if ($permitido('usuarios')): ?>
         <div class="sidebar-section-title mt-3">Ventanilla</div>
         <a href="/admin/usuarios" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/usuarios') ? 'active' : '' ?>">
             <i class="bi bi-people me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Usuarios y ciudadanos</span>
         </a>
+        <?php endif; ?>
 
+        <?php if ($hayCatalogos): ?>
         <div class="sidebar-section-title mt-3">Catálogos</div>
+        <?php if ($permitido('tarifas')): ?>
         <a href="/admin/tarifas" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/tarifas') ? 'active' : '' ?>">
             <i class="bi bi-cash-coin me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Tarifario</span>
         </a>
+        <?php endif; ?>
+        <?php if ($permitido('concesiones')): ?>
         <a href="/admin/concesiones" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/concesiones') ? 'active' : '' ?>">
             <i class="bi bi-card-list me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Concesiones</span>
         </a>
+        <?php endif; ?>
+        <?php if ($permitido('formatos')): ?>
         <a href="/admin/formatos" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/formatos') ? 'active' : '' ?>">
             <i class="bi bi-file-earmark-richtext me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Formatos de trámite</span>
         </a>
+        <?php endif; ?>
+        <?php if ($permitido('auditoria')): ?>
         <a href="/admin/auditoria" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/auditoria') ? 'active' : '' ?>">
             <i class="bi bi-shield-check me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Auditoría</span>
         </a>
-        <a href="/admin/convocatorias/1/evaluacion" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/convocatorias') ? 'active' : '' ?>">
+        <?php endif; ?>
+        <?php if ($permitido('documentos')): ?>
+        <a href="/admin/documentos" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/documentos') ? 'active' : '' ?>">
+            <i class="bi bi-file-earmark me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Documentos recibidos</span>
+        </a>
+        <?php endif; ?>
+        <?php if ($permitido('verificaciones')): ?>
+        <a href="/admin/verificaciones" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/verificaciones') ? 'active' : '' ?>">
+            <i class="bi bi-clipboard2-check me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Verificaciones físicas</span>
+        </a>
+        <?php endif; ?>
+        <?php if ($permitido('convocatorias')): ?>
+        <a href="/admin/convocatorias" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/convocatorias') ? 'active' : '' ?>">
             <i class="bi bi-award-fill me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Convocatorias UR-01</span>
         </a>
+        <?php endif; ?>
+        <?php endif; ?>
 
+        <?php if ($hayAppTransito): ?>
         <div class="sidebar-section-title mt-3">App Tránsito</div>
+        <?php if ($permitido('app_transito_config')): ?>
         <a href="/admin/app-transito" class="sidebar-link <?= uri_string() === 'admin/app-transito' ? 'active' : '' ?>">
             <i class="bi bi-sliders me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Configuración & UMA</span>
         </a>
+        <?php endif; ?>
+        <?php if ($permitido('app_transito_boletas')): ?>
         <a href="/admin/app-transito/boletas" class="sidebar-link <?= uri_string() === 'admin/app-transito/boletas' ? 'active' : '' ?>">
             <i class="bi bi-receipt-cutoff me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Boletas de Campo</span>
         </a>
+        <?php endif; ?>
+        <?php if ($permitido('app_transito_catalogo')): ?>
         <a href="/admin/app-transito/catalogo" class="sidebar-link <?= uri_string() === 'admin/app-transito/catalogo' ? 'active' : '' ?>">
             <i class="bi bi-journal-bookmark me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Catálogo de Faltas</span>
         </a>
+        <?php endif; ?>
+        <?php if ($permitido('app_transito_sesiones')): ?>
+        <a href="/admin/sesiones-app" class="sidebar-link <?= uri_string() === 'admin/sesiones-app' ? 'active' : '' ?>">
+            <i class="bi bi-key me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Sesiones de la app</span>
+        </a>
+        <?php endif; ?>
+        <?php endif; ?>
+
+        <?php if ($esAdministrador): ?>
+        <div class="sidebar-section-title mt-3">Seguridad</div>
+        <a href="/admin/permisos-operador" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/permisos-operador') ? 'active' : '' ?>">
+            <i class="bi bi-shield-lock me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Permisos del Operador</span>
+        </a>
+        <?php endif; ?>
 
         <div class="sidebar-section-title mt-3">Sesión</div>
         <div class="px-3 py-2 text-white-50 small sidebar-user-info">
             <div class="fw-semibold text-white text-truncate sidebar-text"><?= esc(session('nombre_completo') ?? session('username') ?? 'Usuario') ?></div>
-            <div class="badge bg-secondary-subtle text-white mt-1 sidebar-text"><?= implode(', ', (array)(session('roles') ?? [])) ?></div>
+            <div class="mt-1 sidebar-text"><span class="rol-chip <?= $rolChip ?>"><?= esc($rolNombre) ?></span></div>
         </div>
         <a href="/auth/logout" class="sidebar-link text-danger mt-2">
             <i class="bi bi-box-arrow-right me-2 sidebar-link-icon"></i>
@@ -131,12 +234,17 @@
                 <button type="button" class="btn btn-outline-secondary btn-sm sidebar-toggle-btn" id="btnSidebarToggle" aria-label="Abrir menú" aria-controls="sidebarAdmin" aria-expanded="false">
                     <i class="bi bi-list fs-5"></i>
                 </button>
-                <h1 class="h5 mb-0 text-truncate"><?= $this->renderSection('pageTitle') ?></h1>
+                <h1 class="h5 mb-0 text-truncate" title="<?= esc($__tituloPagina) ?>"><?= $this->renderSection('pageTitle') ?></h1>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-primary-subtle text-primary d-none d-sm-inline-block">
-                    <?= implode(', ', (array)(session('roles') ?? [])) ?>
+                <span class="rol-chip <?= $rolChip ?> d-none d-sm-inline-flex" data-bs-toggle="tooltip" data-bs-placement="bottom" title="<?= esc($rolAlcance) ?>">
+                    <?= esc($rolNombre) ?>
                 </span>
+                <button type="button" class="btn-ayuda-rol" data-bs-toggle="tooltip" data-bs-placement="bottom"
+                        title="Panel de <?= esc($rolNombre) ?>. Pasa el cursor sobre los iconos &#63; para ver ayuda de cada sección.">
+                    <i class="bi bi-question-lg" aria-hidden="true"></i>
+                    <span class="visually-hidden">Ayuda</span>
+                </button>
                 <a href="/auth/logout" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center" title="Cerrar sesión">
                     <i class="bi bi-box-arrow-right"></i>
                     <span class="d-none d-md-inline ms-1">Salir</span>
@@ -148,6 +256,14 @@
             <div class="alert alert-success alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert">
                 <i class="bi bi-check-circle-fill fs-5 me-2 text-success"></i>
                 <div><?= esc(session('message')) ?></div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+            </div>
+        <?php endif; ?>
+
+        <?php if (session('error')): ?>
+            <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert">
+                <i class="bi bi-x-circle-fill fs-5 me-2 text-danger"></i>
+                <div><?= esc((string) session('error')) ?></div>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
             </div>
         <?php endif; ?>
@@ -170,6 +286,42 @@
         <?= $this->renderSection('content') ?>
     </div>
 </div>
+
+<?php
+// Navegación rápida del panel en teléfono: el cajón lateral obliga a abrir y
+// cerrar, así que las cuatro rutas del día a día se quedan siempre visibles.
+$uriActual     = uri_string();
+$esNuevaSol    = str_starts_with($uriActual, 'admin/solicitudes/nueva');
+$activarInicio = $uriActual === 'admin/dashboard' || $uriActual === 'admin';
+$activarLista  = str_starts_with($uriActual, 'admin/solicitudes') && ! $esNuevaSol;
+$activarDesglose = str_starts_with($uriActual, 'admin/desglose');
+?>
+<nav class="admin-bottom-bar" aria-label="Navegación rápida del panel">
+    <a href="/admin/dashboard" class="admin-bottom-item <?= $activarInicio ? 'active' : '' ?>" <?= $activarInicio ? 'aria-current="page"' : '' ?>>
+        <i class="bi bi-speedometer2" aria-hidden="true"></i>
+        <span>Inicio</span>
+    </a>
+    <?php if ($permitido('solicitudes')): ?>
+    <a href="/admin/solicitudes" class="admin-bottom-item <?= $activarLista ? 'active' : '' ?>" <?= $activarLista ? 'aria-current="page"' : '' ?>>
+        <i class="bi bi-folder2-open" aria-hidden="true"></i>
+        <span>Solicitudes</span>
+    </a>
+    <a href="/admin/solicitudes/nueva" class="admin-bottom-item admin-bottom-item--cta <?= $esNuevaSol ? 'active' : '' ?>" <?= $esNuevaSol ? 'aria-current="page"' : '' ?>>
+        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+        <span>Nueva</span>
+    </a>
+    <?php endif; ?>
+    <?php if ($esAdministrador): ?>
+    <a href="/admin/desglose" class="admin-bottom-item <?= $activarDesglose ? 'active' : '' ?>" <?= $activarDesglose ? 'aria-current="page"' : '' ?>>
+        <i class="bi bi-graph-up-arrow" aria-hidden="true"></i>
+        <span>Desglose</span>
+    </a>
+    <?php endif; ?>
+    <button type="button" class="admin-bottom-item" id="btnBottomMenu" aria-controls="sidebarAdmin" aria-expanded="false" aria-label="Abrir menú completo">
+        <i class="bi bi-list" aria-hidden="true"></i>
+        <span>Menú</span>
+    </button>
+</nav>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/js/formularios.js"></script>
@@ -242,6 +394,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const backdrop = document.getElementById('sidebarBackdrop');
     const toggleBtn = document.getElementById('btnSidebarToggle');
     const closeBtn = document.getElementById('btnCloseSidebar');
+    // El botón "Menú" de la barra inferior abre el mismo cajón que el topbar.
+    const bottomMenuBtn = document.getElementById('btnBottomMenu');
     const body = document.body;
 
     var MOBILE_BREAKPOINT = 991.98;
@@ -270,6 +424,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (toggleBtn) {
             toggleBtn.setAttribute('aria-expanded', String(value));
             toggleBtn.setAttribute('aria-label', value ? 'Cerrar menú' : 'Abrir menú');
+        }
+        // Las dos puertas del mismo cajón deben decir lo mismo para quien navega
+        // con lector de pantalla o sin vista.
+        if (bottomMenuBtn) {
+            bottomMenuBtn.setAttribute('aria-expanded', String(value));
+            bottomMenuBtn.setAttribute('aria-label', value ? 'Cerrar menú completo' : 'Abrir menú completo');
         }
     }
 
@@ -316,6 +476,18 @@ document.addEventListener('DOMContentLoaded', function() {
     if (toggleBtn) toggleBtn.addEventListener('click', handleToggleBtnClick);
     if (closeBtn) closeBtn.addEventListener('click', closeSidebarMobile);
     if (backdrop) backdrop.addEventListener('click', closeSidebarMobile);
+
+    // El botón "Menú" de la barra inferior usa el mismo cajón que el topbar.
+    if (bottomMenuBtn) {
+        bottomMenuBtn.addEventListener('click', function () {
+            var abierto = sidebar ? sidebar.classList.contains('show') : false;
+            if (abierto) {
+                closeSidebarMobile();
+            } else {
+                openSidebarMobile();
+            }
+        });
+    }
 
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && window.matchMedia('(max-width: ' + MD_BREAKPOINT + 'px)').matches) {

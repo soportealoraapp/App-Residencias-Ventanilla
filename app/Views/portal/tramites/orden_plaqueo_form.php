@@ -1,4 +1,9 @@
 <?php declare(strict_types=1);
+// Variables inyectadas por el controlador: se leen del ambito real para que el
+// analisis estatico no las marque como indefinidas; en runtime gana el valor enviado.
+$__view = get_defined_vars();
+/** @var float $tarifaMonto */
+$tarifaMonto = $__view['tarifaMonto'] ?? 0.0;
 $validation = \Config\Services::validation();
 $oldTipoPersona = old('tipo_persona', 'fisica');
 $oldNumTitulo = old('numero_titulo_concesion', '');
@@ -74,7 +79,7 @@ $oldNumSerie = old('vehiculo_num_serie', '');
                                 <label for="numero_titulo_concesion" class="form-label fw-semibold">
                                     Número de Título de Concesión <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" class="form-control font-monospace" id="numero_titulo_concesion" name="numero_titulo_concesion" required maxlength="50" value="<?= esc($oldNumTitulo) ?>" placeholder="Ej: CONC-URI-2024-0001">
+                                <input type="text" class="form-control font-monospace" id="numero_titulo_concesion" name="numero_titulo_concesion" required maxlength="50" value="<?= esc($oldNumTitulo) ?>" placeholder="Ej: CONC-URI-2024-0001" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next">
                                 <div class="form-text small">Ingresa el folio oficial del título vigente.</div>
                                 <?php if ($validation->getError('numero_titulo_concesion')): ?>
                                     <div class="text-danger small mt-1"><?= $validation->getError('numero_titulo_concesion') ?></div>
@@ -84,7 +89,7 @@ $oldNumSerie = old('vehiculo_num_serie', '');
                                 <label for="nombre_concesionario" class="form-label fw-semibold">
                                     <span id="lblNombreTitular">Nombre completo del concesionario</span> <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" class="form-control" id="nombre_concesionario" name="nombre_concesionario" required maxlength="180" value="<?= esc($oldNombreConcesionario) ?>" placeholder="Nombre o denominación social">
+                                <input type="text" class="form-control" id="nombre_concesionario" name="nombre_concesionario" required maxlength="180" value="<?= esc($oldNombreConcesionario) ?>" placeholder="Nombre o denominación social" autocomplete="organization" autocapitalize="words" spellcheck="false" enterkeyhint="next">
                                 <?php if ($validation->getError('nombre_concesionario')): ?>
                                     <div class="text-danger small mt-1"><?= $validation->getError('nombre_concesionario') ?></div>
                                 <?php endif; ?>
@@ -103,21 +108,21 @@ $oldNumSerie = old('vehiculo_num_serie', '');
                                 <label for="numero_factura" class="form-label fw-semibold">
                                     Número de Factura <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" class="form-control" id="numero_factura" name="numero_factura" required maxlength="60" value="<?= esc($oldNumFactura) ?>" placeholder="Ej: FAC-98234">
+                                <input type="text" class="form-control" id="numero_factura" name="numero_factura" required maxlength="60" value="<?= esc($oldNumFactura) ?>" placeholder="Ej: FAC-98234" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next">
                                 <?php if ($validation->getError('numero_factura')): ?>
                                     <div class="text-danger small mt-1"><?= $validation->getError('numero_factura') ?></div>
                                 <?php endif; ?>
                             </div>
                             <div class="col-md-4">
                                 <label for="vehiculo_placas" class="form-label fw-semibold">Placas asignadas previas / trámite</label>
-                                <input type="text" class="form-control text-uppercase" id="vehiculo_placas" name="vehiculo_placas" maxlength="20" value="<?= esc($oldPlacas) ?>" placeholder="Ej: GTO-123-A">
+                                <input type="text" class="form-control text-uppercase" id="vehiculo_placas" name="vehiculo_placas" maxlength="20" value="<?= esc($oldPlacas) ?>" placeholder="Ej: GTO-123-A" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next">
                                 <?php if ($validation->getError('vehiculo_placas')): ?>
                                     <div class="text-danger small mt-1"><?= $validation->getError('vehiculo_placas') ?></div>
                                 <?php endif; ?>
                             </div>
                             <div class="col-md-4">
                                 <label for="vehiculo_num_serie" class="form-label fw-semibold">Número de Serie (VIN)</label>
-                                <input type="text" class="form-control text-uppercase" id="vehiculo_num_serie" name="vehiculo_num_serie" maxlength="30" value="<?= esc($oldNumSerie) ?>" placeholder="Ej: 3VWSK7AN1RM000001">
+                                <input type="text" class="form-control text-uppercase" id="vehiculo_num_serie" name="vehiculo_num_serie" maxlength="30" value="<?= esc($oldNumSerie) ?>" placeholder="Ej: 3VWSK7AN1RM000001" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next">
                                 <?php if ($validation->getError('vehiculo_num_serie')): ?>
                                     <div class="text-danger small mt-1"><?= $validation->getError('vehiculo_num_serie') ?></div>
                                 <?php endif; ?>

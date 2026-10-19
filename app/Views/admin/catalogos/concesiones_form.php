@@ -1,5 +1,16 @@
+<?php
+// Variables inyectadas por el controlador: se leen del ambito real para que el
+// analisis estatico no las marque como indefinidas; en runtime gana el valor enviado.
+$__view = get_defined_vars();
+/** @var string $modo */
+$modo = $__view['modo'] ?? 'nuevo';
+/** @var object $concesion */
+$concesion = $__view['concesion'] ?? null;
+/** @var array $estatusOpciones */
+$estatusOpciones = $__view['estatusOpciones'] ?? [];
+?>
 <?= $this->extend('layouts/admin') ?>
-<?= $this->section('pageTitle') ?><?= $modo === 'nuevo' ? 'Nueva Concesión (stub)' : 'Editar Concesión #' . $concesion->id ?><?= $this->endSection() ?>
+<?= $this->section('pageTitle') ?><?= $modo === 'nuevo' ? 'Nueva Concesión' : 'Editar Concesión #' . $concesion->id ?><?= $this->endSection() ?>
 <?= $this->section('content') ?>
 
 <div class="row mb-3">
@@ -25,28 +36,28 @@
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Número de título <span class="text-danger">*</span></label>
-                    <input type="text" name="numero_titulo" class="form-control" maxlength="50" required
+                    <input autocomplete="off" autocapitalize="characters" spellcheck="false" type="text" name="numero_titulo" class="form-control" maxlength="50" required
                         value="<?= esc(old('numero_titulo', $concesion->numero_titulo)) ?>"
                         placeholder="ej: CONC-2024-0001">
                 </div>
 
                 <div class="col-md-8">
                     <label class="form-label fw-semibold">Titular actual <span class="text-danger">*</span></label>
-                    <input type="text" name="titular_actual" class="form-control" maxlength="180" required
+                    <input autocomplete="off" autocapitalize="words" spellcheck="false" type="text" name="titular_actual" class="form-control" maxlength="180" required
                         value="<?= esc(old('titular_actual', $concesion->titular_actual)) ?>"
                         placeholder="Nombre completo del titular">
                 </div>
 
                 <div class="col-md-3">
                     <label class="form-label fw-semibold">Placas vehículo</label>
-                    <input type="text" name="vehiculo_placas" class="form-control" maxlength="10"
+                    <input autocomplete="off" autocapitalize="characters" spellcheck="false" type="text" name="vehiculo_placas" class="form-control" maxlength="10"
                         value="<?= esc(old('vehiculo_placas', $concesion->vehiculo_placas)) ?>"
                         placeholder="Ej. GTO-123-45">
                 </div>
 
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Número de serie vehículo</label>
-                    <input type="text" name="vehiculo_num_serie" class="form-control" maxlength="20"
+                    <input autocomplete="off" autocapitalize="characters" spellcheck="false" type="text" name="vehiculo_num_serie" class="form-control" maxlength="20"
                         value="<?= esc(old('vehiculo_num_serie', $concesion->vehiculo_num_serie)) ?>"
                         placeholder="VIN o número de serie">
                 </div>
@@ -91,7 +102,7 @@
                 <a href="/admin/concesiones" class="btn btn-secondary">Cancelar</a>
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-save me-1"></i>
-                    <?= $modo === 'nuevo' ? 'Crear concesión (stub)' : 'Guardar cambios' ?>
+                    <?= $modo === 'nuevo' ? 'Crear concesión' : 'Guardar cambios' ?>
                 </button>
             </div>
         <?= form_close() ?>

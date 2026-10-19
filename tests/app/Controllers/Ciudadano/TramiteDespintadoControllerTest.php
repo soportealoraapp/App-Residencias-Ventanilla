@@ -33,7 +33,6 @@ class TramiteDespintadoControllerTest extends DatabaseTestCase
         $GLOBALS['_POST'] = [];
         $_FILES = [];
         $_POST = [];
-        $this->request = null;
         Services::resetSingle('request');
         Services::resetSingle('validation');
         $this->seedData();
@@ -45,7 +44,6 @@ class TramiteDespintadoControllerTest extends DatabaseTestCase
         $GLOBALS['_POST'] = [];
         $_FILES = [];
         $_POST = [];
-        $this->request = null;
         Services::resetSingle('request');
         Services::resetSingle('validation');
         parent::tearDown();

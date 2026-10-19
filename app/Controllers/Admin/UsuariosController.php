@@ -11,10 +11,12 @@ use CodeIgniter\HTTP\Files\UploadedFile;
 /**
  * Alta, edición y baja de cuentas del portal desde la ventanilla.
  *
- * El registro público fue retirado: el ciudadano acude de forma presencial y
- * el personal de ventanilla (operador o administrador) crea su cuenta aquí.
- * El operador de ventanilla solo administra cuentas de ciudadano; el
- * administrador puede además asignar roles internos y eliminar cuentas.
+ * El ciudadano puede autorregistrarse en /auth/register, y la ventanilla
+ * (operador o administrador) también puede crear o editar su cuenta aquí para
+ * la atención presencial. El operador de ventanilla solo administra cuentas de
+ * ciudadano; el administrador puede además asignar roles internos y eliminar
+ * cuentas. Las cuentas de AGENTES DE TRÁNSITO no se autorregistran: se dan de
+ * alta exclusivamente desde el panel (App Tránsito) por el administrador.
  */
 class UsuariosController extends Controller
 {
@@ -70,8 +72,42 @@ class UsuariosController extends Controller
             'pager'         => $this->userModel->pager,
             'filtros'       => ['q' => $q, 'rol' => $rol, 'estado' => $estado],
             'roles'         => self::ROLES,
+            'conteos'       => $this->conteosCuentas(),
             'esAdmin'       => $this->esAdministrador(),
         ]);
+    }
+
+    /**
+     * Totales globales para los filtros rápidos de cuentas.
+     *
+     * Son conteos de todo el padrón, no del resultado filtrado: los chips deben
+     * decir cuántas hay antes de tocarlas, igual que en el desglose.
+     *
+     * @return array{total: int, activos: int, inactivos: int, roles: array<string, int>}
+     */
+    private function conteosCuentas(): array
+    {
+        $db = \Config\Database::connect();
+
+        $conteos = [
+            'total'     => $db->table('users')->countAllResults(),
+            'activos'   => $db->table('users')->where('activo', 1)->countAllResults(),
+            'inactivos' => $db->table('users')->where('activo', 0)->countAllResults(),
+            'roles'     => [],
+        ];
+
+        $porRol = $db->table('user_roles ur')
+            ->select('r.nombre AS rol, COUNT(*) AS total')
+            ->join('roles r', 'r.id = ur.role_id')
+            ->groupBy('r.nombre')
+            ->get()
+            ->getResultArray();
+
+        foreach ($porRol as $fila) {
+            $conteos['roles'][(string) $fila['rol']] = (int) $fila['total'];
+        }
+
+        return $conteos;
     }
 
     public function formNuevo()
@@ -285,7 +321,7 @@ class UsuariosController extends Controller
             'rfc'       => ['label' => 'RFC', 'rules' => 'permit_empty|min_length[12]|max_length[13]|regex_match[/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/]'],
             'email'     => ['label' => 'Correo electrónico', 'rules' => 'permit_empty|valid_email|max_length[255]|' . $unico('email')],
             'username'  => ['label' => 'Nombre de usuario', 'rules' => 'required|alpha_numeric|min_length[5]|max_length[100]|' . $unico('username')],
-            'password'  => ['label' => 'Contraseña', 'rules' => 'permit_empty|min_length[6]'],
+            'password'  => ['label' => 'Contraseña', 'rules' => 'permit_empty|min_length[8]|max_length[100]'],
             'telefono'  => ['label' => 'Teléfono', 'rules' => 'permit_empty|min_length[7]|max_length[20]'],
             'estado'    => ['label' => 'Estado', 'rules' => 'permit_empty|max_length[100]'],
             'ciudad'    => ['label' => 'Ciudad / Municipio', 'rules' => 'permit_empty|max_length[150]'],

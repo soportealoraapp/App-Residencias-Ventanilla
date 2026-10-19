@@ -20,4 +20,16 @@ mkdir -p ../../public/agentes/fonts
 cp -f node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/*.ttf ../../public/agentes/fonts/ 2>/dev/null || true
 cd ../..
 
+# 3. Traduce al espanol el shell HTML generado por Expo (idioma, titulo y
+#    mensaje que se ve sin JavaScript). Expo ignora app/+html.tsx en modo de
+#    salida "single", asi que se ajusta el archivo ya generado.
+INDEX_HTML="public/agentes/index.html"
+if [ -f "$INDEX_HTML" ]; then
+  sed -i 's/lang="en"/lang="es"/' "$INDEX_HTML"
+  sed -i 's|<title>[^<]*</title>|<title>Agentes de Tránsito · Municipio de Uriangato</title>|' "$INDEX_HTML"
+  sed -i 's|You need to enable JavaScript to run this app.|Necesitas habilitar JavaScript para usar esta aplicación.|' "$INDEX_HTML"
+  sed -i 's|<!-- Use static rendering with Expo Router to support running without JavaScript. -->|<!-- Renderizado inicial: la interfaz aparece al cargar JavaScript. -->|' "$INDEX_HTML"
+  sed -i 's|<!-- The root element for your Expo app. -->|<!-- Contenedor raíz de la aplicación. -->|' "$INDEX_HTML"
+fi
+
 echo "Build completo: PHP backend + App Agentes de Transito"

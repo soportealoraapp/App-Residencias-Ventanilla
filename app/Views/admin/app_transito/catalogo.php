@@ -1,4 +1,68 @@
-<?php declare(strict_types=1); ?>
+<?php declare(strict_types=1);
+
+/**
+ * Variables inyectadas por Admin\AppTransitoController::catalogo() vía view(..., $data).
+ * Se leen desde get_defined_vars() para que Intelephense no las marque como
+ * "undefined" sin alterar el runtime de CI4.
+ */
+$__view = get_defined_vars();
+
+/** @var list<object> $items */
+$items = $__view['items'] ?? [];
+/** @var float $valorUma */
+$valorUma = (float) ($__view['valorUma'] ?? 0);
+/** @var array{q?: string, categoria?: string, estado?: string} $filtros */
+$filtros = $__view['filtros'] ?? [];
+$filtros += ['q' => '', 'categoria' => '', 'estado' => ''];
+/** @var array<string, int> $categorias */
+$categorias = $__view['categorias'] ?? [];
+/** @var array{total?: int, activas?: int, inactivas?: int} $conteos */
+$conteos = $__view['conteos'] ?? [];
+/** @var array<string, int> $boletasPorFalta */
+$boletasPorFalta = $__view['boletasPorFalta'] ?? [];
+
+/**
+ * URL del catálogo que conserva los filtros activos.
+ */
+$urlCatalogo = static function (array $cambios) use ($filtros): string {
+    $base = [
+        'q'         => (string) $filtros['q'],
+        'categoria' => (string) $filtros['categoria'],
+        'estado'    => (string) $filtros['estado'],
+    ];
+    $limpia = array_filter(array_merge($base, $cambios), static fn ($v): bool => $v !== '' && $v !== null);
+
+    return '/admin/app-transito/catalogo' . ($limpia === [] ? '' : '?' . http_build_query($limpia));
+};
+
+/**
+ * Boletas emitidas con un fundamento concreto: el catálogo permite bajar al
+ * detalle de cómo se está usando cada falta en el campo.
+ */
+$urlBoletasFalta = static function (string $fundamento) use ($filtros): string {
+    $query = ['falta' => $fundamento];
+    if ((string) $filtros['estado'] !== '') {
+        $query['estado'] = (string) $filtros['estado'];
+    }
+
+    return '/admin/app-transito/boletas?' . http_build_query($query);
+};
+
+$chipsCatalogo = [
+    ['etiqueta' => 'Todas las faltas', 'valor' => (int) ($conteos['total'] ?? 0),     'url' => $urlCatalogo(['estado' => '']),              'activo' => $filtros['estado'] === '',        'clase' => 'bg-primary text-white'],
+    ['etiqueta' => 'Visibles en la app', 'valor' => (int) ($conteos['activas'] ?? 0), 'url' => $urlCatalogo(['estado' => 'activa']),        'activo' => $filtros['estado'] === 'activa',   'clase' => 'bg-success text-white'],
+    ['etiqueta' => 'Dadas de baja',    'valor' => (int) ($conteos['inactivas'] ?? 0), 'url' => $urlCatalogo(['estado' => 'inactiva']),      'activo' => $filtros['estado'] === 'inactiva', 'clase' => 'bg-danger text-white'],
+];
+foreach ($categorias as $categoria => $total) {
+    $chipsCatalogo[] = [
+        'etiqueta' => $categoria,
+        'valor'    => (int) $total,
+        'url'      => $urlCatalogo(['categoria' => (string) $categoria]),
+        'activo'   => $filtros['categoria'] === (string) $categoria,
+        'clase'    => 'bg-dark text-white',
+    ];
+}
+?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('pageTitle') ?>Catálogo de Infracciones - App Agentes<?= $this->endSection() ?>
 <?= $this->section('content') ?>
@@ -12,7 +76,7 @@
                 <span class="badge bg-warning-subtle text-warning">Reglamento Uriangato</span>
             </div>
             <h2 class="h3 fw-bold mt-1 mb-0 text-dark">Catálogo Oficial de Infracciones</h2>
-            <p class="text-muted small mb-0">Faltas viales disponibles en el catálogo de la app móvil para emisión de boletas en campo.</p>
+            <p class="text-muted small mb-0">Faltas viales disponibles en el catálogo de la app móvil para emisión de boletas en campo. Cada monto enlaza las boletas reales que se cobraron con esa falta.</p>
         </div>
         <div class="d-flex align-items-center gap-2">
             <span class="badge bg-light text-dark border p-2">
@@ -25,9 +89,35 @@
         </div>
     </div>
 
+    <div class="dgs-nav" role="navigation" aria-label="Filtros rápidos del catálogo de faltas">
+        <?php foreach ($chipsCatalogo as $c): ?>
+            <a class="dgs-nav-item <?= $c['activo'] ? $c['clase'] . ' border-0' : '' ?>" href="<?= esc($c['url']) ?>" <?= $c['activo'] ? 'aria-current="page"' : '' ?>>
+                <?= esc($c['etiqueta']) ?>
+                <span class="badge <?= $c['activo'] ? 'bg-white text-dark' : 'bg-light text-dark border' ?>"><?= (int) $c['valor'] ?></span>
+            </a>
+        <?php endforeach; ?>
+    </div>
+
+    <form method="get" action="/admin/app-transito/catalogo" class="row g-2 align-items-center mb-3">
+        <input type="hidden" name="estado" value="<?= esc($filtros['estado']) ?>">
+        <input type="hidden" name="categoria" value="<?= esc($filtros['categoria']) ?>">
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input autocomplete="off" spellcheck="false" enterkeyhint="search" type="text" class="form-control border-start-0" name="q" value="<?= esc($filtros['q']) ?>" placeholder="Buscar artículo o descripción..." aria-label="Buscar en el catálogo">
+            </div>
+        </div>
+        <div class="col-6 col-md-3 d-flex gap-2">
+            <button type="submit" class="btn btn-outline-primary btn-sm">Filtrar</button>
+            <?php if ($filtros['q'] !== '' || $filtros['categoria'] !== '' || $filtros['estado'] !== ''): ?>
+                <a href="/admin/app-transito/catalogo" class="btn btn-outline-secondary btn-sm" aria-label="Limpiar filtros"><i class="bi bi-x-lg"></i></a>
+            <?php endif; ?>
+        </div>
+    </form>
+
     <div class="card border-0 shadow-sm rounded-4 bg-white">
         <div class="card-body p-0">
-            <div class="table-responsive">
+            <div class="table-responsive d-none d-md-block">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light small text-muted text-uppercase">
                         <tr>
@@ -43,8 +133,12 @@
                     <tbody>
                         <?php if (empty($items)): ?>
                             <tr>
-                                <td colspan="7" class="text-center py-5 text-muted">
-                                    No hay faltas registradas en el catálogo.
+                                <td colspan="7">
+                                    <div class="empty-state">
+                                        <i class="bi bi-journal-x" aria-hidden="true"></i>
+                                        <div class="empty-titulo">Sin faltas en este filtro</div>
+                                        <div class="empty-texto">Ajusta la búsqueda o <a href="/admin/app-transito/catalogo">ver el catálogo completo</a>.</div>
+                                    </div>
                                 </td>
                             </tr>
                         <?php else: ?>
@@ -55,7 +149,13 @@
                                 ?>
                                 <tr>
                                     <td class="ps-4">
-                                        <span class="fw-bold font-monospace text-primary"><?= esc($item->fundamento_legal) ?></span>
+                                        <a class="fw-bold font-monospace text-primary text-decoration-none" href="<?= esc($urlBoletasFalta((string) $item->fundamento_legal)) ?>" title="Ver las boletas emitidas con este fundamento"><?= esc($item->fundamento_legal) ?></a>
+                                        <?php $usadas = (int) ($boletasPorFalta[(string) $item->fundamento_legal] ?? 0); ?>
+                                        <?php if ($usadas > 0): ?>
+                                            <div class="small text-muted"><?= $usadas ?> boleta<?= $usadas === 1 ? '' : 's' ?></div>
+                                        <?php else: ?>
+                                            <div class="small text-muted">sin uso en campo</div>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <div class="fw-semibold text-dark small" style="max-width: 380px;">
@@ -63,9 +163,9 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="badge bg-light text-secondary border small">
+                                        <a class="badge bg-light text-secondary border small text-decoration-none" href="<?= esc($urlCatalogo(['categoria' => (string) $item->categoria])) ?>" title="Ver todas las faltas de esta categoría">
                                             <?= esc($item->categoria) ?>
-                                        </span>
+                                        </a>
                                     </td>
                                     <td>
                                         <div class="fw-bold text-dark small">
@@ -81,9 +181,9 @@
                                     </td>
                                     <td class="text-center">
                                         <?php if ($item->activo == 1): ?>
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2">Activo</span>
+                                            <a class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 text-decoration-none" href="<?= esc($urlCatalogo(['estado' => 'activa'])) ?>">Activo</a>
                                         <?php else: ?>
-                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2">Inactivo</span>
+                                            <a class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 text-decoration-none" href="<?= esc($urlCatalogo(['estado' => 'inactiva'])) ?>">Inactivo</a>
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-end pe-4 text-nowrap">
@@ -105,6 +205,50 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Fichas para el teléfono: la tabla de siete columnas no cabe en pantalla -->
+            <div class="d-block d-md-none">
+                <?php if (empty($items)): ?>
+                    <div class="empty-state">
+                        <i class="bi bi-journal-x" aria-hidden="true"></i>
+                        <div class="empty-titulo">Sin faltas en este filtro</div>
+                        <div class="empty-texto">Ajusta la búsqueda o <a href="/admin/app-transito/catalogo">ver el catálogo completo</a>.</div>
+                    </div>
+                <?php else: ?>
+                    <?php foreach ($items as $item): ?>
+                        <?php
+                            $minPesos = (float) $item->monto_min_uma * $valorUma;
+                            $maxPesos = (float) $item->monto_max_uma * $valorUma;
+                            $usadas   = (int) ($boletasPorFalta[(string) $item->fundamento_legal] ?? 0);
+                        ?>
+                        <div class="p-3 border-bottom">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <a class="fw-bold font-monospace text-primary text-decoration-none" href="<?= esc($urlBoletasFalta((string) $item->fundamento_legal)) ?>"><?= esc($item->fundamento_legal) ?></a>
+                                <?php if ($item->activo == 1): ?>
+                                    <a class="badge text-decoration-none bg-success-subtle text-success border border-success-subtle rounded-pill flex-shrink-0" href="<?= esc($urlCatalogo(['estado' => 'activa'])) ?>">Visible</a>
+                                <?php else: ?>
+                                    <a class="badge text-decoration-none bg-danger-subtle text-danger border border-danger-subtle rounded-pill flex-shrink-0" href="<?= esc($urlCatalogo(['estado' => 'inactiva'])) ?>">Dada de baja</a>
+                                <?php endif; ?>
+                            </div>
+                            <p class="small text-dark mb-2"><?= esc($item->descripcion) ?></p>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <a class="badge bg-light text-secondary border small text-decoration-none" href="<?= esc($urlCatalogo(['categoria' => (string) $item->categoria])) ?>"><?= esc($item->categoria) ?></a>
+                                <span class="small text-muted"><?= number_format((float) $item->monto_min_uma, 1) ?>–<?= number_format((float) $item->monto_max_uma, 1) ?> UMA</span>
+                                <span class="fw-bold text-success small">$<?= number_format($minPesos, 2) ?> – $<?= number_format($maxPesos, 2) ?></span>
+                            </div>
+                            <div class="small text-muted mt-1">
+                                <i class="bi bi-receipt me-1"></i><?= $usadas > 0 ? $usadas . ' boleta' . ($usadas === 1 ? '' : 's') . ' emitida' . ($usadas === 1 ? '' : 's') : 'sin uso en campo' ?>
+                            </div>
+                            <div class="d-flex gap-2 mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill flex-fill"
+                                    onclick="editarFalta(<?= esc(json_encode($item), 'attr') ?>)">
+                                    Editar falta
+                                </button>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 </div>
@@ -123,7 +267,7 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="fundamento_legal" class="form-label small fw-semibold">Fundamento Legal (Artículo) <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="fundamento_legal" name="fundamento_legal" placeholder="Ej. Art. 39 Frac. IX" required>
+                        <input autocomplete="off" autocapitalize="words" spellcheck="false" type="text" class="form-control" id="fundamento_legal" name="fundamento_legal" placeholder="Ej. Art. 39 Frac. IX" required>
                     </div>
 
                     <div class="mb-3">
@@ -134,22 +278,22 @@
                     <div class="row g-2 mb-3">
                         <div class="col-sm-6">
                             <label for="categoria" class="form-label small fw-semibold">Categoría <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control text-uppercase" id="categoria" name="categoria" placeholder="Ej. MANEJO Y VIALIDAD" required>
+                            <input autocomplete="off" autocapitalize="words" spellcheck="false" type="text" class="form-control text-uppercase" id="categoria" name="categoria" placeholder="Ej. MANEJO Y VIALIDAD" required>
                         </div>
                         <div class="col-sm-6">
                             <label for="orden" class="form-label small fw-semibold">Orden de Despliegue</label>
-                            <input type="number" class="form-control" id="orden" name="orden" value="0">
+                            <input inputmode="numeric" type="number" class="form-control" id="orden" name="orden" value="0">
                         </div>
                     </div>
 
                     <div class="row g-2 mb-3">
                         <div class="col-sm-6">
                             <label for="monto_min_uma" class="form-label small fw-semibold">Monto Mínimo (UMAs) <span class="text-danger">*</span></label>
-                            <input type="number" step="0.1" min="0" class="form-control" id="monto_min_uma" name="monto_min_uma" required>
+                            <input inputmode="decimal" type="number" step="0.1" min="0" class="form-control" id="monto_min_uma" name="monto_min_uma" required>
                         </div>
                         <div class="col-sm-6">
                             <label for="monto_max_uma" class="form-label small fw-semibold">Monto Máximo (UMAs) <span class="text-danger">*</span></label>
-                            <input type="number" step="0.1" min="0" class="form-control" id="monto_max_uma" name="monto_max_uma" required>
+                            <input inputmode="decimal" type="number" step="0.1" min="0" class="form-control" id="monto_max_uma" name="monto_max_uma" required>
                         </div>
                     </div>
 

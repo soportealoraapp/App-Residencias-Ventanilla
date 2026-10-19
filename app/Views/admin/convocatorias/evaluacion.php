@@ -1,14 +1,34 @@
-<?php declare(strict_types=1); ?>
+<?php declare(strict_types=1);
+
+/**
+ * Variables inyectadas por Admin\ConvocatoriasController::evaluacion() vía
+ * view(..., $data). Se leen desde get_defined_vars() para que Intelephense no
+ * las marque como "undefined" sin alterar el runtime de CI4.
+ */
+$__view = get_defined_vars();
+
+/** @var object $convocatoria */
+$convocatoria = $__view['convocatoria'] ?? (object) [];
+
+/** @var array<int, object> $solicitudes */
+$solicitudes = $__view['solicitudes'] ?? [];
+?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('pageTitle') ?>Evaluación Comparativa · Convocatoria #<?= esc($convocatoria->id) ?><?= $this->endSection() ?>
 <?= $this->section('content') ?>
+
+<?= view('layouts/_ayuda', [
+    'tono'   => 'info',
+    'titulo' => 'Evaluación de convocatoria',
+    'texto'  => 'Revisa los puntajes de cada solicitante y designa al ganador. La selección es definitiva: confirma los datos antes de registrar la elección.',
+]) ?>
 
 <div class="row mb-3">
     <div class="col">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb small">
-                <li class="breadcrumb-item"><a href="<?= site_url('/admin/dashboard') ?>">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="<?= site_url('/admin/solicitudes?tramite=UR-TT-T-01') ?>">Solicitudes UR-01</a></li>
+                <li class="breadcrumb-item"><a href="<?= site_url('/admin/dashboard') ?>">Inicio</a></li>
+                <li class="breadcrumb-item"><a href="<?= site_url('/admin/convocatorias') ?>">Convocatorias</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Convocatoria #<?= esc($convocatoria->id) ?></li>
             </ol>
         </nav>
@@ -23,11 +43,19 @@
                 <i class="bi bi-award fs-3"></i>
             </div>
             <div>
-                <h1 class="h4 mb-0 text-white">Convocatoria #<?= esc($convocatoria->id) ?> · Otorgamiento de Concesiones</h1>
+                <h1 class="h4 mb-0 text-white"><?= esc($convocatoria->titulo ?: 'Convocatoria #' . $convocatoria->id . ' · Otorgamiento de Concesiones') ?></h1>
                 <div class="small opacity-75">Publicada el <?= date('d/m/Y', strtotime($convocatoria->fecha_publicacion)) ?> · Estatus: <strong><?= esc($convocatoria->estatus) ?></strong></div>
             </div>
         </div>
-        <div>
+        <div class="d-flex flex-wrap gap-2 justify-content-end">
+            <a class="btn btn-sm btn-outline-light" href="<?= site_url('admin/convocatorias/editar/' . (int) $convocatoria->id) ?>">
+                <i class="bi bi-pencil me-1"></i>Editar
+            </a>
+            <?php if (! empty($convocatoria->bases_archivo)): ?>
+                <a class="btn btn-sm btn-outline-light" href="<?= site_url('admin/convocatorias/' . (int) $convocatoria->id . '/bases') ?>" target="_blank" rel="noopener">
+                    <i class="bi bi-file-earmark-pdf me-1"></i>Bases oficiales
+                </a>
+            <?php endif; ?>
             <span class="badge bg-primary fs-6 px-3 py-2">
                 <i class="bi bi-people-fill me-1"></i><?= count($solicitudes) ?> Solicitantes Participantes
             </span>
@@ -37,7 +65,7 @@
         <div class="row align-items-center">
             <div class="col-md-8">
                 <div class="small text-muted mb-1">Bases de la Convocatoria:</div>
-                <div class="fw-semibold text-dark"><?= esc($convocatoria->bases) ?></div>
+                <div class="fw-semibold text-dark"><?= esc($convocatoria->bases ?: 'Sin bases redactadas.') ?></div>
             </div>
             <div class="col-md-4 text-md-end mt-3 mt-md-0 border-start ps-md-4">
                 <div class="small text-muted">Periodo de registro:</div>
@@ -52,13 +80,24 @@
 </div>
 
 <?php
+    // Un mismo listado alimenta la tabla de escritorio y las fichas del teléfono.
+    $participantes = [];
+    foreach ($solicitudes as $item) {
+        $sol = is_array($item) ? (object) ($item['solicitud'] ?? []) : (is_object($item) && isset($item->solicitud) ? $item->solicitud : $item);
+        $participantes[] = [
+            'sol'              => $sol,
+            'datos'            => is_array($item) && isset($item['datos']) ? $item['datos'] : [],
+            'esGanador'        => (($sol->estatus ?? '') === 'Seleccionado'),
+            'esNoSeleccionado' => (($sol->estatus ?? '') === 'No seleccionado'),
+        ];
+    }
+
     $tieneGanador = false;
     $ganadorFolio = null;
-    foreach ($solicitudes as $item) {
-        $sol = is_array($item) ? (object)$item['solicitud'] : (is_object($item) && isset($item->solicitud) ? $item->solicitud : $item);
-        if ($sol && isset($sol->estatus) && $sol->estatus === 'Seleccionado') {
+    foreach ($participantes as $p) {
+        if ($p['esGanador']) {
             $tieneGanador = true;
-            $ganadorFolio = $sol->folio;
+            $ganadorFolio = $p['sol']->folio ?? null;
             break;
         }
     }
@@ -88,7 +127,7 @@
             <i class="bi bi-table me-2 text-primary"></i>Cuadro Comparativo de Solicitantes
         </h5>
     </div>
-    <div class="table-responsive">
+    <div class="table-responsive d-none d-md-block">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-dark">
                 <tr>
@@ -102,7 +141,7 @@
                 </tr>
             </thead>
             <tbody>
-                <?php if (empty($solicitudes)): ?>
+                <?php if (empty($participantes)): ?>
                     <tr>
                         <td colspan="7" class="text-center py-5 text-muted">
                             <i class="bi bi-folder-x fs-1 d-block mb-2 text-secondary"></i>
@@ -110,11 +149,11 @@
                         </td>
                     </tr>
                 <?php else: ?>
-                    <?php foreach ($solicitudes as $item): 
-                        $sol = is_array($item) ? (object)$item['solicitud'] : (is_object($item) && isset($item->solicitud) ? $item->solicitud : $item);
-                        $datos = is_array($item) && isset($item['datos']) ? $item['datos'] : [];
-                        $esGanador = ($sol->estatus === 'Seleccionado');
-                        $esNoSeleccionado = ($sol->estatus === 'No seleccionado');
+                    <?php foreach ($participantes as $p):
+                        $sol = $p['sol'];
+                        $datos = $p['datos'];
+                        $esGanador = $p['esGanador'];
+                        $esNoSeleccionado = $p['esNoSeleccionado'];
                     ?>
                     <tr class="<?= $esGanador ? 'table-success border-success' : ($esNoSeleccionado ? 'opacity-75 bg-light' : '') ?>">
                         <td>
@@ -122,7 +161,7 @@
                                 <?php if ($esGanador): ?>
                                     <i class="bi bi-trophy-fill text-warning me-1"></i>
                                 <?php endif; ?>
-                                <code><?= esc($sol->folio) ?></code>
+                                <a class="text-decoration-none" href="<?= site_url('/admin/solicitudes/' . $sol->folio) ?>" title="Ver expediente completo"><code><?= esc($sol->folio) ?></code></a>
                             </div>
                             <div>
                                 <?php if ($esGanador): ?>
@@ -156,7 +195,7 @@
                         </td>
                         <td class="text-end">
                             <div class="btn-group">
-                                <a href="<?= site_url('/admin/solicitudes/' . $sol->folio) ?>" class="btn btn-sm btn-outline-secondary" title="Ver Expediente Completo">
+                                <a href="<?= site_url('/admin/solicitudes/' . $sol->folio) ?>" class="btn btn-sm btn-outline-secondary" title="Ver expediente completo">
                                     <i class="bi bi-folder2-open me-1"></i>Expediente
                                 </a>
                                 <?php if (! $esGanador): ?>
@@ -175,6 +214,60 @@
                 <?php endif; ?>
             </tbody>
         </table>
+    </div>
+
+    <!-- Fichas para el teléfono: el cuadro comparativo de siete columnas no cabe -->
+    <div class="d-block d-md-none">
+        <?php if (empty($participantes)): ?>
+            <div class="p-4 text-center text-muted">
+                <i class="bi bi-folder-x fs-1 d-block mb-2 text-secondary"></i>
+                No hay participantes registrados en esta convocatoria.
+            </div>
+        <?php else: ?>
+            <?php foreach ($participantes as $p):
+                $sol = $p['sol'];
+                $datos = $p['datos'];
+            ?>
+            <div class="p-3 border-bottom <?= $p['esGanador'] ? 'table-success' : ($p['esNoSeleccionado'] ? 'opacity-75' : '') ?>">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <div class="overflow-hidden">
+                        <a class="fw-bold font-monospace text-decoration-none" href="<?= site_url('/admin/solicitudes/' . $sol->folio) ?>">
+                            <?= $p['esGanador'] ? '<i class="bi bi-trophy-fill text-warning me-1"></i>' : '' ?><?= esc($sol->folio) ?>
+                        </a>
+                        <div class="fw-semibold small"><?= esc($datos['solicitante_nombre'] ?? '—') ?></div>
+                    </div>
+                    <?php if ($p['esGanador']): ?>
+                        <span class="badge bg-success flex-shrink-0">Seleccionado</span>
+                    <?php elseif ($p['esNoSeleccionado']): ?>
+                        <span class="badge bg-secondary flex-shrink-0">No seleccionado</span>
+                    <?php else: ?>
+                        <span class="badge bg-primary flex-shrink-0"><?= esc($sol->estatus) ?></span>
+                    <?php endif; ?>
+                </div>
+                <div class="d-flex flex-wrap gap-2 small text-muted mt-2">
+                    <span><i class="bi bi-person-vcard me-1"></i><?= esc(ucfirst($datos['tipo_persona'] ?? 'fisica')) ?></span>
+                    <span class="font-monospace"><?= esc($datos['rfc'] ?? '—') ?></span>
+                    <span><i class="bi bi-bus-front me-1"></i><?= esc($datos['tipo_servicio'] ?? 'Transporte Público') ?> · <?= esc($datos['num_vehiculos'] ?? '1') ?> unidad(es)</span>
+                    <span><i class="bi bi-calendar3 me-1"></i><?= formatear_fecha($sol->fecha_solicitud) ?></span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <span class="fw-bold">$ <?= number_format((float) $sol->monto, 2) ?></span>
+                    <a class="btn btn-sm btn-outline-secondary" href="<?= site_url('/admin/solicitudes/' . $sol->folio) ?>" title="Ver expediente completo">
+                        <i class="bi bi-folder2-open me-1"></i>Expediente
+                    </a>
+                </div>
+                <?php if (! $p['esGanador']): ?>
+                    <form method="post" action="<?= site_url('admin/convocatorias/' . $convocatoria->id . '/seleccionar') ?>" class="mt-2" onsubmit="return confirm('¿Confirmas seleccionar a la solicitud <?= esc($sol->folio) ?> como GANADORA de la convocatoria? Esto actualizará a los demás participantes a No seleccionado.');">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="solicitud_id" value="<?= esc($sol->id) ?>">
+                        <button type="submit" class="btn btn-sm btn-success fw-bold w-100">
+                            <i class="bi bi-trophy me-1"></i>Seleccionar Ganador
+                        </button>
+                    </form>
+                <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
+        <?php endif; ?>
     </div>
 </div>
 

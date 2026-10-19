@@ -10,12 +10,13 @@
   "routes": [
     { "src": "/assets/(.*)", "dest": "/public/assets/$1" },
     { "src": "/(css|js|img)/(.*)", "dest": "/public/$1/$2" },
-    { "src": "/(favicon\\.ico|robots\\.txt|logo-uri\\.webp)", "dest": "/public/$1" },
+    { "src": "/(favicon\\.ico|robots\\.txt|.*\\.webp)", "dest": "/public/$1" },
     { "src": "/agentes/_expo/(.*)", "dest": "/public/agentes/_expo/$1" },
     { "src": "/agentes/assets/(.*)", "dest": "/public/agentes/assets/$1" },
     { "src": "/agentes/fonts/(.*)", "dest": "/public/agentes/fonts/$1" },
     { "src": "/agentes/favicon\\.ico", "dest": "/public/agentes/favicon.ico" },
-    { "src": "/agentes(/.*)?", "dest": "/public/agentes/index.html" },
+    { "src": "/agentes", "dest": "/public/agentes/index.html" },
+    { "src": "/([A-Za-z0-9._-]+\\.ttf)", "dest": "/public/$1" },
     { "src": "/(.*)", "dest": "/api/index.php" }
   ],
   "headers": [
@@ -24,7 +25,10 @@
       "headers": [
         { "key": "X-Powered-By", "value": "" },
         { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" },
+        { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), payment=()" }
       ]
     }
   ]

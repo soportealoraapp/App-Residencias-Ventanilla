@@ -23,6 +23,20 @@ class Encryption extends BaseConfig
      */
     public string $key = '';
 
+    public function __construct()
+    {
+        parent::__construct();
+
+        // CI4 ya enlaza automáticamente "encryption.key" desde .env. En plataformas
+        // donde el nombre de variable no admite puntos (Vercel) se usa ENCRYPTION_KEY.
+        if ($this->key === '') {
+            $envKey = getenv('ENCRYPTION_KEY');
+            if (is_string($envKey) && $envKey !== '') {
+                $this->key = $envKey;
+            }
+        }
+    }
+
     /**
      * --------------------------------------------------------------------------
      * Previous Encryption Keys

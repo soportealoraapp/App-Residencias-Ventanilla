@@ -52,7 +52,34 @@ class CatalogoConcesionesController extends Controller
             'pager'          => $pager,
             'filtros'        => $filtros,
             'estatusOpciones' => $estatusOpciones,
+            'conteos'        => $this->conteosConcesiones(),
         ]);
+    }
+
+    /**
+     * Cuántas concesiones hay por estatus, sin importar la búsqueda en curso,
+     * para que cada filtro rápido del listado muestre su cantidad real.
+     *
+     * @return array{total: int, por_estatus: array<string, int>}
+     */
+    private function conteosConcesiones(): array
+    {
+        $db = \Config\Database::connect();
+
+        $porEstatus = [];
+        $filas = $db->table('concesiones')
+            ->select('estatus, COUNT(*) AS total')
+            ->groupBy('estatus')
+            ->get()
+            ->getResultArray();
+        foreach ($filas as $fila) {
+            $porEstatus[(string) $fila['estatus']] = (int) $fila['total'];
+        }
+
+        return [
+            'total'       => $db->table('concesiones')->countAllResults(),
+            'por_estatus' => $porEstatus,
+        ];
     }
 
     public function formNuevo()
@@ -236,6 +263,12 @@ class CatalogoConcesionesController extends Controller
         return redirect()->to(site_url('admin/concesiones'))->with('message', 'Concesión actualizada correctamente.');
     }
 
+    /**
+     * Baja del padrón. Se niega si la concesión ya tiene solicitudes vinculadas:
+     * borrarla rompía el historial del ciudadano (el expediente apuntaba a una
+     * fila inexistente), así que la vía correcta para que deje de aparecer como
+     * activa es cambiarle el estatus, no eliminarla.
+     */
     public function eliminar(int $id)
     {
         $concesionModel = new ConcesionModel();
@@ -244,6 +277,16 @@ class CatalogoConcesionesController extends Controller
         $concesion = $concesionModel->find($id);
         if (!$concesion) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        $vinculadas = \Config\Database::connect()
+            ->table('solicitudes')
+            ->where('concesion_id', $id)
+            ->countAllResults();
+
+        if ($vinculadas > 0) {
+            return redirect()->to(site_url('admin/concesiones'))
+                ->with('error', "La concesión #{$id} tiene {$vinculadas} solicitud(es) vinculadas. No se puede eliminar del padrón: edita su estatus para darla de baja y conservar el historial.");
         }
 
         $concesionModel->delete($id);
