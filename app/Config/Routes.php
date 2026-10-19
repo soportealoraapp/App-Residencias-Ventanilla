@@ -143,6 +143,14 @@ $routes->get('login', 'AuthController::login', ['as' => 'acceso']);
 $routes->get('register', 'AuthController::register', ['as' => 'registro']);
 $routes->get('logout', 'AuthController::logout', ['as' => 'salida']);
 
+// Fallback del enrutador de la app de agentes: /agentes/login y cualquier ruta
+// hija, para que un enlace directo o un F5 no caigan en el 404 de la plataforma
+// (ver AgentesWebController y EnrutadoServerlessTest). Las dos rutas apuntan al
+// mismo método, así que cada una necesita su propio nombre: si la segunda hereda
+// el de la primera, CI4 la descarta en silencio.
+$routes->get('agentes', 'AgentesWebController::shell', ['as' => 'agentes.inicio']);
+$routes->get('agentes/(:any)', 'AgentesWebController::shell', ['as' => 'agentes.ruta']);
+
 
 $routes->group('portal', ['filter' => 'auth'], static function ($routes) {
     $routes->get('', 'Ciudadano\PortalController::dashboard');       // /portal → dashboard

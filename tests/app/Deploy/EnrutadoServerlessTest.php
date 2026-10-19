@@ -24,9 +24,11 @@ use Config\App;
  * llegaba al enrutador como `parametros`. Ninguna prueba lo detectaba porque en
  * local el front controller es public/index.php, donde el recorte no borra nada.
  *
- * Este examen fija tres cosas: el mecanismo que provoca el 404, que con la
- * corrección las rutas API vuelven a resolverse, y que el arreglo sigue escrito
- * en el front controller serverless.
+ * Este examen fija cuatro cosas: el mecanismo que provoca el 404 de la API, que con
+ * la corrección las rutas API vuelven a resolverse, que el arreglo sigue escrito en
+ * el front controller serverless, y que los otros tres 404 que salieron del mismo
+ * console (las fuentes .ttf de la raíz, el HEAD / que NetInfo usa para saber si hay
+ * red y las rutas hijas de /agentes) tienen quién los atienda.
  */
 final class EnrutadoServerlessTest extends CIUnitTestCase
 {
@@ -177,19 +179,29 @@ final class EnrutadoServerlessTest extends CIUnitTestCase
         return null;
     }
 
-    public function testElShellDeAgentesSeSirveParaCualquierRutaHija(): void
+    public function testElFallbackDeAgentesNoDependeDeUnaReglaEstaticaConComodin(): void
     {
         // Un enlace directo a /agentes/login, o simplemente un F5 en esa pantalla, es
-        // la forma normal de entrar a la app de agentes. Con la regla antigua
-        // `/agentes(/.*)?` el shell solo salía en `/agentes`: las rutas hijas
-        // devolvían el 404 de la plataforma.
+        // la forma normal de entrar a la app de agentes. La primera idea fue resolver
+        // ese fallback en vercel.json y falló dos veces: con `/agentes(/.*)?` y con
+        // `/agentes(?:/[^/]*)*` la plataforma buscaba el destino más lo consumido
+        // (/public/agentes/index.html/login), respondía su propio 404 con
+        // x-vercel-error: NOT_FOUND y no dejaba caer en la regla siguiente.
+        // Por eso aquí se verifica lo contrario: ninguna regla estática puede
+        // prometer el shell de más de un segmento; las rutas hijas tienen que llegar
+        // a la función, que es la única que recibe la URI original intacta.
         $rutas = $this->reglasVercel();
 
-        foreach (['/agentes', '/agentes/', '/agentes/login', '/agentes/infracciones/40'] as $peticion) {
+        $portada = $this->reglaQueAtiende($rutas, '/agentes');
+        $this->assertNotNull($portada, '/agentes no la atiende ninguna regla de vercel.json.');
+        $this->assertSame('/public/agentes/index.html', $portada['dest'],
+            'La portada de la app de agentes debe seguir sirviéndose como archivo estático.');
+
+        foreach (['/agentes/', '/agentes/login', '/agentes/infracciones/40'] as $peticion) {
             $regla = $this->reglaQueAtiende($rutas, $peticion);
             $this->assertNotNull($regla, "{$peticion} no la atiende ninguna regla de vercel.json.");
-            $this->assertSame('/public/agentes/index.html', $regla['dest'],
-                "{$peticion} debe entregar el shell de Expo, y esa ruta se declaró con `dest` {$regla['dest']}.");
+            $this->assertSame('/api/index.php', $regla['dest'],
+                "{$peticion} debe caer en el front controller para que el fallback lo resuelva PHP; `dest` {$regla['dest']} lo resolvería como archivo y la plataforma respondería su 404.");
         }
 
         // Los archivos reales del export siguen ganando al fallback del shell.
@@ -197,6 +209,34 @@ final class EnrutadoServerlessTest extends CIUnitTestCase
             'Los bundles de _expo no pueden caer en el HTML del shell.');
         $this->assertSame('/public/agentes/fonts/$1', $this->reglaQueAtiende($rutas, '/agentes/fonts/Ionicons.ttf')['dest'] ?? null,
             'Las fuentes del export no pueden caer en el HTML del shell.');
+    }
+
+    public function testLasRutasHijasDeAgentesEntreganElShell(): void
+    {
+        // El fallback vive en AgentesWebController: cualquier ruta hija de /agentes
+        // responde el HTML del export para que el enrutador de la app (Expo Router)
+        // tome el control desde la URI que ve el navegador.
+        $coleccion = service('routes');
+        $coleccion->loadRoutes();
+
+        // El mapa interno ya tiene el marcador convertido: (:any) se guarda como (.*)
+        // y (:num) como ([0-9]+), así que en esa forma se busca la ruta declarada.
+        $declaradas = array_intersect_key(
+            $coleccion->getRoutes('GET'),
+            array_flip(['agentes', 'agentes/(.*)']),
+        );
+        $this->assertCount(2, $declaradas,
+            'Faltan las rutas GET "agentes" y "agentes/(:any)"; sin la segunda, un F5 en /agentes/login devuelve el 404 de la plataforma.');
+
+        foreach (['/agentes/login', '/agentes/infracciones/40'] as $uri) {
+            $respuesta = $this->call('GET', $uri);
+            $respuesta->assertResponseOK();
+            $this->assertStringContainsString(
+                '/agentes/_expo/static/js/web/entry-',
+                (string) $respuesta->response()->getBody(),
+                "{$uri} no devuelve el shell del export: el navegador cargaría una página sin aplicación.",
+            );
+        }
     }
 
     public function testNingunaReglaEstaticaDejaGruposSinReferenciar(): void
