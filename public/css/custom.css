@@ -871,12 +871,83 @@ body.sidebar-open-no-scroll {
   }
 
   .main-admin {
-    padding: 0.6rem 0.65rem !important;
+    /* El padding debe cubrir el margen negativo de .row (-12px); con menos,
+       las filas sangraban un par de pixeles por lado y se recortaban. */
+    padding: 0.6rem 0.8rem !important;
   }
 
   .topbar-admin {
     padding: 0.55rem 0.7rem;
     gap: 0.5rem;
+  }
+}
+
+/* ============================================================
+   DESBORDES HORIZONTALES EN MOVIL
+   Medido a 360 y 320 px de ancho. Los titulos largos del panel y las
+   insignias de los encabezados se salian de la pantalla porque un hijo de
+   flex no puede reducirse por debajo de su contenido (min-width: auto), y el
+   contenedor general tiene overflow-x: hidden, asi que el texto se recortaba
+   sin dejar ningun medio de alcanzarlo.
+   ============================================================ */
+.topbar-admin > div {
+  min-width: 0;
+}
+
+.topbar-admin > div:first-child {
+  flex: 1 1 auto;
+}
+
+.topbar-admin > div:last-child {
+  flex: 0 0 auto;
+}
+
+.topbar-admin h1 {
+  min-width: 0;
+}
+
+@media (max-width: 767.98px) {
+  /* Con envoltura, el navegador manda los iconos de la derecha a una segunda
+     linea en lugar de apretar el titulo. Sin envoltura, la barra se comprime
+     y el titulo baja de linea, que es lo que se quiere aqui. */
+  .topbar-admin {
+    flex-wrap: nowrap;
+  }
+
+  /* El titulo de la barra ocupa como maximo dos lineas: en movil importa mas
+     saber donde se esta que mantener una sola linea, pero una barra pegandose
+     media pantalla tampoco sirve. El titulo completo queda en el atributo
+     title y en el rotulo de la pestana. */
+  .topbar-admin h1 {
+    white-space: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    line-height: 1.2;
+    /* Un folio o un nombre largo sin espacios no debe poder abrir la barra. */
+    overflow-wrap: anywhere;
+  }
+
+  /* Encabezados tipo "titulo + insignia": la insignia baja de linea y
+     permite que el titulo se comprima en lugar de empujar todo. */
+  .card-header.d-flex,
+  .card-header .d-flex {
+    flex-wrap: wrap;
+    row-gap: 0.4rem;
+  }
+
+  .card-header.d-flex > *,
+  .card-header .d-flex > * {
+    min-width: 0;
+  }
+
+  .card-header .badge {
+    white-space: normal;
+    text-align: left;
+    line-height: 1.35;
   }
 }
 

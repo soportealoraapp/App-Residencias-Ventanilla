@@ -28,7 +28,7 @@ $valorUma       = (float) ($__view['valorUma'] ?? 0);
     <!-- Header banner minimalista -->
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex flex-wrap align-items-center gap-2">
                 <span class="badge rounded-pill text-bg-primary px-3 py-2 fw-semibold">
                     <i class="bi bi-phone me-1"></i> App Móvil Operativa
                 </span>
@@ -41,7 +41,7 @@ $valorUma       = (float) ($__view['valorUma'] ?? 0);
                 Gestiona el valor de la UMA, parámetros de sincronización, agentes autorizados y catálogo de boletas de campo.
             </p>
         </div>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex flex-wrap align-items-center gap-2">
             <a href="/agentes" target="_blank" class="btn btn-outline-primary d-inline-flex align-items-center shadow-sm">
                 <i class="bi bi-box-arrow-up-right me-2"></i> Abrir App Web (/agentes)
             </a>

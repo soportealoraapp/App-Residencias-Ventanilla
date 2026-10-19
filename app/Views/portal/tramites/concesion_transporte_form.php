@@ -95,7 +95,7 @@ $oldNumVehiculos = old('num_vehiculos', '1');
 
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Tipo de Persona <span class="text-danger">*</span></label>
-                                <div class="d-flex gap-4">
+                                <div class="d-flex flex-wrap gap-3 gap-lg-4">
                                     <div class="form-check">
                                         <input class="form-check-input" type="radio" name="tipo_persona" id="tp_fisica" value="fisica" <?= $oldTipoPersona === 'fisica' ? 'checked' : '' ?>>
                                         <label class="form-check-label fw-medium" for="tp_fisica">Persona Física</label>

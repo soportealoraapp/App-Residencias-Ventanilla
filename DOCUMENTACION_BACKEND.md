@@ -4,14 +4,14 @@
 **Gobierno Municipal de Uriangato, Guanajuato**  
 **Dirección de Movilidad y Transporte**  
 **Versión del Backend:** 2.5.0  
-**Stack Principal:** PHP 8.2+ | CodeIgniter 4.5.8 | PostgreSQL 15+ (Supabase) | Supabase Storage  
+**Stack Principal:** PHP 8.2+ | CodeIgniter 4.7.4 | PostgreSQL 15+ (Supabase) | Supabase Storage  
 **Fecha de Actualización:** Octubre 2026  
 
 ---
 
 ## 1. Visión General de la Arquitectura Backend
 
-El backend del sistema actúa como el motor transaccional, normativo y de seguridad para todos los procesos de la Dirección de Movilidad y Transporte de Uriangato. Está implementado sobre **CodeIgniter 4.5.8** con tipado estricto en PHP 8.2 (`declare(strict_types=1)`), estructurado bajo el patrón clásico **Modelo-Vista-Controlador (MVC)** y optimizado para ejecutarse en entornos serverless (**Vercel**) conectado a un clúster de alta disponibilidad en **PostgreSQL (Supabase)**.
+El backend del sistema actúa como el motor transaccional, normativo y de seguridad para todos los procesos de la Dirección de Movilidad y Transporte de Uriangato. Está implementado sobre **CodeIgniter 4.7.4** con tipado estricto en PHP 8.2 (`declare(strict_types=1)`), estructurado bajo el patrón clásico **Modelo-Vista-Controlador (MVC)** y optimizado para ejecutarse en entornos serverless (**Vercel**) conectado a un clúster de alta disponibilidad en **PostgreSQL (Supabase)**.
 
 ```mermaid
 graph TD
@@ -84,8 +84,8 @@ graph TD
 │   │   ├── AdminController.php
 │   │   └── CatalogoTarifasController.php
 │   ├── Api/                   # Endpoints REST para la App Móvil de Tránsito
-│   │   ├── AgentesTransitoApiController.php # Login seguro (BCrypt/Bearer) y registro de agentes
-│   │   └── InfraccionesApiController.php    # Parámetros, checklist 80 fracciones, sincronización y evidencias
+│   │   ├── AgentesTransitoApiController.php # Login seguro (BCrypt/Bearer); sin registro público de agentes
+│   │   └── InfraccionesApiController.php    # Parámetros, checklist de 80 infracciones, sincronización y evidencias
 │   ├── Ciudadano/             # Portal ciudadano, mis solicitudes, seguimiento, pagos
 │   │   ├── PortalController.php
 │   │   └── Tramite*.php       # Controladores de trámites individuales
@@ -174,10 +174,11 @@ graph TD
   * `/admin/despintado`: Módulo especializado para agendar citas de inspección física en patio municipal para el trámite UR-TT-T-02.
   * `/admin/infracciones`: Visor administrativo de boletas de infracción levantadas por los agentes viales en la app móvil.
 
-### 3.5. `AgentesApiController.php`
+### 3.5. `AgentesTransitoApiController.php` / `InfraccionesApiController.php`
 * **Rutas Gestionadas:**
-  * `POST /api/agentes/registro`: Endpoint seguro para el enrolamiento de oficiales de tránsito en el padrón municipal. Valida unicidad de placa, nombre y genera hash de contraseña seguro.
-  * `GET /api/checklist-infracciones`: Entrega el catálogo normativo de infracciones tipificadas y parámetros de la UMA en formato JSON para el consumo de la app móvil.
+  * `POST /api/agentes/login`: único punto de acceso de la app móvil; valida placa y contraseña contra `agentes_transito` con BCrypt y emite token de portador con caducidad.
+  * `GET /api/checklist-infracciones`: entrega el catálogo normativo de infracciones tipificadas y los parámetros de la UMA en formato JSON para el consumo de la app móvil.
+  * **No existe `POST /api/agentes/registro`.** Los agentes de tránsito tienen capacidad de sanción y por eso **no se autorregistran**: solo el administrador los da de alta desde `/admin/app-transito` (`app-transito/agentes/guardar`, protegido por `role:administrador`). Cualquier documento anterior que mencionara ese endpoint está desactualizado.
 * **Lógica Operativa:**
   * Respuestas normalizadas con encabezados `Content-Type: application/json` y códigos HTTP RFC estándar (`200 OK`, `201 Created`, `400 Bad Request`, `409 Conflict`, `500 Internal Server Error`).
 
@@ -272,21 +273,27 @@ En arquitecturas serverless como Vercel, el sistema de archivos del servidor es 
 
 | Método | Ruta | Controlador / Acción | Filtros | Descripción |
 |---|---|---|---|---|
-| **POST** | `/api/agentes/registro` | `Api\AgentesTransitoApiController::registrar` | Ninguno | Enrolamiento de agentes de tránsito desde la app móvil. |
-| **POST** | `/api/agentes/login` | `Api\AgentesTransitoApiController::login` | Ninguno | Autenticación de oficiales con validación BCrypt y token Bearer. |
-| **GET** | `/api/checklist-infracciones`| `Api\InfraccionesApiController::checklist` | Ninguno | Descarga del catálogo normativo de 80 infracciones clasificadas y valor UMA. |
-| **GET** | `/api/parametros` | `Api\InfraccionesApiController::parametros` | Ninguno | Parámetros operativos (valor UMA, mínimo de fotos obligatorias). |
-| **POST** | `/api/infracciones/sincronizar` | `Api\InfraccionesApiController::sincronizar` | Ninguno | Recepción y almacenamiento de boletas levantadas en campo en `boletas_infracciones`. |
-| **POST** | `/api/infracciones/evidencias` | `Api\InfraccionesApiController::subirEvidencia` | Ninguno | Recepción multipart (`FormData`) de fotografías de evidencia asociadas al folio. |
+| **POST** | `/api/agentes/login` | `Api\AgentesTransitoApiController::login` | Ninguno (autentica en el controlador) | Autenticación de oficiales con validación BCrypt y token Bearer. |
+| **GET** | `/api/checklist-infracciones`| `Api\InfraccionesApiController::checklist` | Ninguno | Descarga del catálogo normativo de infracciones clasificadas y valor UMA. |
+| **GET** | `/api/parametros` | `Api\InfraccionesApiController::parametros` | Ninguno | Parámetros operativos (valor UMA, mínimo de fotos obligatorias, versión de la app). |
+| **POST** | `/api/infracciones/sincronizar` | `Api\InfraccionesApiController::sincronizar` | **`agenteToken`** | Recepción y almacenamiento de boletas levantadas en campo en `boletas_infracciones`. |
+| **POST** | `/api/infracciones/evidencias` | `Api\InfraccionesApiController::subirEvidencia` | **`agenteToken`** | Recepción multipart (`FormData`) de fotografías de evidencia asociadas al folio. |
 | **GET** | `/portal/dashboard` | `Ciudadano\PortalController::dashboard` | `auth` | Dashboard ciudadano. |
 | **GET** | `/portal/mis-solicitudes` | `Ciudadano\PortalController::misSolicitudes`| `auth` | Listado y búsqueda de trámites del ciudadano. |
 | **GET** | `/portal/solicitud/{folio}`| `Ciudadano\PortalController::verSolicitud` | `auth` | Expediente y evolución del trámite. |
 | **POST** | `/portal/tramites/{tipo}/guardar`| `Ciudadano\TramitesController::guardar` | `auth, csrf` | Recepción y procesamiento de solicitud. |
-| **GET** | `/admin/dashboard` | `Admin\AdminController::dashboard` | `auth, role:admin` | Dashboard general de supervisión municipal. |
-| **GET** | `/admin/solicitudes` | `Admin\AdminController::solicitudes` | `auth, role:admin` | Bandeja maestra de expedientes con filtros. |
-| **POST** | `/admin/solicitudes/cambiar-estatus`| `Admin\AdminController::cambiarEstatus`| `auth, role:admin, csrf`| Cambio regulado de estatus con observaciones. |
-| **GET** | `/admin/infracciones` | `Admin\AdminController::infracciones`| `auth, role:admin` | Monitoreo de boletas levantadas en campo. |
-| **GET** | `/admin/auditoria` | `Admin\AdminController::auditoria` | `auth, role:superadmin` | Bitácora de eventos y auditoría. |
+| **GET** | `/admin/dashboard` | `Admin\AdminController::dashboard` | `auth`, `role:administrador,operador_ventanilla` | Dashboard general de supervisión municipal. |
+| **GET** | `/admin/solicitudes` | `Admin\AdminController::solicitudes` | `auth`, grupo `role:administrador,operador_ventanilla` | Bandeja maestra de expedientes con filtros. |
+| **POST** | `/admin/solicitudes/cambiar-estatus`| `Admin\AdminController::cambiarEstatus`| `auth`, rol del grupo, CSRF global | Cambio regulado de estatus con observaciones. |
+| **GET** | `/admin/infracciones` | `Admin\AdminController::infracciones`| `auth`, rol del grupo | Monitoreo de boletas levantadas en campo. |
+| **GET** | `/admin/auditoria` | `Admin\AdminController::auditoria` | `auth`, `role:administrador` | Bitácora de eventos y auditoría. |
+
+**Notas sobre esta tabla:**
+
+* El filtro de rol **no se declara ruta por ruta**: se aplica en los dos grupos de `app/Config/Routes.php` —`role:administrador,operador_ventanilla` para casi todo el panel y `role:administrador` para las rutas exclusivas del administrador (líneas 45–46 y 105). Sobrescribirlo por ruta solo se hace cuando una acción debe quedar fuera del alcance del operador.
+* Encima del rol actúa `PermisoOperadorFilter`, declarado sobre `admin` y `admin/*`, que puede bloquear secciones concretas para el operador según el mapa JSON guardado en `parametros_app`.
+* El CSRF está exento en `api/*` (la app móvil no maneja tokens de formulario) y **activo** en todo lo demás, incluyendo los `POST` del portal y del panel.
+* Las rutas `OPTIONS` de `/api/agentes/login`, `/api/parametros`, `/api/infracciones/sincronizar` y `/api/boletas/sincronizar` están declaradas explícitamente para responder al *preflight* del navegador cuando la app móvil se sirve como SPA web. Existe además el alias `POST /api/boletas/sincronizar`, que resuelve a la misma acción `sincronizar`.
 
 ---
 

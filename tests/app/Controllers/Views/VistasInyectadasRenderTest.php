@@ -389,10 +389,15 @@ final class VistasInyectadasRenderTest extends DatabaseTestCase
 
         self::assertSame(
             1,
-            preg_match('#<h1 class="h5 mb-0 text-truncate">(.*?)</h1>#s', $html, $encabezado),
+            preg_match('#<h1 class="h5 mb-0 text-truncate" title="([^"]*)">(.*?)</h1>#s', $html, $encabezado),
             'La barra superior perdio su contenedor de titulo.'
         );
-        self::assertSame('Editar Tarifa #3', trim($encabezado[1]), 'El panel se pinta sin titulo visible.');
+        self::assertSame('Editar Tarifa #3', trim($encabezado[2]), 'El panel se pinta sin titulo visible.');
+        self::assertSame(
+            'Editar Tarifa #3',
+            $encabezado[1],
+            'El titulo completo debe seguir accesible cuando la barra lo recorte.'
+        );
 
         self::assertSame(
             1,

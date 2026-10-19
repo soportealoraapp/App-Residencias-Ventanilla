@@ -5,7 +5,7 @@ Plataforma gubernamental integral para la digitalización de trámites, gestión
 [![Producción Vercel](https://img.shields.io/badge/Vercel-Producción%20Online-black?logo=vercel)](https://app-residencias.vercel.app/)
 [![App Agentes Web](https://img.shields.io/badge/Expo%20Web-App%20Agentes-4630EB?logo=expo)](https://app-residencias.vercel.app/agentes/)
 [![PHP](https://img.shields.io/badge/PHP-8.2+-777BB4?logo=php)](https://www.php.net/)
-[![CodeIgniter](https://img.shields.io/badge/CodeIgniter-4.5.8-EF4223?logo=codeigniter)](https://codeigniter.com/)
+[![CodeIgniter](https://img.shields.io/badge/CodeIgniter-4.7.4-EF4223?logo=codeigniter)](https://codeigniter.com)
 [![PostgreSQL](https://img.shields.io/badge/Supabase-PostgreSQL%2015+-3ECF8E?logo=supabase)](https://supabase.com/)
 
 ---
@@ -35,14 +35,14 @@ El ecosistema digital integra tres ramas de desarrollo comunicadas a través de 
 
 | Capa | Tecnologías Principales |
 |---|---|
-| **Backend & Core** | PHP 8.2 (Strict Types), CodeIgniter 4.5.8, Composer |
+| **Backend & Core** | PHP 8.2 (Strict Types), CodeIgniter 4.7.4 (`^4.5` en composer.json), Composer |
 | **Bases de Datos** | PostgreSQL 15+ (Supabase) con PgBouncer Pooler (puerto 6543) |
 | **Almacenamiento** | Supabase Storage (Buckets privados `documentos` y `evidencias`) con alternativa local firmada |
 | **Criptografía** | Hashing SHA-256 inmutable de archivos y contraseñas BCRYPT |
 | **Frontend Web** | Bootstrap 5.3.2, Bootstrap Icons 1.11.1, Plus Jakarta Sans, CSS *mobile-first* con design tokens |
 | **App Móvil & SPA** | React Native 0.86, Expo SDK 57, TypeScript, AsyncStorage, `@supabase/supabase-js` |
 | **Despliegue & Cloud** | Vercel Serverless (`vercel-php@0.7.4`), CI/CD automatizado vía Git |
-| **Pruebas** | PHPUnit 10 (117 casos / 442 aserciones) sobre harness SQLite aislado |
+| **Pruebas** | PHPUnit 10.5 (210 casos / 845 aserciones en 24 clases) sobre harness SQLite aislado; verificador propio de la app (`node tests/auth-flow.test.cjs`, 18 casos) |
 
 ---
 
@@ -135,9 +135,17 @@ Para ejecutar la suite de pruebas unitarias y de integración:
 ```
 En Windows, si `php` no está en el PATH: `./php82/php.exe vendor/bin/phpunit`.
 
-Las pruebas (**117 casos / 442 aserciones**) cubren: control de acceso por rol, permisos configurables del operador, validaciones de los 7 trámites, cálculo dinámico de tarifas (incluido el monto por camiones de UR-07), reglas de transición de la máquina de estados, radicación presencial, trazas de auditoría e historial, endpoints REST de agentes y el blindaje del almacenamiento local (firma HMAC, caducidad y rechazo de travesía de ruta).
+Las pruebas (**210 casos / 845 aserciones / 24 clases**) cubren: control de acceso por rol, permisos configurables del operador, validaciones de los 7 trámites, cálculo dinámico de tarifas (incluido el monto por camiones de UR-07), reglas de transición de la máquina de estados, radicación presencial, trazas de auditoría e historial, endpoints REST de agentes, el blindaje del almacenamiento local (firma HMAC, caducidad y rechazo de travesía de ruta), el **desglose navegable del tablero** y el **barrido de renderizado de vistas** (que el HTML producido lleve título, cabecera y el número correcto de filas).
 
 La suite corre contra **SQLite en memoria** con prefijo `db_`, nunca contra la base institucional. Requiere que las migraciones estén aplicadas (`php spark migrate`).
+
+La app móvil se verifica por separado, sin Expo ni dispositivo:
+
+```bash
+cd mobile/agentes-transito
+node tests/auth-flow.test.cjs     # 18 casos: sesión, caducidad de token, cola offline, 401
+npx tsc --noEmit                  # tipos del cliente (salida limpia)
+```
 
 ---
 
@@ -148,6 +156,7 @@ Ambas interfaces son *mobile-first*: el ciudadano y el operador pueden usarlas d
 * **Objetivos táctiles de 44 px** y campos a 16 px (evita el zoom automático de iOS al enfocar un formulario).
 * **Portal:** navegación inferior fija tipo app en móvil, con el contenido desplazado para no quedar tapado.
 * **Panel:** la barra lateral se convierte en gaveta deslizante (`min(300px, 86vw)`) con fondo oscurecido y barra superior pegajosa; respeta áreas seguras en dispositivos con muesca (`viewport-fit=cover` + `env(safe-area-inset-*)`).
+* **Sin texto recortado, comprobado:** 55 páginas medidas en el navegador a 360/320/290 px con detector de desbordes y página de control. La causa raíz era que un hijo de *flexbox* no puede comprimirse por debajo de su contenido, y el `overflow-x: hidden` del contenedor lo ocultaba al no generar barra de desplazamiento.
 * **Portada:** la fotografía institucional se ancla y el desenfoque se reduce en pantallas verticales para conservar el sujeto y el contraste del texto sin sacrificar rendimiento.
 * **Accesibilidad:** respeta `prefers-reduced-motion`, conserva foco visible por teclado y un modo de impresión que oculta la interfaz para imprimir expedientes.
 

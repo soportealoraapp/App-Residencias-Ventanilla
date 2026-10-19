@@ -30,7 +30,7 @@ graph TB
         CZ[Ciudadano / Concesionario\nNavegador Web Desktop o Móvil] -->|HTTPS| PW[Portal Ciudadano Web\n/portal/*]
         CZF[Ciudadano que acude\nfísicamente a ventanilla] -.->|Atención presencial| ADM
         ADM[Personal de Movilidad\nRevisores / Directores] -->|HTTPS + RBAC| PA[Panel Administrativo\n/admin/*]
-        PW --> CI4[Backend Monolítico MVC\nCodeIgniter 4.5.8 - PHP 8.2]
+        PW --> CI4[Backend Monolítico MVC\nCodeIgniter 4.7.4 - PHP 8.2]
         PA --> CI4
     end
 
@@ -46,7 +46,7 @@ graph TB
         CI4 -->|Sessions Handler| SESS[(Tabla ci_sessions)]
         RN -->|Supabase JS Client\nUpsert Boletas| PG
         RN -->|Upload Multipart| STG
-        RN -->|HTTP REST Fallback\n/api/agentes/registro| CI4
+        RN -->|HTTP REST\n/api/agentes/login + sincronización| CI4
     end
 ```
 
@@ -55,7 +55,7 @@ graph TB
 ## PARTE I: PORTAL CIUDADANO Y PANEL ADMINISTRATIVO WEB
 
 ### 1. Arquitectura y Tecnologías Web
-* **Framework Backend:** CodeIgniter 4.5.8 (PHP 8.2) con arquitectura Modelo-Vista-Controlador (MVC).
+* **Framework Backend:** CodeIgniter 4.7.4 (línea `^4.5` en `composer.json`) sobre PHP 8.2, con arquitectura Modelo-Vista-Controlador (MVC).
 * **Motor de Plantillas:** Vistas PHP nativas con layouts desacoplados (`layouts/portal.php`, `layouts/admin.php`, `layouts/auth.php`).
 * **Frontend:** Bootstrap 5.3.2, Bootstrap Icons 1.11.1, CSS modular (`custom.css`) con variables personalizadas y JavaScript modular nativo (sin dependencias pesadas).
 * **Autenticación y Sesiones:** Sesiones persistentes basadas en base de datos (`ci_sessions`) que garantizan tolerancia a fallos en la infraestructura serverless de Vercel.
@@ -133,7 +133,7 @@ stateDiagram-v2
   * `InfraccionesContext`: Motor de persistencia local, cálculo de multas, cola de sincronización y catálogo.
   * `ThemeContext`: Conmutación de tema Claro / Oscuro de alto contraste optimizado para uso nocturno o bajo luz solar intensa.
 * **Almacenamiento Local (Offline-First):** `AsyncStorage` como base de datos embebida en el dispositivo móvil.
-* **Conectividad:** Sincronización REST prioritaria con el **Backend Municipal en CodeIgniter 4** (`/api/infracciones/*` y `/api/agentes/*`), con compatibilidad de respaldo en Supabase.
+* **Conectividad:** Sincronización REST prioritaria con el **Backend Municipal en CodeIgniter 4** (`/api/agentes/login`, `/api/parametros`, `/api/checklist-infracciones`, `/api/infracciones/sincronizar`, `/api/infracciones/evidencias`), con compatibilidad de respaldo directa a Supabase. Las escrituras van protegidas por el filtro `agenteToken`.
 
 ---
 
@@ -253,7 +253,7 @@ Cada vez que un ciudadano o funcionario sube un documento, el backend calcula su
 * **RBAC por rol** (`AuthFilter`, `RoleFilter`, `AdminRedirectFilter`): tres roles — `ciudadano` usa el portal; `administrador` y `operador_ventanilla` usan el panel; los funcionarios son redirigidos automáticamente si intentan entrar al portal.
 * **Autorización de grano fino** (`PermisoOperadorFilter`): dentro del rol `operador_ventanilla`, el administrador habilita o bloquea secciones concretas del panel desde `/admin/permisos-operador`. El mapa se guarda como JSON en `parametros_app`, sin migraciones y sin crear roles nuevos. La coincidencia se hace por **prefijo de URI más largo**, así que una ruta nueva bajo un prefijo ya catalogado queda protegada automáticamente.
 * **Invariantes:** el administrador nunca se filtra; las bajas definitivas no son configurables (grupo de ruta exclusivo `role:administrador`); sin configuración guardada todo está permitido.
-* **Agentes de tránsito:** no se autorregistran. Solo el administrador los da de alta en `/admin/app-transito`, por ser personal con capacidad de sanción.
+* **Agentes de tránsito:** no se autorregistran ni por el portal ni desde la app; no existe un endpoint público de registro de agentes. Solo el administrador los da de alta en `/admin/app-transito`, por ser personal con capacidad de sanción.
 
 ### 4. Interfaz Web Responsiva (Portal y Panel)
 
@@ -262,8 +262,9 @@ Ambas interfaces son *mobile-first* y operan desde teléfono sin perder funciona
 * **Objetivos táctiles de 44 px** (`--touch-target`) y campos a 16 px, que evita el zoom automático de iOS al enfocar un formulario.
 * **Portal:** navegación inferior fija tipo app en móvil; menú colapsable con fondo sólido; montos con `clamp()` y quiebre de palabra para que no desborden.
 * **Panel:** la barra lateral se convierte en gaveta deslizante (`min(300px, 86vw)`) con fondo oscurecido y barra superior pegajosa; respeta áreas seguras en dispositivos con muesca (`viewport-fit=cover` + `env(safe-area-inset-*)`).
+* **Sin desbordes horizontales, comprobado y no supuesto:** el título de la barra del panel, los encabezados de tarjeta con insignia y las hileras de botones se corrigieron tras una **auditoría instrumental de 55 páginas medidas a 360/320/290 px**. La causa raíz fue de modelo de caja (*flexbox* no permite que un hijo se comprima por debajo de su contenido) y quedó enmascarada porque el contenedor declara `overflow-x: hidden`: el texto se recortaba **sin dejar barra de desplazamiento**. Detalle en `DOC_METODOLOGIA_PORTAL_PANEL.md` §9.8.
 * **Portada:** la fotografía institucional se ancla y se reduce el desenfoque en pantallas verticales, para conservar el sujeto y el contraste del texto sin sacrificar rendimiento.
-* **Accesibilidad:** `prefers-reduced-motion`, foco visible por teclado, `lang="es"`, `aria-label` en controles de acordeón y modo de impresión que oculta la interfaz para imprimir expedientes.
+* **Accesibilidad:** `prefers-reduced-motion`, foco visible por teclado, `lang="es"`, `aria-label` en controles de acordeón y modo de impresión que oculta la interfaz para imprimir expedientes. Páginas de error propias en español (400, 404, excepción y producción) en lugar de las del marco.
 
 > ⚠️ **Restricción de despliegue:** en Vercel solo se sirve lo declarado en el arreglo `routes` de `vercel.json`; cualquier otra petición cae en el comodín que la entrega a PHP y responde 404. **Al agregar una imagen o archivo estático a `public/`, hay que declarar su ruta** y verificarla contra la URL desplegada, porque en local `spark serve` sí sirve todo el directorio.
 
@@ -315,13 +316,39 @@ El proyecto está configurado para despliegue continuo en Vercel Serverless medi
 ./vendor/bin/phpunit                       # Linux / macOS
 ./php82/php.exe vendor/bin/phpunit         # Windows con el PHP del repositorio
 ```
-La suite consta de **117 casos de prueba y 442 aserciones** repartidas en 17 clases (control de acceso, permisos del operador, los 7 trámites, tarifario dinámico, máquina de estados, radicación presencial, API REST de agentes y almacenamiento local). Corre contra SQLite en memoria con prefijo `db_`, de modo que **jamás toca la base institucional**. Requiere migraciones aplicadas.
+La suite consta de **210 casos de prueba y 845 aserciones** repartidas en 24 clases (control de acceso, permisos del operador, los 7 trámites, tarifario dinámico, máquina de estados, radicación presencial, API REST de agentes, almacenamiento local, renderizado de vistas y desglose del tablero). Corre contra SQLite en memoria con prefijo `db_`, de modo que **jamás toca la base institucional**. Requiere migraciones aplicadas.
+
+La app móvil tiene su propio verificador, independiente de PHPUnit:
+
+```bash
+cd mobile/agentes-transito
+node tests/auth-flow.test.cjs     # 18 casos: login, caducidad de token, cola offline, manejo de 401
+npx tsc --noEmit                  # tipos del cliente; debe salir limpio
+```
+
+El procedimiento completo para comprobar que la app móvil sigue sincronizada con el backend (contrato de API, ausencia de rupturas, versión y haz exportado) está documentado en `DOC_METODOLOGIA_PORTAL_PANEL.md` §10.6.
 
 ---
 
-## 5. Documentos Complementarios Específicos
+## 5. Metodología de Trabajo y División del Equipo
+
+El proyecto se desarrolló con una **metodología iterativa e incremental**: primero el andamiaje común (autenticación, roles, expediente maestro, enrutamiento, sesiones, almacenamiento) y después iteraciones que se construyeron, probaron y validaron por separado (un trámite, luego el canal presencial, luego la permisología, luego la adaptación móvil y su auditoría). Cada iteración cerró con evidencia reproducible —una corrida de PHPUnit, una prueba de humo contra la URL desplegada o una medición en el navegador— y no con una revisión visual.
+
+**Tres responsables de módulo, un solo repositorio.** Se evaluaron tableros virtuales de gestión, pero la dinámica real del equipo (tres personas, bloqueos técnicos que se resolvían en minutos y no en días) pedía coordinación directa, así que la división de módulos, la asignación de responsabilidades y el desbloqueo técnico se llevaron mediante **comunicación síncrona en un grupo de mensajería instantánea (WhatsApp)**. El compromiso metodológico que hace defendible esa elección es que **todo acuerdo de conversación se materializó en un commit, una prueba o una línea de documentación**, que es la parte auditable.
+
+| Rama | Superficie del repositorio | Cómo se verifica |
+|---|---|---|
+| **Backend** | `app/Config`, `app/Models`, `app/Libraries`, `app/Filters`, `app/Database/Migrations`, `api/` | PHPUnit (§4) y `php spark migrate` |
+| **Portal y Panel Web** | `app/Controllers/{Admin,Ciudadano}`, `app/Views/{portal,admin,layouts,auth}`, `public/css`, `public/js` | PHPUnit, barrido de vistas (§10.5 del doc de metodología) y auditoría de desbordes (§9.8) |
+| **App Móvil de Agentes** | `mobile/agentes-transito/` y su exportación servida en `public/agentes/` | `node tests/auth-flow.test.cjs`, `npx tsc --noEmit` y cotejo de endpoints contra `app/Config/Routes.php` |
+
+Recorrido completo por fases, con las tablas de evidencia listas para desplegar en el documento final: `DOC_METODOLOGIA_PORTAL_PANEL.md` §11.
+
+---
+
+## 6. Documentos Complementarios Específicos
 
 Para una inmersión técnica profunda en cada componente, consulta los manuales especializados:
 * [DOCUMENTACION_BACKEND.md](./DOCUMENTACION_BACKEND.md): Arquitectura completa del Backend CodeIgniter 4, controladores, modelos, servicios, filtros de seguridad y API REST.
 * [DOCUMENTACION_APP_TRANSITO.md](./DOCUMENTACION_APP_TRANSITO.md): Manual técnico exhaustivo de la App Móvil en React Native/Expo, modo offline-first, cámara, GPS y sincronización con Supabase.
-* [DOC_METODOLOGIA_PORTAL_PANEL.md](./DOC_METODOLOGIA_PORTAL_PANEL.md): Metodología de desarrollo, arquitectura de software, especificación de los 7 formularios, radicación presencial, permisología del operador, diseño responsivo móvil y aseguramiento de la calidad del Portal y Panel Web.
+* [DOC_METODOLOGIA_PORTAL_PANEL.md](./DOC_METODOLOGIA_PORTAL_PANEL.md): Metodología de desarrollo (incluida la gestión del equipo y el recorrido por fases para el documento final), arquitectura de software, especificación de los 7 formularios, radicación presencial, permisología del operador, diseño responsivo móvil con su auditoría de desbordes y aseguramiento de la calidad del Portal y Panel Web.

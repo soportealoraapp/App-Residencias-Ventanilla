@@ -5,7 +5,7 @@
 **Carrera:** Ingeniería en Sistemas Computacionales / Ingeniería en Software  
 **Institución Receptora:** Dirección de Movilidad y Transporte — H. Ayuntamiento de Uriangato, Gto.  
 **Autor:** Residente Profesional  
-**Versión del Documento:** 3.0  
+**Versión del Documento:** 4.0  
 **Fecha:** Octubre 2026  
 
 ---
@@ -13,6 +13,9 @@
 ## Índice General
 
 1. [Delimitación del Alcance del Proyecto de Residencia](#1-delimitación-del-alcance-del-proyecto-de-residencia)
+   * 1.1. Alcance Técnico Asignado
+   * 1.2. Exclusiones Metodológicas
+   * **1.3. Metodología de Trabajo: Desarrollo Iterativo-Incremental y Coordinación Síncrona**
 2. [Arquitectura de Software y Patrones de Diseño (MVC en CodeIgniter 4)](#2-arquitectura-de-software-y-patrones-de-diseño-mvc-en-codeigniter-4)
    * 2.1. Implementación del Patrón Modelo-Vista-Controlador (MVC)
    * 2.2. Patrón Entity-Attribute-Value (EAV) para Metadatos de Trámites
@@ -59,12 +62,24 @@
    * 9.5. Portada Fotográfica: Composición, Velo de Contraste y Comportamiento en Retrato
    * 9.6. Identidad Visual, Favicones y Recursos Estáticos en el Edge
    * 9.7. Accesibilidad, Movimiento Reducido y Rendimiento
+   * **9.8. Auditoría Medible de Desbordes Horizontales en Móvil**
 10. [Aseguramiento de la Calidad y Estrategia de Pruebas](#10-aseguramiento-de-la-calidad-y-estrategia-de-pruebas)
    * 10.1. Suite Automatizada con PHPUnit y FeatureTestTrait
    * 10.2. Matriz de Cobertura Funcional
    * 10.3. Harness de Pruebas Aislado en SQLite
    * 10.4. Pruebas de Humo y Verificación en Producción
-11. [Conclusiones Técnicas de la Metodología](#11-conclusiones-técnicas-de-la-metodología)
+   * **10.5. Barrido de Renderizado de Vistas y Convención de Inyección de Datos**
+   * **10.6. Verificación de Sincronía entre Ramas (Backend ↔ App Móvil)**
+11. **Recorrido Procesal del Desarrollo (Fases)** — *organizado por fases de trabajo, para el capítulo de metodología del documento final*
+   * 11.0. Mapa de Correspondencia con las Fases del Proyecto
+   * 11.1. Fase de Análisis y Levantamiento de Requerimientos en Campo
+   * 11.2. Fase de Diseño y Validación de Interfaces de Usuario (UX/UI)
+   * 11.3. Fase de Diseño e Implementación de la Base de Datos
+   * 11.4. Fase de Programación del Backend y Reglas de Negocio
+   * 11.5. Fase de Frontend y Despliegue en Entorno de Producción
+   * 11.6. Correspondencia con las Figuras del Documento Final
+   * 11.7. Referencias Tecnológicas Utilizadas
+12. [Conclusiones Técnicas de la Metodología](#12-conclusiones-técnicas-de-la-metodología)
 
 ---
 
@@ -80,13 +95,37 @@ El presente reporte metodológico documenta formalmente el diseño ingenieril, c
 ### 1.2. Exclusiones Metodológicas
 Se excluye del análisis profundo de este documento la implementación interna del cliente móvil nativo para agentes de tránsito (desarrollado en Expo / React Native), abordándose únicamente en lo relativo a los puntos de contacto e interoperabilidad con la base de datos relacional y los endpoints de configuración y registro expuestos por el backend web.
 
+### 1.3. Metodología de Trabajo: Desarrollo Iterativo-Incremental y Coordinación Síncrona
+
+El subsistema web no se construyó como un bloque único que se prueba al final, sino con una **metodología iterativa e incremental**: se entregaron primero los troncos comunes (autenticación, roles, expediente maestro, listas) y sobre ellos se fueron incorporando iteraciones —un trámite, luego dos, luego el canal presencial, luego la permisología, luego la adaptación móvil—, de modo que cada iteración se **construyó, probó y validó por separado** antes de depender de la siguiente. Esta secuencia fue posible porque el esquema de datos se definió de forma declarativa (§3) y porque cada iteración quedó protegida por pruebas automatizadas (§10): si un cambio rompía una regla ya validada, la suite lo detectaba el mismo día.
+
+Tres consecuencias prácticas de ese orden de trabajo:
+
+1. **El andamiaje se construyó antes que la funcionalidad voluminosa.** Enrutamiento, filtros, sesiones en base de datos y la fachada de almacenamiento existían antes del segundo trámite, así que agregar los seis restantes fue rellenar un patrón ya probado y no reinventarlo siete veces.
+2. **Nada se declaró terminado sin evidencia.** Cada iteración cerró con una verificación reproducible (una corrida de PHPUnit, una prueba de humo contra la URL desplegada o una medición en el navegador), no con una revisión visual.
+3. **El desecho fue barato.** Cuando una decisión resultó cara —por ejemplo el modelo de datos duplicado por trámite que se reemplazó por el catálogo declarativo (§7.6.2)— solo se perdió el trabajo de una iteración, no el del proyecto.
+
+**Gestión diaria del equipo.** La residencia se repartió en tres responsables de módulo: **backend**, **panel web** y **aplicación móvil**. Inicialmente se evaluaron herramientas tradicionales de gestión (tableros virtuales tipo Kanban, seguimiento de tarjetas, flujos de ticket), pero se determinó que la dinámica real del equipo —tres personas, un mismo repositorio, bloqueos técnicos que se resolvían en minutos y no en días— pedía coordinación directa. La división de módulos, la asignación de responsabilidades y el desbloqueo técnico se llevaron mediante **comunicación síncrona en un grupo de mensajería instantánea (WhatsApp)**, lo que mantuvo el avance de las tres ramas alineado: cuando el backend publicaba un endpoint nuevo, el panel y la app lo consumían en la misma jornada.
+
+Esta elección de gestión no sustituyó la disciplina técnica, sino que se apoyó en ella, y es la razón por la que el repositorio conserva artefactos que hacen visible el estado del trabajo sin necesidad de un tablero:
+
+| Artefacto en el repositorio | Qué sustituye del tablero tradicional |
+|---|---|
+| Historial de `git` con mensajes convencionales (`feat:`, `fix:`, `docs:`) | Registro de tareas terminadas y su autor |
+| Suite de PHPUnit en verde (`vendor/bin/phpunit`) | Criterio de "listo" (*definition of done*) verificable |
+| `FeatureFlags` y banderas de función (§2.3) | Tablero de "en desarrollo / listo para activar" |
+| Los cuatro documentos de este repositorio (§12 y documentos complementarios) | Documentación viva de cada módulo en lugar de tickets sueltos |
+| Bitácora de `auditoria` en base de datos (§7.4) | Traza de decisiones tomadas sobre datos reales, no conversaciones |
+
+> **Nota para el documento final:** la coordinación por mensajería es válida y defendible en una residencia de tres personas, pero conviene registrarla con su límite: no deja artefactos buscables por sí sola. El compromiso metodológico que se documentó aquí es que **todo acuerdo de conversación se materializó en un commit, una prueba o una línea de documentación**, y esa es la parte que se puede auditar años después.
+
 ---
 
 ## 2. Arquitectura de Software y Patrones de Diseño (MVC en CodeIgniter 4)
 
 ### 2.1. Implementación del Patrón Modelo-Vista-Controlador (MVC)
 
-El núcleo del sistema web está construido sobre el framework **CodeIgniter 4.5.8** bajo **PHP 8.2+** con declaración de tipado estricto (`declare(strict_types=1)`), adoptando una arquitectura en capas basada en el patrón clásico **Modelo-Vista-Controlador (MVC)**, complementada por una capa intermedia de Servicios y Filtros de Seguridad.
+El núcleo del sistema web está construido sobre el framework **CodeIgniter 4.7.4** (línea `^4.5` en `composer.json`) bajo **PHP 8.2+** con declaración de tipado estricto (`declare(strict_types=1)`), adoptando una arquitectura en capas basada en el patrón clásico **Modelo-Vista-Controlador (MVC)**, complementada por una capa intermedia de Servicios y Filtros de Seguridad.
 
 ```mermaid
 graph LR
@@ -427,7 +466,7 @@ CodeIgniter 4 aplica los filtros configurados en `app/Config/Filters.php` de for
 public array $globals = [
     'before' => [
         'cors',
-        'csrf' => ['except' => ['api/agentes/registro']],
+        'csrf' => ['except' => ['api/*']],
         'invalidchars',
     ],
     'after' => [
@@ -969,15 +1008,23 @@ protected function request(string $method, string $url, ?string $body, array $he
 
 ### 8.2. Exposición y Gobernanza de Endpoints REST para Clientes Externos
 
-El backend web expone rutas de API para interoperabilidad con clientes móviles y servicios satélite:
-1. **`POST /api/agentes/registro`:**
-   * Controlador: `App\Controllers\Api\AgentesTransitoApiController::registrar()`.
-   * Propósito: Alta y enrolamiento de agentes operativos de tránsito desde la aplicación móvil.
-   * Manejo CORS y Preflight: Soporta peticiones preflight `OPTIONS` devolviendo `HTTP 204 No Content` con cabeceras `Access-Control-Allow-Origin`, `Access-Control-Allow-Methods: POST, OPTIONS` y `Access-Control-Allow-Headers`.
-   * Seguridad: Excluido de la validación de tokens CSRF en `app/Config/Filters.php`, pero sujeto a validación estricta de estructura JSON (placa única, longitud de contraseña de 3 a 50 caracteres, hashing BCRYPT).
-2. **`GET /api/checklist-infracciones`:**
-   * Controlador: `App\Controllers\Api\InfraccionesApiController::checklist()`.
-   * Propósito: Entrega del catálogo estructurado de faltas administrativas al reglamento de movilidad para sincronización offline en la app móvil.
+El backend web expone exactamente cinco rutas de API para interoperabilidad con la app móvil. La lista es corta y deliberada: **cada endpoint existe porque una pantalla de la app lo consume**, y el cotejo se hace en ambas direcciones (§10.6).
+
+| # | Endpoint | Controlador · acción | Filtro | Propósito |
+|---|---|---|---|---|
+| 1 | `POST /api/agentes/login` | `Api\AgentesTransitoApiController::login()` | Ninguno (autentica el controlador) | Inicio de turno con placa y PIN contra `agentes_transito` con BCRYPT; emite token de portador con caducidad |
+| 2 | `GET /api/checklist-infracciones` | `Api\InfraccionesApiController::checklist()` | Ninguno | Catálogo estructurado de faltas con su fundamento legal y rangos de UMA, para sincronización offline |
+| 3 | `GET /api/parametros` | `Api\InfraccionesApiController::parametros()` | Ninguno | Valor UMA vigente, mínimo de fotos obligatorias y versión de la app |
+| 4 | `POST /api/infracciones/sincronizar` | `Api\InfraccionesApiController::sincronizar()` | **`agenteToken`** | Inserción de boletas levantadas en campo en `boletas_infracciones` |
+| 5 | `POST /api/infracciones/evidencias` | `Api\InfraccionesApiController::subirEvidencia()` | **`agenteToken`** | Recepción multipart de las fotografías de evidencia asociadas al folio |
+
+**Tres decisiones de gobernanza visibles en `app/Config/Routes.php`:**
+
+* **Escritura protegida, lectura abierta.** Los tres primeros no requieren token (el login no puede pedirlo todavía y el catálogo es público); las dos escrituras sí, mediante el filtro `agenteToken`, que valida el bearer y su caducidad.
+* **`OPTIONS` declarados explícitamente** para `login`, `parametros`, `sincronizar` y `boletas/sincronizar`, porque la app se sirve también como SPA web y el navegador emite *preflight*. La respuesta es `204 No Content` con `Access-Control-Allow-Origin`, `Access-Control-Allow-Methods` y `Access-Control-Allow-Headers`.
+* **CSRF exento en todo `api/*`** (`'csrf' => ['except' => ['api/*']]`): un cliente móvil no maneja tokens de formulario, y su protección es el token de portador. La exención está acotada al prefijo `api`, **no** al panel ni al portal.
+
+> **Nota histórica para quien lea versiones anteriores de este documento:** existió un endpoint `POST /api/agentes/registro` con su pantalla de enrolamiento en la app. Fue **retirado del código** por una razón de fondo: un agente de tránsito tiene capacidad de sanción, y esa alta no puede ser un autorregistro público. Hoy solo el administrador los da de alta desde `/admin/app-transito` (`app-transito/agentes/guardar`, grupo `role:administrador`). Este cambio de modelo de seguridad es un ejemplo concreto de las iteraciones de §1.3: la funcionalidad existía, se evaluó contra el requisito operativo y se eliminó.
 
 ---
 
@@ -1144,6 +1191,94 @@ Además, las cabeceras `Strict-Transport-Security`, `X-Content-Type-Options: nos
 * **Utilidades de impresión:** `@media print` oculta barra lateral, barra superior y pie (`display: none`) para que un expediente pueda imprimirse en papel sin ruido de interfaz, requisito operativo de la ventanilla física.
 * **Descarga en demanda:** tipografías desde CDN con `display=swap`, Bootstrap y sus iconos desde CDN, y una sola hoja propia; en móvil se suprimen las capas de `backdrop-filter` restantes para reducir composición.
 
+### 9.8. Auditoría Medible de Desbordes Horizontales en Móvil
+
+La adaptación descrita en §§9.1–9.7 se construyó pantalla por pantalla, y aun así quedó un defecto residual que la inspección visual no alcanzaba a dimensionar: en ciertos títulos largos del panel, parte del texto **se salía de la pantalla sin que apareciera barra de desplazamiento**, de modo que el funcionario nunca podía leerlo completo. Se realizó entonces una auditoría sistemática, no una corrección puntual.
+
+#### 9.8.1. Por qué el desbordamiento era invisible
+
+El contenedor general del panel declara `overflow-x: hidden`. Con esa regla, un elemento más ancho que el *viewport* **se recorta en silencio**: `document.documentElement.scrollWidth` resulta igual a `clientWidth`, no se pinta barra de desplazamiento y una prueba ingenua del tipo "¿hay scroll horizontal?" devuelve *limpio* en todas las páginas. El defecto existía y era medible, pero no era detectable con el criterio equivocado.
+
+De ahí el primer hallazgo metodológico: **un detector de desbordes debe clasificar el ancestro que recorta**, no limitarse a comparar anchos.
+
+| Ancestro encontrado hacia arriba | Interpretación |
+|---|---|
+| `overflow-x: auto/scroll` | Carril o tabla con desplazamiento intencional (`.table-responsive`, rieles de pestañas). **No es defecto.** |
+| `overflow-x: hidden` | Contenido **recortado sin medio de alcanzarlo**. **Sí es defecto.** |
+| Ninguno (`visible` hasta `<body>`) | Desplazamiento horizontal de toda la página. **Sí es defecto.** |
+
+#### 9.8.2. Causa raíz: `min-width: auto` en hijos de *flexbox*
+
+La causa no fue un píxel mal puesto sino una propiedad del modelo de caja flexible: **un hijo de contenedor *flex* no puede reducirse por debajo del tamaño de su contenido** (`min-width` inicial vale `auto`, no `0`). Como consecuencia, el `<h1>` de la barra superior llevaba un `text-truncate` que no servía de nada: en lugar de truncarse, obligaba a toda la hilera a crecer más que la pantalla y empujaba hacia afuera tanto el título como los iconos de acción.
+
+#### 9.8.3. Procedimiento de medición
+
+1. **Render real, no maqueta.** Se generaron **55 páginas autenticadas** poblando la base de pruebas con el sembrador institucional (`DatabaseSeeder`) y despachando cada ruta con `FeatureTestTrait`, incluyendo los estados que solo aparecen con datos (expediente prevenido, rechazado, con cita, con boleta sincronizada). Las respuestas se volcaron a HTML estático y se sirvieron con `php -S -t public` **sin** *script* enrutador, para que las hojas de estilo se resolvieran igual que en producción.
+2. **Pantalla móvil sin cambiar la ventana del sistema.** Cada página se midió dentro de un `<iframe>` mismo-origen oculto cuyo ancho se fijó en 360, 320 y 290 px. Las *media queries* evalúan el *viewport* del propio *iframe*, así que se obtiene la distribución real de un teléfono sin redimensionar el navegador.
+3. **Detector clasificado** (la tabla de §9.8.1) sobre `getBoundingClientRect()`, con umbral de 1 px, excluyendo las gavetas laterales apartadas fuera de pantalla (`translateX(-100%)`) que están ocultas por diseño.
+4. **Página de control.** Se añadió una página con un bloque deliberadamente ancho para confirmar que el detector dispara (+347 px). Sin este paso, un "cero desbordes" podría haber sido simplemente un detector roto.
+
+#### 9.8.4. Hallazgos cuantificados antes de corregir
+
+| Síntoma | Medición (*viewport* de 354 px) |
+|---|---|
+| Título de la barra superior (7 pantallas distintas del panel, entre ellas "Registrar Solicitud Presencial") | recortado entre **+31 y +177 px** |
+| Distintivo "Cita: …" en UR-02 | **+12 px** dentro de su tarjeta |
+| Bloque de aviso UR-01 (insignia, título y ayuda) | **+25 px** |
+| `.row` de Bootstrap | **+2 px** por lado (ver nota) |
+
+> **Nota sobre el reborde de la retícula:** los `.row` de Bootstrap usan márgenes negativos de `-.75rem` (−12 px) para alinear columnas. Si el contenedor padre tiene menos de 12 px de relleno lateral, toda la retícula sangra y se recorta. El relleno móvil del panel era de `0.65rem` (10.4 px): por eso cada página perdía ~1.6 px por lado. Se subió a `0.8rem`.
+
+#### 9.8.5. Correcciones aplicadas
+
+Las cuatro reglas siguientes sustituyeron el patrón defectuoso en todo el panel, no pantalla por pantalla:
+
+```css
+/* 1. Autorizar que el hijo flex se comprima (cancela min-width: auto) */
+.topbar-admin > div { min-width: 0; }
+.topbar-admin > div:first-child { flex: 1 1 auto; }   /* el título cede */
+.topbar-admin > div:last-child  { flex: 0 0 auto; }   /* las acciones no */
+
+@media (max-width: 767.98px) {
+  /* 2. Sin envoltura: con wrap, el navegador manda los iconos a una segunda
+        línea en vez de apretar el título (las líneas flex se deciden ANTES
+        de comprimir). */
+  .topbar-admin { flex-wrap: nowrap; }
+
+  /* 3. Título con máximo dos líneas, y sin que un folio sin espacios pueda
+        abrir la barra. */
+  .topbar-admin h1 {
+    white-space: normal; overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2; line-clamp: 2; line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  /* 4. Encabezados de tarjeta "título + insignia": la insignia baja de línea */
+  .card-header.d-flex, .card-header .d-flex { flex-wrap: wrap; row-gap: .4rem; }
+  .card-header.d-flex > *, .card-header .d-flex > * { min-width: 0; }
+  .card-header .badge { white-space: normal; text-align: left; line-height: 1.35; }
+}
+```
+
+El orden de las dos reglas de la barra es revelador y costó dos iteraciones encontrarlo: al aplicar solo `min-width: 0`, los iconos de acción saltaban a una segunda línea; al quitar la envoltura sin más, el título de tres líneas estiraba la barra pegajosa a 116 px de alto (casi un tercio del alto útil de un teléfono). La acotación a dos líneas la dejó en 77 px. **Corregir un desbordamiento puede crear un problema de altura; hay que volver a medir después de cada corrección.**
+
+Complementos de capa de vista:
+
+* La barra conserva el texto íntegro accesible cuando lo acorta: `<h1 … title="<?= esc($__tituloPagina) ?>">`, además del `<title>` de la pestaña.
+* Dos hileras de botones del módulo App de Tránsito y el grupo de radios "Tipo de Persona" de UR-01 recibieron `flex-wrap`, porque sus etiquetas ("Abrir App Web (/agentes)", "Persona Moral (Sociedad/Empresa)") eran las únicas que sí desbordaban a 314 px. **No se envolvió sistemáticamente todo lo parecido:** los grupos de radios de UR-03 y UR-07, visualmente idénticos, se dejaron intactos porque la medición no los marcó.
+
+#### 9.8.6. Resultado verificado
+
+* **55 de 55 páginas sin desbordes reales en el rango de 312 a 354 px de *viewport* efectivo**, que cubre los teléfonos municipales más comunes (360 × 800 y los de entrada de 320 px).
+* Por debajo de ~300 px (fuera del piso de diseño de 320 px) quedan cuatro piezas apretadas: los interruptores de `/admin/permisos-operador` (+19/+23 px), una insignia del visor de boletas (+27 px) y una del catálogo (+10 px). Se documentan como límite conocido, no como defecto oculto.
+* La lectura `scroll = 1 px` en las 16 páginas del portal a 282 px se investigó y resultó ser ruido del medidor: al repetir la toma con más tiempo de asentamiento, `scrollWidth === clientWidth`. No se modificó nada para "corregir" un artefacto de medición.
+* Suite completa en verde tras las correcciones: **210 casos, 845 aserciones**, incluido el nuevo candado de §10.5.
+
+#### 9.8.7. Valor metodológico
+
+Este apartado existe en la documentación porque convierte una queja subjetiva ("el texto sobresale") en un resultado reproducible: una lista de rutas, un sembrador, un medidor con su página de control y una tabla de antes/después. Es el mismo criterio aplicado al resto del proyecto: **la usabilidad móvil se demuestra midiendo, no mirando.**
+
 ---
 
 ## 10. Aseguramiento de la Calidad y Estrategia de Pruebas
@@ -1155,7 +1290,7 @@ El subsistema web está cubierto por una suite de **PHPUnit** (`vendor/bin/phpun
 * **Pruebas unitarias de lógica de negocio** (`tests/app/Libraries/`): validan servicios puros sin HTTP — transiciones de estado, cálculo de tarifas, resolución de montos de infracción y almacenamiento de archivos.
 * **Pruebas de funcionalidad de extremo a extremo** (`tests/app/Controllers/`): usan `FeatureTestTrait` para despachar peticiones reales por el enrutador, con filtros, sesiones y validaciones incluidas, y asertar sobre la respuesta y las filas escritas en base de datos.
 
-**Estado verificable de la suite: 17 clases de prueba, 117 casos, 442 aserciones, todas en verde.**
+**Estado verificable de la suite: 24 clases de prueba, 210 casos, 845 aserciones, todas en verde** (PHPUnit 10.5.64 sobre PHP 8.2.25; tiempo de corrida ~46 s, 26 MB). La cifra es reproducible con `vendor/bin/phpunit --no-coverage` y debe volver a tomarse antes de citar en un documento final.
 
 ### 10.2. Matriz de Cobertura Funcional
 
@@ -1172,6 +1307,11 @@ El subsistema web está cubierto por una suite de **PHPUnit** (`vendor/bin/phpun
 | `TarifarioServiceTest`, `ResolverMontoInfraccionServiceTest` | Cálculo de derechos municipales y de multas en UMA |
 | `AlmacenamientoLocalTest` | Firma HMAC, caducidad, rechazo de travesía de ruta y buckets no permitidos |
 | `ApiAgentesTransitoYBoletasTest`, `InfraccionesApiControllerTest` | Endpoints REST y autenticación por token de agente |
+| `DesgloseSistemaTest` | Desglose navegable del panel: cada tarjeta del tablero lleva a su detalle y el desglose concuerda con las cifras del expediente |
+| `VistasInyectadasRenderTest` | Barrido de renderizado de vistas con datos inyectados (§10.5) |
+| `AuthFormsRenderTest` | formularios de acceso y registro se pintan completos, con token CSRF y sin texto huérfano |
+| `DocumentosAdminTest`, `VerificacionesAdminTest`, `SesionesAppAdminTest` | Descarga segura de expedientes, agenda de inspección física y gestión de sesiones de la app |
+| `TramiteCargaDescargaFormTest` | Reglas propias de UR-07 (tons, periodo y horarios) |
 
 ### 10.3. Harness de Pruebas Aislado en SQLite
 
@@ -1203,9 +1343,378 @@ Además de PHPUnit, el repositorio conserva utilitarias ejecutables para validac
 
 **Criterio de verificación en el navegador:** el entorno de desarrollo local (`spark serve`) sirve todo el contenido de `public/`, mientras que Vercel solo sirve lo declarado en `vercel.json`. Por eso los cambios de recursos estáticos, rutas y *headers* **deben comprobarse contra la URL desplegada**, no solo en local. La comprobación de las cabeceras de seguridad y de las rutas de la app móvil se hace sobre el dominio de producción.
 
+### 10.5. Barrido de Renderizado de Vistas y Convención de Inyección de Datos
+
+Un controlador puede devolver 200 con una vista semánticamente vacía: un título que no se pinta, una variable mal escrita que degrada a `null`, una sección que el *layout* nunca consume. Ese tipo de fallo no lo detecta una aserción sobre el estado HTTP, así que se añadió una capa de prueba específica.
+
+**Convención de capa de vista.** Toda vista declara primero qué variables espera y las lee de una única fuente:
+
+```php
+<?php
+/** @var array $tarifas */
+/** @var int $id */
+$__view     = $this->data;
+$idTarifa   = (int) ($__view['id'] ?? 0);
+$registros  = $__view['tarifas'] ?? [];
+?>
+```
+
+La convención aporta tres cosas medibles: el editor y el analizador estático saben qué inyecta cada controlador (`@var`), la vista no revienta si una liga cambió de nombre sino que degrada explícitamente, y la lectura de `$this->data` es el único canal admitido, de modo que una variable huérfana se ve como tal.
+
+**Prueba de barrido.** `VistasInyectadasRenderTest` despacha rutas reales del panel con sesión autenticada y aserta sobre el **HTML producido**, no sobre el estado de la respuesta:
+
+* el `<h1>` de la barra superior y el `<title>` de la pestaña llevan el título del trámite (candado de la corrección de `renderSection()`);
+* el título completo figura también en el atributo `title` del `<h1>`, para que siga accesible cuando la barra lo acorta en móvil (§9.8.5);
+* el cuerpo contiene la cabecera y el pie del *layout*, es decir, la vista no se pintó desnuda;
+* el número de filas de la tabla coincide con los registros sembrados.
+
+**El defecto que esta capa descubrió y cómo.** El consumo de `renderSection('pageTitle')` con argumentos vacíos sobreescribía la captura previa: el *layout* pedía el contenido de la sección pero una segunda llamada sin el parámetro `true` la vaciaba, produciendo `<h1></h1>` y `<title>` vacío en **todas** las páginas administrativas. La corrección exige **una sola lectura con captura** y reutilización del valor:
+
+```php
+$__tituloPagina = trim($this->renderSection('pageTitle', true));   // captura sin emitir
+```
+
+y `<?= $__tituloPagina ?>` en los dos puntos donde se necesita. Este fallo pasaba inadvertido porque la página se veía funcional: solo faltaba un rótulo.
+
+### 10.6. Verificación de Sincronía entre Ramas (Backend ↔ App Móvil)
+
+Como las tres ramas del proyecto comparten un repositorio y se coordinan por mensajería (§1.3), la pregunta "¿la app móvil está alineada con el backend más reciente?" no puede responderse por confianza: tiene un procedimiento.
+
+| Verificación | Cómo se comprueba | Resultado esperado |
+|---|---|---|
+| **Contrato de API** | Cotejar las rutas que llama el cliente (`src/services/`, `src/api/`) contra `app/Config/Routes.php` | Coincidencia exacta de los cinco endpoints (`/api/agentes/login`, `/api/checklist-infracciones`, `/api/parametros`, `/api/infracciones/sincronizar`, `/api/infracciones/evidencias`), con los de escritura protegidos por el filtro `agenteToken` |
+| **Ausencia de ruptura de contrato** | `git show --stat <último commit>` restringido a los archivos que la app consume | Solo cambios **aditivos**; ninguna columna o campo consumido desaparece |
+| **Tipos del cliente** | `npx tsc --noEmit` en `mobile/agentes-transito` | Salida limpia |
+| **Pruebas del cliente** | `node tests/auth-flow.test.cjs` | 18 casos en verde (inicio de sesión, caducidad de token, cola offline, conservación de boletas ante `401`) |
+| **Versión publicada** | `package.json`, `app.json` y el valor por defecto del parámetro `app_version` | Misma versión en los tres sitios |
+| **Entorno del cliente** | `mobile/agentes-transito/.env` | `EXPO_PUBLIC_API_BASE_URL` apuntando al dominio de producción |
+| **Haz servido** | `git status` sobre `mobile/` y `public/agentes/` | Sin cambios sin exportar; el *build* (`npx expo export --platform web`) reproduce el contenido servido |
+
+> **Enseñanza metodológica:** los cambios de diseño responsivo del *layout* PHP (§9.8) **no** afectan al haz de la app móvil, porque `/agentes` es una SPA de Expo con su propio CSS; y a la inversa, exportar la app no toca las vistas del panel. Confundir ambas superficies produce dos errores clásicos: corregir CSS esperando que cambie la app, o reexportar la app creyendo que así se arregla el portal.
+
 ---
 
-## 11. Conclusiones Técnicas de la Metodología
+## 11. Recorrido Procesal del Desarrollo (Fases)
+
+Los capítulos anteriores de este documento están organizados **por tema técnico** (arquitectura, datos, seguridad, despliegue, UX, pruebas). Este capítulo está organizado **por fase de trabajo**, que es como sucedió realmente y como suele pedirse que se narre en un informe de residencia. Su función es servir de matriz de despliegue: cada apartado indica qué ocurrió, con qué evidencia en el repositorio puede demostrarse y a qué sección temática remitir para el detalle.
+
+### 11.0. Mapa de Correspondencia con las Fases del Proyecto
+
+| Fase | Qué se hizo | Evidencia verificable en el repositorio | Detalle temático |
+|---|---|---|---|
+| **1. Análisis y levantamiento en campo** | Reuniones en Presidencia (área de TI) y entrevista en Tránsito y Seguridad | Directiva de framework (§11.1.1), catálogos y módulos derivados del proceso de ventanilla (§11.1.2) | §§1, 6, 7 |
+| **2. Diseño y validación de interfaces** | Portal ciudadano y panel; iteración sobre los 7 trámites; *mobile-first* | `app/Views/` (61 vistas), 3 *layouts*, `public/css/custom.css` (1 892 líneas), auditoría de desbordes (§9.8) | §9 |
+| **3. Diseño e implementación de la base de datos** | Modelado relacional y su construcción automatizada | 22 migraciones PHP en `app/Database/Migrations/`, 8 migraciones SQL en `supabase/migrations/`, 21 tablas + `ci_sessions` | §3 |
+| **4. Programación del backend y reglas de negocio** | MVC, gestión documental, seguridad por roles, tarifario, máquina de estados | 25 controladores, 20 modelos, 11 bibliotecas de servicio, 5 filtros propios | §§2, 4, 6, 7, 8 |
+| **5. Frontend y despliegue en producción** | Vistas conectadas al controlador, pruebas end-to-end, publicación serverless | `vercel.json`, `scripts/vercel-install.sh`, tabla `ci_sessions`, suite de 210 casos | §§5, 10 |
+
+---
+
+### 11.1. Fase de Análisis y Levantamiento de Requerimientos en Campo
+
+El primer paso no fue escribir código sino entender las necesidades exactas del H. Ayuntamiento de Uriangato. El levantamiento fue presencial e interactivo, y se dividió en dos vertientes que aportaron requerimientos distintos pero complementarios.
+
+#### 11.1.1. Reuniones en Presidencia Municipal (Área de TI)
+
+Se acudió en múltiples ocasiones a las instalaciones de la Presidencia para entrevistarse con el encargado del departamento de Tecnologías de la Información y Telecomunicaciones. De esas sesiones salieron dos determinantes que condicionaron todo el trabajo posterior:
+
+1. **Directriz técnica inamovible: CodeIgniter 4.** La decisión no fue de preferencia personal ni de moda, sino de **compatibilidad futura**: es el mismo framework que utiliza la Ventanilla Digital oficial del municipio, así que el código de este proyecto podrá ser leído, mantenido y absorbido por el personal que ya opera esa plataforma. Consecuencia práctica en el repositorio: se aceptó la línea `codeigniter4/framework: ^4.5` y se trabajó sobre la versión instalada (4.7.4), sin introducir un segundo framework ni una capa de interfaz gráfica del lado del servidor (ningún Laravel, Symfony completo, Vue o React en el portal).
+2. **No existía API ni backend preexistente que consumir.** La dependencia no contaba con un servicio institucional. El equipo asumió entonces **toda la infraestructura desde cero**, lo que convierte el proyecto en un desarrollo *greenfield* y no en una integración. El inventario de lo que hubo que construir desde el vacío es, en sí mismo, un resultado medible:
+
+| Pieza construida desde cero | Dónde vive | Nota |
+|---|---|---|
+| Esquema de base de datos | 22 migraciones + 8 SQL | §3, §11.3 |
+| Autenticación (login, registro, cierre, recuperación) | `AuthController`, `app/Views/auth/`, `AuthFilter` | §4 |
+| Gestión de roles (ciudadano, operador, administrador) | `roles`, `user_roles`, `RoleModel`, `RoleFilter` | §4.1 |
+| Autorización de grano fino por sección | `PermisoOperadorFilter`, `PermisosOperador`, `parametros_app` | §4.4 |
+| Lógica de los 7 trámites | 7 controladores `Tramite*` + `TramitesController` | §6.1 |
+| Máquina de estados del expediente | `EstadoSolicitudService`, `historial_estatus` | §7.2 |
+| Tarifario y cálculo de derechos | `TarifarioService`, `tarifas` | §6.2 |
+| Gestión documental y almacenamiento | `DocumentoUploader`, `SupabaseStorage`, `ArchivosLocalesController` | §3.3 |
+| API REST para clientes externos | `Api\AgentesTransitoApiController`, `Api\InfraccionesApiController` | §8.2 |
+| Sesiones persistentes en base de datos | `ci_sessions`, `Config/Session.php` | §5.2 |
+
+> **Cómo redactar esto en la tesis:** la directriz de TI es un **requerimiento de diseño impuesto por el cliente**, no una elección del residente. Conviene enunciarla así, porque explica decisiones que de otro modo parecerían arbitrarias (ausencia de un SPA en el portal, uso de vistas PHP, Bootstrap en lugar de una librería de componentes moderna).
+
+#### 11.1.2. Entrevista Operativa en Tránsito y Seguridad
+
+Se realizó una visita de campo a las oficinas de Tránsito y Seguridad de Uriangato y se entrevistó al personal encargado. El motivo central era el proceso de **levantamiento de infracciones viales**, requerimiento de la aplicación móvil que desarrollaba en paralelo otro miembro del equipo; pero la visita resultó vital también para el módulo web, por tres razones concretas y cada una con su huella en el código:
+
+1. **Comprender el flujo operativo de la dependencia permitió dimensionar el panel.** El Panel Administrativo no es un CRUD de solicitudes genéricas: tiene que **recibir, visualizar y administrar boletas de campo generadas por los agentes**. Eso se tradujo en un módulo específico de monitoreo (`Admin\AppTransitoController`, `Admin\DesgloseController`), en las tablas `boletas_infracciones`, `boleta_checklist_item`, `catalogo_infracciones_app`, `agentes_transito` y `agentes_transito_tokens`, y en el visor `/admin/app-transito/boletas`.
+2. **La bitácora física de control de folios y documentos retenidos reveló el modelo de datos real.** El municipio ya llevaba control en papel: folio consecutivo, placas retenidas, licencia retenida, vehículo al corralón, inventario de grúa. Ese mismo vocabulario se conservó en el sistema para que el funcionario reconozca su propio proceso: la app captura **garantías retenidas** y la **tipificación con fundamento legal y rangos de UMA**, y el expediente conserva el **folio único** (`FolioGenerator`).
+3. **El trabajo en vía pública ocurre sin cobertura.** La observación operativa de que el agente levanta la boleta en la calle, sin señal, es el origen del requisito *offline-first* de la app y de los endpoints de sincronización y evidencia (`/api/infracciones/sincronizar`, `/api/infracciones/evidencias`) que el backend web expone.
+
+> **Dato metodológico aprovechable:** la entrevista de campo no generó un documento de requerimientos formal en el sentido estricto; generó **restricciones verificables** (framework obligatorio, inexistencia de backend, vocabulario operativo del papel, trabajo sin cobertura). En la tesis conviene presentarlas así, porque una restricción es auditable y un "el usuario quiere algo moderno" no lo es.
+
+---
+
+### 11.2. Fase de Diseño y Validación de Interfaces de Usuario (UX/UI)
+
+Con los requerimientos técnicos y operativos claros, se diseñó la interfaz gráfica con dos objetivos diferenciados: un **portal ciudadano fácil de usar para cualquier persona**, y un **panel administrativo que diera herramientas de control real a los funcionarios** (no solo consultar, sino dictaminar).
+
+**Componentes principales** que se diseñaron y construyeron: formularios de trámite con validación en el servidor y mensajes en español, tablas de expedientes con búsqueda y filtros por estatus, botones de acción por transición válida de la máquina de estados, tarjetas de métricas enlazadas a su detalle, gaveta lateral de navegación, visor de documentos y asistente de radicación en dos pasos.
+
+**Iteración sobre los 7 trámites operativos.** La interfaz sufrió varias correcciones para ajustarse a la realidad normativa de cada trámite: UR-01 exige distinguir persona física de moral y validar RFC; UR-02 es gratuito pero requiere cita de inspección física en patio; UR-03 genera oficio para trámite estatal (SATEG); UR-04 cotiza por días de vigencia; UR-05 cobra por horas/días y categoría vial y exige plan de vías alterna y anuencia vecinal; UR-06 está regulada y se libera por bandera de función; UR-07 calcula por toneladas y periodo. Cada una de esas diferencias se resolvió en el mismo tronco (EAV + catálogo declarativo + tarifario), que es la razón por la que la iteración fue barata (§2.2, §6.1, §7.6.2).
+
+**Maquetación y responsividad.** Para el código final se utilizó **Bootstrap 5.3.2** (CDN de jsDelivr) con **Bootstrap Icons 1.11.1** y una hoja propia `public/css/custom.css`, declarados en los tres *layouts* (`layouts/portal.php`, `layouts/admin.php`, `layouts/auth.php`). La responsividad no se dejó al comportamiento por defecto del marco: se definieron *design tokens* (variables CSS para tipografía, espaciado y el objetivo táctil de 44 px), escala tipográfica fluida con `clamp()`, campos de formulario a 16 px para evitar el zoom automático de iOS, navegación inferior fija en el portal y gaveta deslizante en el panel (§9.1–9.4).
+
+**Validación de las interfaces.** La fase cerró con tres mecanismos, en orden de costo creciente:
+
+1. **Recorrido manual en el navegador** de cada pantalla en escritorio y en móvil.
+2. **Auditoría instrumental de desbordes horizontales** (§9.8): 55 páginas renderizadas con datos reales, medidas a 360/320/290 px con un detector clasificado y una página de control. Esta auditoría detectó y corrigió la clase de defecto que la inspección visual no dimensiona: texto recortado en silencio por `overflow-x: hidden`.
+3. **Barrido de renderizado de vistas** (§10.5): prueba automatizada que aserta sobre el HTML producido, la cual destapó que el título de todas las páginas administrativas se pintaba vacío.
+
+> **Lección de diseño que conviene citar:** las dos últimas verificaciones encontraron fallos **después** de que las pantallas "se veían bien". La validación de interfaz en este proyecto no fue una etapa previa que termina al entregar el diseño, sino un criterio de cierre que se aplicó sobre el producto ya funcionando.
+
+---
+
+### 11.3. Fase de Diseño e Implementación de la Base de Datos
+
+#### 11.3.1. Modelado y alojamiento
+
+Para modelar y alojar la base de datos se utilizó **Supabase**, plataforma que proveyó un entorno robusto de **PostgreSQL** en la nube. La elección aporta tres propiedades que interesaban al proyecto: motor relacional maduro (integridad referencial real, transacciones ACID), almacenamiento de objetos integrado (buckets privados para expedientes y evidencias) y acceso por dos vías —conexión directa con `pdo_pgsql`/PgBouncer para el backend y API REST para el cliente móvil— sin duplicar la fuente de verdad.
+
+#### 11.3.2. Construcción del esquema mediante migraciones, no de forma manual
+
+La creación de las tablas (usuarios, solicitudes, documentos, catálogos) **no se hizo a mano** en el panel de la plataforma, sino a través del sistema de **Migraciones de CodeIgniter 4**. Se escribieron clases en PHP que definen cada tabla, sus columnas, índices y llaves primarias y foráneas:
+
+| Aspecto | Valor real del repositorio |
+|---|---|
+| Migraciones PHP (esquema) | 22 archivos en `app/Database/Migrations/`, con prefijo de fecha y secuencia (`2026-01-01-000005_CreateSolicitudesTable.php`) |
+| Migraciones SQL complementarias (Supabase) | 8 archivos en `supabase/migrations/`, entre ellas `0003_ci_sessions.sql` |
+| Tablas del modelo relacional | 21 + `ci_sessions` (sesiones) |
+| Definición | `Forge` de CodeIgniter: `$this->forge->addField([...])`, `addKey('id', true)`, `addForeignKey(...)` |
+
+**Extracto real de una migración del proyecto** (`app/Database/Migrations/2026-01-01-000005_CreateSolicitudesTable.php`, con omisiones marcadas):
+
+```php
+<?php declare(strict_types=1);
+
+namespace App\Database\Migrations;
+
+use CodeIgniter\Database\Migration;
+
+class CreateSolicitudesTable extends Migration
+{
+    public function up()
+    {
+        // Id generada según el conductor: PostgreSQL usa BIGSERIAL,
+        // SQLite (harness de pruebas) usa INTEGER.
+        $idType = $this->db->DBDriver === 'SQLite3' ? 'INTEGER' : 'BIGSERIAL';
+
+        $this->forge->addField([
+            'id'                => ['type' => $idType, 'auto_increment' => true],
+            'folio'             => ['type' => 'VARCHAR', 'constraint' => 20, 'null' => false],
+            'tramite'           => ['type' => 'VARCHAR', 'constraint' => 20, 'null' => false],
+            'ciudadano_id'      => ['type' => 'BIGINT',  'null' => false],
+            'estatus'           => ['type' => 'VARCHAR', 'constraint' => 50, 'null' => false],
+            'monto'             => ['type' => 'DECIMAL', 'constraint' => '12,2', 'null' => true],
+            'fecha_solicitud'   => ['type' => 'TIMESTAMP', 'null' => false],
+            'fecha_pago'        => ['type' => 'TIMESTAMP', 'null' => true],
+            // ... fechas de vigencia ...
+            'comentario_rechazo' => ['type' => 'TEXT', 'null' => true],
+            'created_at'        => ['type' => 'TIMESTAMP', 'null' => true],
+            'updated_at'        => ['type' => 'TIMESTAMP', 'null' => true],
+        ]);
+
+        $this->forge->addKey('id', true);                      // clave primaria
+        $this->forge->addKey('folio', false, true);            // índice único
+        $this->forge->addKey('ciudadano_id');
+        $this->forge->addKey('tramite');
+        $this->forge->addKey('estatus');
+        $this->forge->addForeignKey('ciudadano_id', 'users', 'id', 'RESTRICT', 'RESTRICT');
+
+        $this->forge->createTable('solicitudes', true);
+    }
+
+    public function down()
+    {
+        $this->forge->dropTable('solicitudes', true);
+    }
+}
+```
+
+Tres detalles de este archivo documentan el proyecto mejor que cualquier descripción prolongada:
+
+* **La columna `comentario_rechazo` está en el esquema, no solo en la interfaz.** La regla de negocio de que un operador debe escribir el motivo del rechazo tiene respaldo físico: si la columna no admite el texto, el rechazo no se registra (§7.3).
+* **`addForeignKey('ciudadano_id', 'users', 'id', 'RESTRICT', 'RESTRICT')` protege el expediente maestro:** no se puede borrar la cuenta de un ciudadano que ya tiene trámites. La baja de cuentas es lógica, no física (§7.7).
+* **La misma migración produce dos dialectos.** La consulta por `DBDriver` para elegir `BIGSERIAL` o `INTEGER` es lo que permite que el esquema se levante tanto en el Supabase de producción como en el SQLite en memoria del harness de pruebas (§10.3). La portabilidad del esquema se pagó con una línea por columna generada, y fue la inversión más rentable del proyecto en términos de capacidad de prueba.
+
+#### 11.3.3. Ejecución y comprobación
+
+Posteriormente se ejecutaron los comandos de migración desde la consola, lo que construyó automáticamente el esquema relacional en el servidor de Supabase:
+
+```bash
+php spark migrate          # aplica las migraciones pendientes
+php spark migrate:refresh  # reconstruye desde cero (solo entorno de pruebas)
+```
+
+Accediendo al panel visual de la plataforma se comprobó que las entidades quedaran correctamente generadas: tablas, claves foráneas y tipos. El mismo mecanismo sustenta el harness de pruebas (§10.3), que levanta y revierte el esquema completo contra SQLite antes de cada caso.
+
+**Tres decisiones de modelado que conviene explicar en la tesis**, porque son las que sostienen el resto del sistema:
+
+1. **Expediente maestro + metadatos EAV.** Una sola tabla `solicitudes` para los 7 trámites, con los campos específicos en `solicitud_datos` (entidad-atributo-valor). Evita siete tablas casi idénticas y permite que agregar un trámite nuevo sea **añadir una entrada al catálogo declarativo**, no un controlador y una vista nuevos (§2.2, §7.6.2).
+2. **Traza inmutable de decisiones.** `historial_estatus` guarda cada cambio de estado con funcionario responsable, fecha y comentario obligatorio; `auditoria` registra eventos sensibles con IP. Son la base de la validez administrativa del expediente (§7.4).
+3. **Origen del trámite como dato, no como esquema.** El canal (`portal` o `presencial`) se registra como un atributo en `solicitud_datos`, de modo que las dos vías de radicación comparten folio, tarifario, estados y expediente en lugar de duplicarlos (§7.6.5).
+
+---
+
+### 11.4. Fase de Programación del Backend y Reglas de Negocio
+
+El desarrollo del motor del sistema en CodeIgniter 4 bajo el patrón **Modelo-Vista-Controlador (MVC)** fue el núcleo del trabajo: al no existir una API institucional (§11.1.1), hubo que programar toda la lógica operativa.
+
+#### 11.4.1. Modelos y controladores
+
+Se programaron los *Models* para interactuar de forma segura con la base de datos y los *Controllers* para recibir las peticiones del usuario. El inventario real del repositorio:
+
+| Capa | Cantidad | Detalle |
+|---|---|---|
+| Controladores | 25 | 3 de acceso e inicio (`AuthController`, `Home`, `ArchivosLocalesController`), 12 del panel, 9 del portal, 2 API REST |
+| Modelos | 20 | uno por entidad persistible, todos sobre `BaseModel` con *prepared statements* de PDO |
+| Bibliotecas de servicio | 11 | lógica que no pertenece ni al controlador ni al modelo (§11.4.5) |
+| Vistas PHP | 61 | organizadas por destino: `admin/`, `portal/`, `auth/`, `layouts/`, `errors/` |
+| Filtros propios | 5 | `AuthFilter`, `RoleFilter`, `PermisoOperadorFilter`, `AdminRedirectFilter`, `AgenteTokenFilter` |
+
+**Controladores independientes por trámite.** Se desarrolló un controlador dedicado para cada uno de los 7 trámites operativos de movilidad, asegurando que el sistema validara correctamente los campos antes de guardarlos:
+
+| Trámite | Controlador | Regla distintiva que valida |
+|---|---|---|
+| UR-TT-T-01 Concesión de Transporte | `Ciudadano\TramiteConcesionTransporteController` | persona física/moral, RFC, modalidades |
+| UR-TT-T-02 Constancia de Despintado | `Ciudadano\TramiteDespintadoController` | exento de pago, obliga a cita de inspección física |
+| UR-TT-T-03 Orden de Plaqueo | `Ciudadano\TramiteOrdenPlaqueoController` | oficio para gestión estatal (SATEG) |
+| UR-TT-T-04 Permiso Eventual | `Ciudadano\TramitePermisoEventualController` | cotización por días de vigencia, con pago |
+| UR-TT-T-05 Cierre Temporal de Calles | `Ciudadano\TramiteCierreCalleController` | horas/días y categoría vial, vías alternas |
+| UR-TT-T-06 Cesión de Concesión | `Ciudadano\TramiteCesionConcesionController` | regulado, detrás de bandera de función |
+| UR-TT-T-07 Carga y Descarga | `Ciudadano\TramiteCargaDescargaController` | toneladas y periodo, con pago |
+
+Cada uno de los siete tiene su clase de prueba dedicada o compartida en la suite (§10.2), más `TramitesValidacionRedirectTest`, que verifica que un formulario inválido regrese con los errores visibles y **no** con el expediente a medias.
+
+#### 11.4.2. Gestión documental (el módulo crítico)
+
+Se programó un módulo específico para la subida de archivos (`app/Libraries/DocumentoUploader.php` + `app/Libraries/SupabaseStorage.php`). Su secuencia, tal como está en el código:
+
+1. **Rechazo en origen:** se descarta cualquier archivo con error de subida y, fuera del entorno de pruebas, todo lo que no pase `isValid()` (evita confiar en un `multipart` fabricado a mano).
+2. **Validación de peso:** tope duro de **10 MB** (`$tamanoMaximo = 10485760`).
+3. **Validación de tipo por contenido, no por nombre:** se inspecciona el *MIME* real del archivo con `getMimeType()` contra una lista corta de tipos permitidos —`application/pdf`, `image/jpeg`, `image/png`— y la **extensión se deduce del MIME**, nunca del nombre que envió el cliente. Un archivo llamado `licencia.pdf` que en realidad es otro formato no pasa.
+4. **Nombre único:** se genera un **UUID v4** completo con `random_bytes(16)` (con los bits de versión y variante correctos) y se le anexa la extensión deducida. La ruta dentro del almacén es `solicitud_{id}/{uuid}.{ext}`, así que los documentos de un expediente quedan agrupados y ninguno puede pisar a otro.
+5. **Huella criptográfica:** se calcula `hash('sha256', $contenido)` sobre el binario leído en memoria y se guarda en la columna `documentos.hash_sha256`. Esto garantiza que el archivo **no sea alterable en el futuro** sin que la alteración se detecte al recalcular la huella.
+6. **Envío al bucket** `documentos` de Supabase Storage, en modo privado, con el *metadata* de `nombre_original`, `mime_type` y tamaño conservados como datos descriptivos.
+7. **Entrega controlada:** la descarga no usa URLs públicas sino **URLs firmadas de vida corta** (§3.4); en modo local la firma es propia con **HMAC-SHA256**, caducidad de 1 hora, comparación en tiempo constante (`hash_equals`) y validación contra travesía de rutas (§3.5.1).
+
+> **Argumento para la defensa:** el orden importa. Validar el MIME **antes** de asignar nombre y **antes** de subir significa que nunca se escribe en el almacén un archivo que no se quiera; y calcular el hash sobre el contenido en memoria (no sobre el archivo ya almacenado) significa que la huella corresponde a lo que el ciudadano efectivamente entregó, no a lo que el almacén conserva.
+
+#### 11.4.3. Seguridad y roles
+
+Se implementaron **Filtros** (*middleware*) de CodeIgniter para proteger el sistema. Estos filtros leen el rol del usuario que inició sesión; si un ciudadano intenta abrir una URL que pertenece al panel de administración, el sistema lo bloquea automáticamente.
+
+| Filtro | Qué hace | Alcance declarado |
+|---|---|---|
+| `AuthFilter` | Exige sesión iniciada (`user_id`); sin ella, redirige a login | rutas protegidas de portal y panel |
+| `RoleFilter` | Consulta el rol real en base de datos (`tieneRol`) y autoriza o rechaza | argumentos por ruta (`role:administrador`) |
+| `AdminRedirectFilter` | Si un funcionario entra al portal ciudadano, lo devuelve a su panel | prefijo `portal/*` |
+| `PermisoOperadorFilter` | Autorización de grano fino por sección dentro del rol operador | `admin`, `admin/*` |
+| `AgenteTokenFilter` | Valida el token de portador con caducidad para las escrituras de la app móvil | `api/infracciones/*` |
+
+Complemento importante para el documento final: la permisología de grano fino se resuelve por **prefijo de URI más largo**, así que una ruta nueva creada bajo un prefijo ya catalogado queda protegida sin escribir configuración (§4.4.3), y el administrador **nunca puede bloquearse a sí mismo** (§4.4.5).
+
+#### 11.4.4. Reglas de negocio del expediente
+
+* **Máquina de estados finita:** `EstadoSolicitudService` define qué transiciones son legales; un expediente no puede saltar de `Rechazado` a `Aprobado` ni pasar por alto un estado intermedio (§7.2).
+* **Motivo obligatorio:** ningún cambio a `Prevención` o `Rechazo` se acepta sin comentario escrito, con respaldo físico en `historial_estatus.comentario` y en `solicitudes.comentario_rechazo` (§7.3, §11.3.2).
+* **Cotización dinámica:** `TarifarioService` resuelve el monto a partir de tarifas vigentes por periodo y, cuando aplica, del valor de la UMA; `ResolverMontoInfraccionService` hace lo propio con los rangos mínimo/máximo de las infracciones (§6.2).
+* **Folio único:** `FolioGenerator` produce un identificador de 20 caracteres derivados de un UUID v4, usado como llave visible del expediente y como criterio de búsqueda en ambos canales (§7.6).
+
+#### 11.4.5. Desplazamiento de lógica a servicios (por qué no todo va en el controlador)
+
+Once bibliotecas asumen la lógica que un MVC ingenuo dejaría en los controladores: `EstadoSolicitudService`, `TarifarioService`, `ResolverMontoInfraccionService`, `DocumentoUploader`, `SupabaseStorage`, `FolioGenerator`, `BanbajioMockGateway`, `FeatureFlags`, `AgenteTokenService`, `PermisosOperador` y `DesgloseSistema`. La razón no es estética: **una regla que vive en una biblioteca puede probarse sin HTTP** (las cuatro clases de `tests/app/Libraries/`) y puede reutilizarse desde el portal, desde el panel y desde la API sin copiar código. El caso más claro es el tarifario: el mismo cálculo lo consumen el ciudadano que inicia el trámite, el operador que lo radica en ventanilla y el tablero que suma lo recaudado.
+
+---
+
+### 11.5. Fase de Frontend y Despliegue en Entorno de Producción
+
+#### 11.5.1. Conexión de vistas
+
+La última etapa de desarrollo consistió en programar las **vistas** (*Views*) en PHP/HTML, conectándolas con los datos que enviaba el controlador. Se construyeron dos entornos visuales complejos:
+
+* **El Portal Ciudadano:** permite iniciar trámites, subir documentos y cuenta con un **simulador de pago en línea** para cambiar el estatus del expediente. El simulador no es un adorno del frontend: está aislado tras la interfaz `PaymentGatewayInterface` y su implementación `BanbajioMockGateway`, con tres endpoints `pagar` reales (`carga-descarga`, `permiso-eventual`, `cierre-calle`) que invocan la pasarela, registran `fecha_pago` y hacen avanzar la máquina de estados. Cambiar el proveedor real exige **sustituir la implementación, no reescribir el portal** (§2.4, §6.3).
+* **El Panel Administrativo Web:** desarrollado desde cero con un *dashboard* de control para funcionarios, con desglose navegable (cada tarjeta de métrica lleva a su detalle), bandeja maestra de expedientes, visor documental, agenda de inspecciones, radicación presencial y administración de catálogos. Se incluyó una **regla de negocio estricta**: si un operador rechaza un trámite ciudadano, el sistema lo obliga a escribir el motivo del rechazo para que el ciudadano pueda subsanarlo (§7.3).
+
+**Convención de capa de vista adoptada en la fase final.** Las 61 vistas se unificaron tras la convención `/** @var */` + lectura de `$this->data` (§10.5), y las páginas de error por defecto del marco se sustituyeron por cuatro páginas propias en español (`app/Views/errors/html/`: `error_400.php`, `error_404.php`, `error_exception.php` y `production.php`), de modo que un 404 o un 400 no muestre ni trazas técnicas ni texto en inglés a la ciudadanía.
+
+#### 11.5.2. Pruebas y despliegue
+
+Con el sistema codificado se realizaron **pruebas manuales simulando el ciclo completo de una solicitud ciudadana** (radicar → cotizar → pagar → revisar → prevenir → subsanar → dictaminar → consultar en el portal), y ese mismo ciclo quedó automatizado en la suite de funcionalidad de `tests/app/Controllers/` (§10.1, §10.2). Una vez validado, el sistema se publicó en internet mediante **Vercel**.
+
+Dado que Vercel utiliza tecnología **serverless** (sin un servidor fijo ni sistema de archivos persistente), se tuvo que reconfigurar CodeIgniter para que **las sesiones de los usuarios se guardaran dentro de la base de datos de PostgreSQL** en lugar de en archivos temporales:
+
+| Ajuste | Configuración |
+|---|---|
+| Motor de sesiones | se cambia **condicionalmente según la plataforma**, en el constructor de `app/Config/Session.php` (ver código abajo) |
+| Tabla de destino | `ci_sessions`, creada por `supabase/migrations/0003_ci_sessions.sql` |
+| Conectividad | Connection pooler **PgBouncer** de Supabase (puerto 6543, modo transacción) con PDO (§5.3) |
+| Entrega estática | `vercel.json` declara el arreglo `routes`; **solo se sirve lo declarado** (§10.4) |
+| Construcción automática | `scripts/vercel-install.sh` ejecuta `composer install` y el *build* de la app Expo en cada publicación |
+| HTTPS | filtro `forcehttps` y `APP_FORCE_HTTPS` hacia el dominio de producción |
+
+El cambio de motor de sesiones no se escribió como un valor fijo sino como una **adaptación detectada en tiempo de arranque**, lo que permite conservar un solo código base para dos entornos:
+
+```php
+// app/Config/Session.php
+public function __construct()
+{
+    parent::__construct();
+
+    if ($this->isVercel()) {                 // getenv('VERCEL') == '1'
+        $this->driver   = DatabaseHandler::class;
+        $this->savePath = 'ci_sessions';
+        $this->DBGroup  = null;              // usa el DBGroup 'default'
+    }
+}
+```
+
+Fuera de Vercel el controlador sigue siendo `FileHandler` con `savePath = WRITEPATH.'session'`, así que el desarrollo local no depende de tener la base de datos levantada para iniciar sesión. **El costo de esa comodidad:** el comportamiento de sesiones solo se ejercita contra PostgreSQL en producción, motivo adicional para verificar siempre contra la URL desplegada.
+
+Con este último ajuste el sistema quedó publicado en línea, completamente funcional y seguro, y listo para la fase final de pruebas con la dependencia.
+
+> **Error de despliegue que conviene registrar** (y que la prueba de humo contra producción detectó): en local, `php -S` / `spark serve` sirve todo el contenido de `public/`, pero Vercel solo sirve lo declarado en `vercel.json`. Un recurso estático nuevo (una imagen, un favicon) **funciona en local y responde 404 en producción**. Por eso la verificación de estáticos, rutas y *headers* se hace siempre contra la URL desplegada.
+
+---
+
+### 11.6. Correspondencia con las Figuras del Documento Final
+
+La tabla siguiente indica, para cada figura ya prevista en el capítulo de metodología, qué debe mostrar y de dónde obtenerla, más cuatro figuras adicionales que sostienen apartados nuevos.
+
+| Figura | Qué debe capturar | Dónde obtenerla |
+|---|---|---|
+| Figura 1 | Captura del grupo de mensajería del equipo | conversación real; recortar nombres y teléfonos ajenos |
+| Figura 2 | Bitácora física de control de folios y documentos retenidos | fotografía de campo en Tránsito y Seguridad |
+| Figura 3 | Diseño preliminar de la pantalla de inicio | borrador de diseño o captura temprana del repositorio (`git log` de `app/Views/`) |
+| Figura 4 | Diagrama relacional preliminar de la base de datos | panel visual de Supabase (Database Schema) o exportación de las 21 tablas |
+| Figura 5 | Fragmento de código del método de subida de archivos del controlador administrativo | `app/Libraries/DocumentoUploader.php::subir()` (el paso de UUID + SHA-256 es el más ilustrativo) |
+| Figura 6 | Panel administrativo (`Dashboard`) | `/admin/dashboard` en producción |
+| Figura 7 | Portal Ciudadano publicado en línea | `/portal/dashboard` en el dominio de producción |
+| **Figura sugerida 8** | Before/after del desbordamiento móvil | el título "Registrar Solicitud Presencial" recortado vs. acotado a dos líneas (§9.8.4) |
+| **Figura sugerida 9** | Terminal con `php spark migrate` y las 22 migraciones aplicadas | evidencia directa de §11.3.3 |
+| **Figura sugerida 10** | Corrida de PHPUnit en verde: `OK (210 tests, 845 assertions)` | evidencia de §10.1 y del criterio de cierre por iteración (§1.3) |
+| **Figura sugerida 11** | Flujo de la máquina de estados | diagrama de la sección 3 de `DOCUMENTACION_GENERAL.md` o §7.2 |
+
+### 11.7. Referencias Tecnológicas Utilizadas (para la bibliografía)
+
+Formato tentativo en APA 7, pendiente de que el autor verifique fechas de consulta y versión conforme a su institución:
+
+* Bootstrap. (s.f.). *Bootstrap 5.3.2 documentation*. https://getbootstrap.com/
+* Bootstrap Icons. (s.f.). *Bootstrap Icons 1.11.1*. https://icons.getbootstrap.com/
+* CodeIgniter Foundation. (s.f.). *CodeIgniter 4 documentation* (versión 4.7.4). https://codeigniter.com/user_guide/
+* Expo. (s.f.). *Expo SDK 57 / React Native 0.86*. https://docs.expo.dev/
+* National Institute of Standards and Technology (NIST). (2015). *FIPS 180-4: Secure Hash Standard (SHS)*. U.S. Department of Commerce. https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+* PostgreSQL Global Development Group. (s.f.). *PostgreSQL 15 documentation*. https://www.postgresql.org/docs/15/
+* PHPUnit. (s.f.). *PHPUnit 10.5 documentation*. https://phpunit.de/
+* Supabase. (s.f.). *Supabase: Open Source Firebase Alternative* (PostgreSQL y Storage). https://supabase.com/docs
+* Vercel. (s.f.). *Vercel: Build and deploy the best web experiences with the Frontend Cloud*. https://vercel.com/docs
+
+---
+
+## 12. Conclusiones Técnicas de la Metodología
 
 La arquitectura construida para el **Portal Ciudadano y Panel Administrativo Web** resolvió con éxito las demandas operativas y normativas de la Dirección de Movilidad y Transporte de Uriangato:
 
@@ -1214,4 +1723,13 @@ La arquitectura construida para el **Portal Ciudadano y Panel Administrativo Web
 3. **Mantenibilidad y Escalabilidad:** El desacoplamiento mediante patrones de diseño (EAV para trámites heterogéneos, Feature Flags para control de versiones y Gateway para pagos) proporciona al H. Ayuntamiento una base tecnológica sólida. El catálogo declarativo de campos (§7.6.2) demostró su valor concreto: agregar un trámite nuevo al canal presencial es **añadir una entrada al arreglo**, no escribir un controlador y una vista nuevos.
 4. **Cobertura del Mundo Real (Canal Híbrido):** El sistema no asume un ciudadano digitalmente competente. La coexistencia del portal de autogestión (§6) y la radicación presencial con validez idéntica (§7.6), ambas escribiendo en el mismo expediente y compartiendo folio, tarifario y máquina de estados, es la decisión que convierte la plataforma en una herramienta **usable por la totalidad de la población** y no solo por su segmento conectado.
 5. **Usabilidad Multidispositiva como Requisito, no como Adorno:** El diseño *mobile-first* con objetivos táctiles de 44 px, navegación inferior en el portal, gaveta lateral con áreas seguras en el panel y una portada que degrada el desenfoque para priorizar contraste (§9) responde al dispositivo real con el que la gente tramita. La corrección del servidor de borde para recursos estáticos (§9.6) dejó registrada una restricción de arquitectura que de otra forma se manifestaría como fallos silenciosos en producción.
-6. **Calidad Comprobable:** La verificación no es una afirmación sino un resultado reproducible: **117 casos de prueba y 442 aserciones en verde** sobre un harness SQLite aislado de los datos institucionales (§10), con cobertura de permisos, estados, montos dinámicos, validaciones por trámite y blindajes de almacenamiento.
+6. **Calidad Comprobable:** La verificación no es una afirmación sino un resultado reproducible: **210 casos de prueba y 845 aserciones en verde**, en 24 clases, sobre un harness SQLite aislado de los datos institucionales (§10), con cobertura de permisos, estados, montos dinámicos, validaciones por trámite, renderizado de vistas y blindajes de almacenamiento.
+7. **Medir en Lugar de Suponer:** Dos hallazgos del cierre del proyecto no habrían aparecido con una revisión visual: el título de todas las páginas administrativas se pintaba vacío (§10.5) y el texto largo del panel se recortaba en silencio por debajo del *overflow-x: hidden* (§9.8). Ambos se detectaron con instrumentación —barrido de HTML producido y medición a 360/320/290 px con página de control— y ambos se convirtieron en candados automatizados para que no puedan regresar.
+8. **El Proceso También Es Resultado:** La secuencia iterativa e incremental (§1.3) y el levantamiento presencial en dos vertientes (§11.1) no son un preámbulo del trabajo sino parte de él: explican por qué el andamiaje soportó siete trámites sin reescribirse, por qué el esquema de datos es portable entre PostgreSQL y SQLite y por qué el panel habla el vocabulario operativo de la dependencia en lugar de imponer otro.
+
+### Cómo usar este documento en el informe final
+
+* **Capítulo de metodología (proceso por fases):** copiar y desplegar desde la **sección 11**, que ya está redactada en orden temporal y con sus tablas de evidencia.
+* **Capítulos de arquitectura, base de datos y seguridad:** remitirse a las **secciones 2 a 8**, que son el detalle técnico.
+* **Capítulo de resultados y análisis (pendientes):** la sección 9.8 (tabla de antes/después de la auditoría móvil), la 10.1 (cifra de suite), la 10.6 (verificación de sincronía entre ramas) y la 11.3 (número de migraciones y tablas) aportan datos cuantitativos directos.
+* **Antes de entregar:** volver a ejecutar `vendor/bin/phpunit --no-coverage` y citar la cifra obtenida en ese momento, no la de este documento.

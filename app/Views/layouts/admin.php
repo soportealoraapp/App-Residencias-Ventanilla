@@ -234,7 +234,7 @@ $__tituloPagina = trim($this->renderSection('pageTitle', true));
                 <button type="button" class="btn btn-outline-secondary btn-sm sidebar-toggle-btn" id="btnSidebarToggle" aria-label="Abrir menú" aria-controls="sidebarAdmin" aria-expanded="false">
                     <i class="bi bi-list fs-5"></i>
                 </button>
-                <h1 class="h5 mb-0 text-truncate"><?= $this->renderSection('pageTitle') ?></h1>
+                <h1 class="h5 mb-0 text-truncate" title="<?= esc($__tituloPagina) ?>"><?= $this->renderSection('pageTitle') ?></h1>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <span class="rol-chip <?= $rolChip ?> d-none d-sm-inline-flex" data-bs-toggle="tooltip" data-bs-placement="bottom" title="<?= esc($rolAlcance) ?>">
