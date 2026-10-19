@@ -312,18 +312,24 @@ Cuando el backend o el panel reciben cambios, la pregunta no es "¿la app funcio
 | # | Verificación | Método | Resultado |
 |---|---|---|---|
 | 1 | **Contrato de API** | Cotejar las rutas invocadas por `src/services/` y `src/api/` contra `app/Config/Routes.php` | Coincidencia exacta en los cinco endpoints: `/api/agentes/login`, `/api/checklist-infracciones`, `/api/parametros`, `/api/infracciones/sincronizar`, `/api/infracciones/evidencias`; las dos de escritura protegidas por el filtro `agenteToken` |
-| 2 | **Ausencia de ruptura de contrato** | `git show --stat <último commit>` restringido a los archivos que la app consume | Único cambio fue `app/Models/AgenteTokenModel.php` y es **aditivo** (la clase ya existía); ningún campo consumido desaparece |
+| 2 | **Ausencia de ruptura de contrato** | `git show --stat <últimos commits>` restringido a los archivos que la app consume | Los tres commits más recientes del backend tocaron `app/Config/Routes.php` (los tres atajos públicos de acceso, fuera de `api/*`), controladores y vistas del **panel** y una llave foránea de `solicitudes`. **Ninguno** toca los cinco endpoints, `AgenteTokenModel`, `boletas_infracciones`, `catalogo_infracciones*` ni `parametros_app`: el contrato queda intacto |
 | 3 | **Versión publicada** | Comparar `package.json`, `app.json` y el valor por defecto del parámetro `app_version` | `1.0.0` en los tres sitios, y el panel muestra ese mismo valor en "Configuración App Agentes de Tránsito" |
 | 4 | **Entorno del cliente** | Revisar `mobile/agentes-transito/.env` | `EXPO_PUBLIC_API_BASE_URL=https://app-residencias.vercel.app` y `APP_ENV=production` |
 | 5 | **Estado del código** | `git status` sobre `mobile/` | Sin cambios sin compitear |
-| 6 | **Haz servido en `/agentes`** | `git log` comparado entre `mobile/agentes-transito` y `public/agentes` | Ambos en el mismo commit; el export reproduce el contenido servido byte a byte |
+| 6 | **Haz servido en `/agentes`** | `git status` tras reexportar, más sondeo de la URL de producción | Reexportar con `scripts/exportar_agentes_web.ps1` dejó `public/agentes` **sin un solo cambio** (salida idéntica byte a byte) y el dominio de producción sirve el mismo `entry-*.js` del repositorio, con `lang="es"` y sin cadenas en inglés dentro del bundle |
 
-**Regla práctica para no perder la sincronía:** cualquier cambio en `mobile/agentes-transito/` queda **invisible en producción** hasta que se vuelve a exportar el haz web:
+> **Cómo se usó esta tabla para descartar un reporte equivocado:** se reportó que la versión publicada seguía mostrando un botón en inglés "Crear una cuenta" porque "el bundle desplegado es viejo". Las filas 5 y 6 lo niegan con evidencia: la cadena no existe en el repositorio, el reexport no produce diferencia y el haz desplegado en producción es idéntico al commiteado. El defecto real estaba en otro lado y sí era propio del código: los atajos `/login`, `/register` y `/logout` de las vistas PHP estaban muertos por una colisión de nombre con las rutas de autenticación. **Consecuencia metodológica:** antes de reconstruir algo que "se ve viejo", comprobar primero que el fuente no contenga el síntoma; reexportar un haz correcto solo refuerza la falsa idea de que el despliegue no propaga los cambios.
 
-```bash
+**Regla práctica para no perder la sincronía:** cualquier cambio en `mobile/agentes-transito/` queda **invisible en producción** hasta que se vuelve a exportar el haz web. Use el script del repositorio, no el comando suelto:
+
+```powershell
 cd mobile/agentes-transito
-npx expo export --platform web --output-dir ../../public/agentes --clear
+..\..\scripts\exportar_agentes_web.ps1
 ```
+
+El script hace tres pasos que un `npx expo export` a secas no cubre: exporta el haz, **repone los 19 archivos `.ttf`** que el exportador elimina de `public/agentes/fonts/` y **localiza el shell** (`public/agentes/index.html`), que Expo genera en inglés: `lang="en"`, el `<title>`, el aviso de *"necesitas habilitar JavaScript"* y los comentarios de plantilla. `scripts/localizar_shell_agentes.php` sustituye esas cinco cadenas y **falla si sobrevive alguna**, de modo que un cambio de redacción en Expo se detecta en el build en lugar de publicarse. Omitir la reposición de fuentes o la localización produce tipografía caída y shell en inglés publicado.
+
+> El shell **no** contiene textos de las pantallas: cadenas como el botón de crear cuenta viven dentro del `entry-*.js`, en el fuente React de `app/` y `src/`. Por eso un botón en inglés visible en producción se diagnostica buscando la cadena en el repositorio y en el bundle servido, no reescribiendo el shell.
 
 Un repositorio con el fuente modificado y el `public/agentes` antiguo produce el peor de los fallos: la app de demostración funciona distinto a la app instalada en el teléfono del agente.
 

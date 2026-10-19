@@ -117,6 +117,8 @@ stateDiagram-v2
 5. **Módulo de Inspección de Despintado (T-02):** Agenda de citas para revisión en patio y dictamen técnico de despintado con cotejo vehicular.
 6. **Monitoreo de Infracciones de Tránsito:** Visor centralizado de boletas levantadas en campo por los agentes viales, con consulta de infractor, placas, coordenadas y fotografías de evidencia.
 7. **Administración de Catálogos y Parámetros:** Gestión de valor de la UMA, tarifas municipales, convocatorias, concesiones y formatos oficiales.
+   * **Convocatorias (`/admin/convocatorias`)**: CRUD completo — listado, alta (`/nueva`), edición, borrado, carga de bases, evaluación y selección de ganadores. **No se puede eliminar una convocatoria que ya tenga solicitudes ligadas**: el sistema lo impide y manda al operador a desligar los expedientes primero.
+   * **Concesiones (`/admin/concesiones`)**: el borrado está **guardado por la misma base de datos** — la llave foránea `solicitudes.concesion_id` es `ON DELETE RESTRICT`, así que intentar eliminar un título con historial arriba produce un error visible en vez de borrar solicitudes en cascada.
 8. **Usuarios y Ciudadanos (`/admin/usuarios`):** Alta, edición y desactivación de cuentas de ciudadanos desde la ventanilla. La baja definitiva es exclusiva del administrador.
 9. **Permisos del Operador (`/admin/permisos-operador`, solo administrador):** El administrador enciende o apaga secciones del panel para el rol `operador_ventanilla` (solicitudes, usuarios, tarifas, concesiones, formatos, auditoría, convocatorias y los tres módulos de App Tránsito) **sin programar ni crear roles nuevos**. Se persiste como JSON en `parametros_app` y lo hace cumplir `PermisoOperadorFilter` en todo el prefijo `admin`.
 10. **Bitácora de Auditoría Municipal:** Registro de todas las operaciones administrativas críticas (altas, modificaciones, cancelaciones) con IP y usuario.
@@ -214,14 +216,14 @@ La persistencia unificada reside en PostgreSQL alojado en Supabase:
 | `users` | Portal / Admin | Cuentas de ciudadanos y funcionarios con contraseña encriptada (bcrypt) y perfil civil (nombre, CURP, RFC, domicilio, teléfono, INE). |
 | `roles` / `user_roles` | Portal / Admin | Catálogo de los tres roles del sistema (`administrador`, `operador_ventanilla`, `ciudadano`) y su asignación por cuenta. |
 | `ci_sessions` | Backend CI4 | Manejador de sesiones persistentes en base de datos para entornos serverless en Vercel. |
-| `solicitudes` | Portal / Admin | Registro maestro de trámites con folio único, estatus, monto, fechas de radicación y pago, y ligas opcionales a `concesion_id` y `convocatoria_id`. |
+| `solicitudes` | Portal / Admin | Registro maestro de trámites con folio único, estatus, monto, fechas de radicación y pago, y ligas **opcionales** a `concesion_id` y `convocatoria_id`. Ambas llaves son `ON DELETE RESTRICT` (con `ON UPDATE SET NULL`): el expediente sobrevive si el catálogo de arriba se va. |
 | `solicitud_datos` | Portal / Admin | Almacenamiento tipo EAV (Entity-Attribute-Value) de campos específicos según el tipo de trámite (vehículos, rutas, placas, motivos) y el marcador de canal `origen` (`portal` o `presencial`). |
 | `documentos` | Portal / Admin | Metadatos de archivos adjuntos: nombre original, tipo, tamaño en bytes, ruta en el almacén y hash SHA-256 de integridad. |
 | `historial_estatus` | Portal / Admin | Trazabilidad inmutable de cambios de estado, funcionario que autorizó, fecha y observaciones técnicas. |
 | `verificaciones_fisicas` | Admin (T-02) | Agenda de citas de inspección física en patio municipal, dictamen de despintado y observaciones del perito. |
-| `concesiones` | Admin | Padrón municipal de títulos de concesión: número de título, titular, ruta, placas, vigencia y estatus. |
+| `concesiones` | Admin | Padrón municipal de títulos de concesión: número de título, titular, ruta, placas, vigencia y estatus. Su eliminación está restringida mientras exista alguna solicitud que los mencione. |
 | `tarifas` | Admin | Conceptos de cobro con monto, factores UMA y periodo de vigencia (`vigente_desde` / `vigente_hasta`). |
-| `convocatorias` | Admin (T-01) | Convocatorias públicas de licitación de concesiones, con estatus `vigente` y selección de ganadores. |
+| `convocatorias` | Admin (T-01) | Convocatorias públicas de licitación de concesiones: título, periodo de registro (`periodo_registro_inicio` / `periodo_registro_fin`), bases publicadas, estatus `vigente` y selección de ganadores. El panel lleva el CRUD completo; el borrado está restringido si hay solicitudes ligadas. Cuando hay varias convocatorias abiertas, **el ciudadano elige cuál** en el formulario UR-TT-T-01. |
 | `formatos_tramite` | Portal / Admin | Repositorio de formatos oficiales descargables desde el portal. |
 | `parametros_app` | Global | Parámetros dinámicos en formato clave-valor: valor de la UMA, reglas fotográficas de la app y **permisos del operador como JSON**. |
 | `parametros_sistema` | Global | Configuración general del sistema web. |
@@ -268,6 +270,8 @@ Ambas interfaces son *mobile-first* y operan desde teléfono sin perder funciona
 
 > ⚠️ **Restricción de despliegue:** en Vercel solo se sirve lo declarado en el arreglo `routes` de `vercel.json`; cualquier otra petición cae en el comodín que la entrega a PHP y responde 404. **Al agregar una imagen o archivo estático a `public/`, hay que declarar su ruta** y verificarla contra la URL desplegada, porque en local `spark serve` sí sirve todo el directorio.
 
+> ⚠️ **Restricción de enrutamiento (CodeIgniter 4):** una ruta cuyo `from` coincida con el **nombre** ya asignado con `['as' => …]` a otra ruta se descarta **en silencio** — no hay error ni en arranque ni en logs. Es lo que tenía muertos los atajos `/login`, `/register` y `/logout` desde el commit inicial: su `from` era idéntico al nombre `login`/`register`/`logout` de `auth/login`. Cada atajo necesita su propio `as` (`acceso`, `registro`, `salida`). Antes de sospechar del despliegue, compruébalo con `php spark routes`: **declarada no es lo mismo que registrada**. Cobertura duradera: `tests/app/Controllers/Views/EnlacesEstaticosTest.php` coteja los `href` literales de las vistas contra el mapa real de rutas y contra `public/` (método en `DOC_METODOLOGIA_PORTAL_PANEL.md` §10.7).
+
 ---
 
 ## PARTE IV: GUÍA DE INSTALACIÓN, CONFIGURACIÓN Y DESPLIEGUE
@@ -289,14 +293,17 @@ cd App-Residencias-Ventanilla
 composer install --no-interaction --prefer-dist
 
 # 3. Configurar variables de entorno
-cp env .env
+cp .env.example .env
 # Configurar POSTGRES_URL, SUPABASE_URL, SUPABASE_ANON_KEY en .env
+# El diccionario de variables está en el propio .env.example, agrupado por sección.
 
 # 4. Instalar y compilar la App Móvil (versión Web para /agentes/)
 cd mobile/agentes-transito
 npm install --legacy-peer-deps
-npx expo export --platform web --output-dir ../../public/agentes --clear
+# Usar el script, no `expo export` suelto: además de exportar vuelve a copiar
+# los .ttf y localiza el shell HTML a español (falla si queda texto en inglés).
 cd ../..
+powershell -File scripts/exportar_agentes_web.ps1
 
 # 5. Iniciar servidor de desarrollo
 php spark serve --port 8080
@@ -316,7 +323,7 @@ El proyecto está configurado para despliegue continuo en Vercel Serverless medi
 ./vendor/bin/phpunit                       # Linux / macOS
 ./php82/php.exe vendor/bin/phpunit         # Windows con el PHP del repositorio
 ```
-La suite consta de **210 casos de prueba y 845 aserciones** repartidas en 24 clases (control de acceso, permisos del operador, los 7 trámites, tarifario dinámico, máquina de estados, radicación presencial, API REST de agentes, almacenamiento local, renderizado de vistas y desglose del tablero). Corre contra SQLite en memoria con prefijo `db_`, de modo que **jamás toca la base institucional**. Requiere migraciones aplicadas.
+La suite consta de **247 casos de prueba y 931 aserciones** repartidas en 27 clases (control de acceso, permisos del operador, los 7 trámites, tarifario dinámico, máquina de estados, radicación presencial, API REST de agentes, almacenamiento local, renderizado de vistas, desglose del tablero, **CRUD de convocatorias, protección del catálogo de concesiones y cotejo de los enlaces estáticos de las vistas**). Corre contra SQLite en memoria con prefijo `db_`, de modo que **jamás toca la base institucional**. Requiere migraciones aplicadas. Duración de referencia: ~1 min con 28 MB de memoria.
 
 La app móvil tiene su propio verificador, independiente de PHPUnit:
 

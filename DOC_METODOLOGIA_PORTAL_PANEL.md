@@ -70,6 +70,7 @@
    * 10.4. Pruebas de Humo y Verificación en Producción
    * **10.5. Barrido de Renderizado de Vistas y Convención de Inyección de Datos**
    * **10.6. Verificación de Sincronía entre Ramas (Backend ↔ App Móvil)**
+   * **10.7. Cotejo Estático de Enlaces contra el Mapa de Rutas Real**
 11. **Recorrido Procesal del Desarrollo (Fases)** — *organizado por fases de trabajo, para el capítulo de metodología del documento final*
    * 11.0. Mapa de Correspondencia con las Fases del Proyecto
    * 11.1. Fase de Análisis y Levantamiento de Requerimientos en Campo
@@ -236,6 +237,15 @@ erDiagram
     tarifas ||..o{ solicitudes : "determina costo"
     users ||--o{ auditoria : "ejecuta accion"
 ```
+
+**Política de borrado del padrón (`ON DELETE RESTRICT`).** Dos ligas del expediente maestro hacia los catálogos —`solicitudes.concesion_id` y `solicitudes.convocatoria_id`— nacieron con `ON DELETE CASCADE`, que es la opción que usa por omisión el constructor de tablas de CodeIgniter 4. En un expediente administrativo eso no es una preferencia de diseño sino un defecto de integridad: eliminar una concesión del padrón o una convocatoria publicada se llevaba por delante los expedientes de la ciudadanía vinculados, sin aviso y sin forma de revertirlo. La política adoptada es **RESTRICT en las dos capas**:
+
+| Capa | Mecanismo | Efecto |
+|---|---|---|
+| Aplicación | `CatalogoConcesionesController::eliminar()` y `ConvocatoriasController::eliminar()` cuentan los expedientes vinculados antes de intentar el borrado | Se rechaza la operación con mensaje explicativo: editar el estatus (`Vencida`, `Suspendida`, `Anulada`) en lugar de eliminar |
+| Base de datos | Llave foránea `... ON DELETE RESTRICT`, declarada en las migraciones CI4 y convertida en `supabase/migrations/0009_concesion_id_sin_cascade.sql` | Un `DELETE` lanzado desde el SQL Editor, desde un script o desde la API de Supabase también falla |
+
+Dar de baja un elemento del padrón sin perder historia significa **cambiarle el estatus**, no borrarlo; la baja física solo es posible mientras no exista un solo expediente vinculado. La conversión de la llave es idempotente (`DROP CONSTRAINT IF EXISTS` + `ADD CONSTRAINT`) y está dentro de transacción, así que puede reaplicarse sin riesgo y no deja la tabla a medias. El propio archivo SQL termina con la consulta de verificación contra `pg_constraint.confdeltype`, que debe reportar `RESTRICT`.
 
 ### 3.2. Diccionario de Datos del Módulo Web
 
@@ -646,6 +656,8 @@ stateDiagram-v2
 * **Datos Capturados:** Modalidad de servicio (urbano, suburbano), propuesta de derrotero, capacidad de pasajeros, modelo de unidad.
 * **Documentación:** Identificación oficial, comprobante de domicilio, propuesta de plan operativo, cartas de antecedentes no penales.
 * **Integración Especial:** Se vincula a un registro activo de la tabla `convocatorias`.
+* **Selección de convocatoria (decisión de la última iteración).** Cuando hay **varias convocatorias vigentes simultáneas**, el formulario **deja elegir al ciudadano**: el controlador lee `ConvocatoriaModel::abiertasHoy()` y la vista pinta tarjetas de radio, una por convocatoria, con su periodo de registro y su título. La consulta `?convocatoria=N` preselecciona una, y si el número no corresponde a ninguna convocatoria abierta se ignora y se muestra la lista real —en ningún caso el parámetro de URL puede sacar al ciudadano de las convocatorias vigentes. Con **una sola** convocatoria abierta no se pide elección: se emite un `input hidden` con ese `id`. Se eliminó de tajo `ConvocatoriaModel::primeraVigente()`, que era el método que permitía reelegir automáticamente "la más reciente": sin ese método, el patrón no puede regresar por descuido.
+* **Orden significativo:** `abiertasHoy()` ordena por `periodo_registro_fin ASC`, es decir, **cierra primero la que aparece primero**. Ese orden es el que define cuál convocatoria queda preseleccionada por omisión, así que no es cosmético y está atado a las pruebas (§10.2).
 
 #### 2. `UR-TT-T-02`: Constancia de Despintado y Retiro de Aditamentos
 * **Alcance:** Trámite obligatorio previo a la desincorporación de una unidad vehicular del servicio público para acreditar el retiro de cromática oficial, números económicos y taxímetro.
@@ -810,7 +822,8 @@ Cada alteración sensible realizada desde el panel administrativo es interceptad
 ### 7.5. Módulos de Catálogos Municipales y Parámetros Operativos
 
 * **Catálogo de Tarifas (`CatalogoTarifasController`):** Administración de los conceptos de cobro municipal, configuración de valores monetarios fijos, definición de factores aplicables al valor diario de la Unidad de Medida y Actualización (UMA) y asignación del ejercicio fiscal.
-* **Catálogo de Concesiones (`CatalogoConcesionesController`):** Registro del padrón municipal de concesiones de transporte público, vinculación de números económicos, rutas asignadas, datos de la unidad vehicular (placas, serie), vigencia de la concesión y control de estatus (`vigente`, `vencida`, `suspendida`, `cancelada`).
+* **Catálogo de Concesiones (`CatalogoConcesionesController`):** Registro del padrón municipal de concesiones de transporte público, vinculación de números económicos, rutas asignadas, datos de la unidad vehicular (placas, serie), vigencia de la concesión y control de estatus (`vigente`, `vencida`, `suspendida`, `cancelada`). La **eliminación está guardada**: si la concesión tiene expedientes vinculados, el sistema rechaza el borrado y explica que se dé de baja cambiando el estatus (§3.1).
+* **Módulo de Convocatorias (`ConvocatoriasController`, UR-TT-T-01):** CRUD completo del padrón de licitaciones públicas —`index` con filtros por estatus, `nueva`/`guardar`, `editar`/`actualizar`, `eliminar` con el mismo candado de expedientes vinculados, `bases` (apertura del PDF oficial por URL firmada), `evaluacion` y `seleccionar` para el fallo de ganadores—. Las 14 columnas de la tabla cubren `titulo`, `fecha_publicacion`, `periodo_registro_inicio`/`_fin`, `estatus`, el archivo de bases (`bases_archivo`, `bases_nombre`, `bases_mime`, `bases_tamano`) y `created_by`. Sustituyó a una pantalla que solo leía datos: antes de este módulo el panel mostraba un estado vacío sin ninguna vía de alta, lo que volvía imposible operar UR-01 desde la institución.
 * **Módulo de Formatos Oficiales (`AdminController::formatos`):** Repositorio institucional para la subida y sustitución de formatos editables y solicitudes oficiales que los ciudadanos pueden descargar desde el portal web.
 * **Consola de Configuración de Tránsito (`AppTransitoController`):** Módulo administrativo que permite actualizar el valor de la UMA vigente, configurar las reglas fotográficas de la aplicación móvil de agentes de tránsito, dar de alta fundamentos legales en el catálogo de infracciones y auditar el historial de boletas levantadas en vía pública.
 
@@ -961,7 +974,7 @@ La superficie completa del panel, declarada en `app/Config/Routes.php` dentro de
 | Descarga documental | `GET admin/solicitudes/descargar-documento/(:num)` | permiso `solicitudes` |
 | Tarifario | `admin/tarifas` (listar, nuevo, guardar, editar, actualizar, eliminar) | permiso `tarifas` (eliminar: solo admin) |
 | Concesiones | `admin/concesiones` (CRUD completo) | permiso `concesiones` (eliminar: solo admin) |
-| Convocatorias | `admin/convocatorias/(:num)/evaluacion`, `seleccionar` | permiso `convocatorias` |
+| Convocatorias | `admin/convocatorias` (index), `nueva`, `guardar`, `editar/(:num)`, `actualizar/(:num)`, `eliminar/(:num)`, `(:num)/bases`, `(:num)/evaluacion`, `(:num)/seleccionar` | permiso `convocatorias` (eliminar: solo admin) |
 | Formatos | `admin/formatos`, `subir`, `eliminar` | permiso `formatos` |
 | Usuarios | `admin/usuarios` (index, nuevo, guardar, editar, actualizar, toggle) | permiso `usuarios` |
 | **Permisos del operador** | `GET admin/permisos-operador`, `POST admin/permisos-operador/guardar` | **solo `administrador`** |
@@ -969,6 +982,8 @@ La superficie completa del panel, declarada en `app/Config/Routes.php` dentro de
 | Auditoría | `GET admin/auditoria` | permiso `auditoria` |
 
 **Detalle técnico que evitó un defecto de enrutamiento:** la ruta literal `solicitudes/nueva` se declaró **antes** del patrón comodín `solicitudes/(:segment)`. CodeIgniter 4 evalúa patrones en orden de declaración, así que sin ese orden `nueva` habría sido interpretado como un folio inexistente. Como salvaguarda adicional está activo `setPrioritize(true)`.
+
+**Segundo defecto de enrutamiento, de detección más difícil: colisión entre nombre y ruta.** Los atajos públicos `/login`, `/register` y `/logout` estuvieron escritos en `app/Config/Routes.php` **desde el commit inicial**, pero no respondían: CI4 registra las rutas con una clave derivada del nombre (`['as' => ...]`) y, cuando el *from* de una definición nueva coincide con el nombre ya asignado a otra ruta, **descarta la definición en silencio** — sin error, sin aviso en el arranque y sin una sola línea en los logs; el único síntoma honesto es que la ruta no aparece en `php spark routes`. Como `auth/login`, `auth/register` y `auth/logout` ya usaban `['as' => 'login'|'register'|'logout']`, las tres rutas cortas nunca existieron. El costo visible: la página 404 propia enlaza "Iniciar sesión" a `/login`, así que el único botón de salida de ese mensaje llevaba a otro 404. Corrección: los atajos reciben nombre propio (`acceso`, `registro`, `salida`), el conflicto queda comentado junto a la definición y `spark routes` sirve para confirmarlo (antes: 0 apariciones de `login`; después: 1). La lección general es que **una ruta declarada no es una ruta registrada**, y por eso el cotejo de enlaces estáticos de §10.7 verifica el mapa real y no el archivo fuente.
 
 ---
 
@@ -1273,7 +1288,7 @@ Complementos de capa de vista:
 * **55 de 55 páginas sin desbordes reales en el rango de 312 a 354 px de *viewport* efectivo**, que cubre los teléfonos municipales más comunes (360 × 800 y los de entrada de 320 px).
 * Por debajo de ~300 px (fuera del piso de diseño de 320 px) quedan cuatro piezas apretadas: los interruptores de `/admin/permisos-operador` (+19/+23 px), una insignia del visor de boletas (+27 px) y una del catálogo (+10 px). Se documentan como límite conocido, no como defecto oculto.
 * La lectura `scroll = 1 px` en las 16 páginas del portal a 282 px se investigó y resultó ser ruido del medidor: al repetir la toma con más tiempo de asentamiento, `scrollWidth === clientWidth`. No se modificó nada para "corregir" un artefacto de medición.
-* Suite completa en verde tras las correcciones: **210 casos, 845 aserciones**, incluido el nuevo candado de §10.5.
+* Suite completa en verde tras las correcciones: **210 casos, 845 aserciones** en ese momento del proyecto, incluido el nuevo candado de §10.5. La cifra vigente está en §10.1; este apartado conserva la suya porque es la evidencia de una fase, no el estado actual.
 
 #### 9.8.7. Valor metodológico
 
@@ -1290,18 +1305,20 @@ El subsistema web está cubierto por una suite de **PHPUnit** (`vendor/bin/phpun
 * **Pruebas unitarias de lógica de negocio** (`tests/app/Libraries/`): validan servicios puros sin HTTP — transiciones de estado, cálculo de tarifas, resolución de montos de infracción y almacenamiento de archivos.
 * **Pruebas de funcionalidad de extremo a extremo** (`tests/app/Controllers/`): usan `FeatureTestTrait` para despachar peticiones reales por el enrutador, con filtros, sesiones y validaciones incluidas, y asertar sobre la respuesta y las filas escritas en base de datos.
 
-**Estado verificable de la suite: 24 clases de prueba, 210 casos, 845 aserciones, todas en verde** (PHPUnit 10.5.64 sobre PHP 8.2.25; tiempo de corrida ~46 s, 26 MB). La cifra es reproducible con `vendor/bin/phpunit --no-coverage` y debe volver a tomarse antes de citar en un documento final.
+**Estado verificable de la suite: 27 clases de prueba, 247 casos, 931 aserciones, todas en verde** (PHPUnit 10.5.64 sobre PHP 8.2.25; tiempo de corrida ~62 s, 28 MB). La cifra es reproducible con `vendor/bin/phpunit --no-coverage` y debe volver a tomarse antes de citar en un documento final.
 
 ### 10.2. Matriz de Cobertura Funcional
 
-| Classe de prueba | Qué protege |
+| Clase de prueba | Qué protege |
 |---|---|
 | `SolicitudPresencialTest` | Acceso por rol, formulario por trámite, creación T-03/T-05/T-07, monto dinámico (tarifa × camiones), rechazo sin ciudadano, campos obligatorios, trazas de auditoría e historial, buscador AJAX |
 | `PermisosOperadorTest` | Todo permitido sin configurar, prefijo más específico, mapa completo con claves omitidas, redirección de ventanilla bloqueada, **administrador nunca bloqueado** |
 | `UsuariosControllerTest` | Alta, edición y control de cuentas desde el panel |
 | `AppTransitoAdminTest` | Configuración de la app móvil, UMA y altas de agentes desde el panel |
 | `TramitesControllerTest`, `TramitesValidacionRedirectTest` | API de radicación y reenvío con errores de validación |
-| `TramiteConcesionTransporteControllerTest`, `TramiteDespintadoControllerTest`, `TramiteOrdenPlaqueoControllerTest` | Reglas propias de UR-01, UR-02 y UR-03 |
+| `TramiteConcesionTransporteControllerTest`, `TramiteDespintadoControllerTest`, `TramiteOrdenPlaqueoControllerTest` | Reglas propias de UR-01, UR-02 y UR-03. En UR-01 incluye el selector de convocatoria: con varias abiertas se pintan las tarjetas de radio y **no** existe un `hidden`; la consulta `?convocatoria=N` preselecciona; un número inventado no saca al ciudadano de las convocatorias reales; con una sola abierta vuelve el `hidden` |
+| `ConvocatoriasAdminTest` | CRUD de convocatorias desde el panel: altas y ediciones válidas, validación de periodos, subida y apertura de bases oficiales, y rechazo a eliminar una convocatoria con postulación |
+| `ConcesionesAdminTest` | Candado del padrón: una concesión con expedientes vinculados **no** se borra (ni la concesión ni los expedientes), la negativa no deja registro de una eliminación en auditoría, varias solicitudes también bloquean, y sin expedientes el borrado sí es posible |
 | `TramiteCesionConcesionValidationTest`, `PortalTramitesT06ViewRenderTest` | Cesión de concesión y su bandera de función |
 | `EstadoSolicitudServiceTest` | Grafo de transiciones de la máquina de estados |
 | `TarifarioServiceTest`, `ResolverMontoInfraccionServiceTest` | Cálculo de derechos municipales y de multas en UMA |
@@ -1309,7 +1326,8 @@ El subsistema web está cubierto por una suite de **PHPUnit** (`vendor/bin/phpun
 | `ApiAgentesTransitoYBoletasTest`, `InfraccionesApiControllerTest` | Endpoints REST y autenticación por token de agente |
 | `DesgloseSistemaTest` | Desglose navegable del panel: cada tarjeta del tablero lleva a su detalle y el desglose concuerda con las cifras del expediente |
 | `VistasInyectadasRenderTest` | Barrido de renderizado de vistas con datos inyectados (§10.5) |
-| `AuthFormsRenderTest` | formularios de acceso y registro se pintan completos, con token CSRF y sin texto huérfano |
+| `EnlacesEstaticosTest` | Cotejo de los `href` literales de las vistas contra el mapa de rutas real y contra `public/` (§10.7) |
+| `AuthFormsRenderTest` | formularios de acceso y registro se pintan completos, con token CSRF y sin texto huérfano; además los atajos `/login` y `/register` responden 200 y `/logout` redirige (§7.8) |
 | `DocumentosAdminTest`, `VerificacionesAdminTest`, `SesionesAppAdminTest` | Descarga segura de expedientes, agenda de inspección física y gestión de sesiones de la app |
 | `TramiteCargaDescargaFormTest` | Reglas propias de UR-07 (tons, periodo y horarios) |
 
@@ -1342,6 +1360,12 @@ Otros dos ajustes del entorno de prueba:
 Además de PHPUnit, el repositorio conserva utilitarias ejecutables para validación manual y en integración continua (`scripts/`), entre ellas `smoke_test_local.ps1`, `test-local.ps1`, `test_auth_and_users.php`, `verificar_montos_catalogo.php` y `probar_calculo_infracciones.php`.
 
 **Criterio de verificación en el navegador:** el entorno de desarrollo local (`spark serve`) sirve todo el contenido de `public/`, mientras que Vercel solo sirve lo declarado en `vercel.json`. Por eso los cambios de recursos estáticos, rutas y *headers* **deben comprobarse contra la URL desplegada**, no solo en local. La comprobación de las cabeceras de seguridad y de las rutas de la app móvil se hace sobre el dominio de producción.
+
+**Protocolo de sondeo usado, y sus trampas.** Estando ya sobre el dominio de producción, se ejecutan `fetch()` del mismo origen contra la lista de rutas de interés y se leen `status`, `type`, longitud del cuerpo y el `<title>` resultante. Tres advertencias que evitan conclusiones falsas, todas ellas tropezadas en el proyecto real:
+
+* Las rutas bajo `admin/*` y `portal/*` **redirigen 302 por el filtro `auth` exista o no la ruta**, así que un `302` no demuestra que el despliegue esté al día ni que el enrutado funcione.
+* Para comprobar el comportamiento **anónimo** hay que pedir `credentials: 'omit'`; si no, la cookie de sesión de la propia prueba contesta 200 y esconde el rechazo del filtro.
+* `fetch()` sin cabeceras de aceptado negocia con CI4 y devuelve **JSON** en los errores, no la página HTML de error; para ver la 404 propia hay que **navegar** la URL, no hacerle `fetch`.
 
 ### 10.5. Barrido de Renderizado de Vistas y Convención de Inyección de Datos
 
@@ -1388,9 +1412,30 @@ Como las tres ramas del proyecto comparten un repositorio y se coordinan por men
 | **Pruebas del cliente** | `node tests/auth-flow.test.cjs` | 18 casos en verde (inicio de sesión, caducidad de token, cola offline, conservación de boletas ante `401`) |
 | **Versión publicada** | `package.json`, `app.json` y el valor por defecto del parámetro `app_version` | Misma versión en los tres sitios |
 | **Entorno del cliente** | `mobile/agentes-transito/.env` | `EXPO_PUBLIC_API_BASE_URL` apuntando al dominio de producción |
-| **Haz servido** | `git status` sobre `mobile/` y `public/agentes/` | Sin cambios sin exportar; el *build* (`npx expo export --platform web`) reproduce el contenido servido |
+| **Haz servido** | `git status` sobre `mobile/` y `public/agentes/`, más sondeo de la URL de producción | Sin cambios sin exportar; el *build* (`scripts/exportar_agentes_web.ps1`, que exporta, repone las 19 fuentes y localiza el shell) reproduce el contenido servido |
+
+**Cómo se usó esta tabla para descartar un reporte equivocado.** Se reportó que la versión publicada de la app seguía mostrando un botón en inglés "Crear una cuenta" y que el haz desplegado estaba viejo. Las tres comprobaciones del procedimiento lo negaron: el repositorio no contenía esa cadena, reexportar dejó `public/agentes` **byte a byte idéntico** (cero cambios en `git status`) y el dominio de producción servía el mismo archivo `entry-*.js` del repositorio, con `lang="es"` y sin esa cadena dentro del bundle. Sin este procedimiento el impulso inmediato habría sido "reconstruir y volver a publicar" un haz que ya era correcto, alimentando la falsa idea de que el despliegue no propaga los cambios.
 
 > **Enseñanza metodológica:** los cambios de diseño responsivo del *layout* PHP (§9.8) **no** afectan al haz de la app móvil, porque `/agentes` es una SPA de Expo con su propio CSS; y a la inversa, exportar la app no toca las vistas del panel. Confundir ambas superficies produce dos errores clásicos: corregir CSS esperando que cambie la app, o reexportar la app creyendo que así se arregla el portal.
+
+### 10.7. Cotejo Estático de Enlaces contra el Mapa de Rutas Real
+
+`tests/app/Controllers/Views/EnlacesEstaticosTest.php` existe porque un defecto visible para la ciudadanía llevaba **desde el commit inicial** sin que ninguna de las 210 pruebas entonces existentes lo viera: la página 404 propia enlazaba a `/login`, y `/login` no estaba registrado (§7.8). Las pruebas cubrían controladores y HTML producido, pero **nadie había cotejado nunca los enlaces escritos a mano dentro del HTML** contra lo que el enrutador realmente responde.
+
+**Qué hace, en tres pasos.**
+
+1. **Construye el mapa real:** pide el servicio `routes`, llama `loadRoutes()` y recorre `getRoutes('GET')` y `getRoutes('POST')`, incluyendo los comodines. Cada ruta se convierte a expresión regular sustituyendo los marcadores del marco (`(:num)`, `(:segment)`, `(:any)`, `(:alphanumeric)`, `(:hash)`, `(:uri)`) por su patrón equivalente.
+2. **Recolecta los enlaces:** barre recursivamente `app/Views/` y extrae los `href="/..."` **escritos como literal**. Se omiten los que contienen `<?`, `$` o `{` porque se resuelven en tiempo de ejecución y se comprueban en su propia prueba de controller, y la plantilla `errors/html/error_exception` porque es del marco.
+3. **Valida contra dos destinos posibles:** una ruta registrada **o** un archivo físico dentro de `public/` (incluidos los directorios con `index.html`, que es como se sirve `/agentes`). Lo que no cuadra en ninguno se reporta como huérfano con su archivo de origen.
+
+**Cómo se evitó que la prueba pasara en falso.** Un examen así es peligroso si su propio insumo falla, porque entonces *todo* parece válido o *todo* parece roto. Por eso hay una salvaguarda explícita (`testElMapaDeRutasNoEstaVacio`) que exige un mapa no vacío y la presencia de un ancla concreta. Fue esa salvaguarda la que destapó dos trampas del entorno de pruebas, ambas incorporadas ya al mecanismo:
+
+* **El servicio `routes` no carga solo las rutas de la aplicación** en un `CIUnitTestCase` pelado: las carga el ciclo de la petición. Sin `loadRoutes()` el mapa venía vacío.
+* **Las claves del mapa están en mayúsculas** (`GET`, `POST`); `getRoutes('get')` devuelve `[]` sin avisar.
+
+**Estado actual:** 133 `href` literales en 38 destinos distintos, todos con ruta registrada o archivo real. La prueba se ejecuta en cada corrida de la suite, así que un enlace nuevo escrito a mano hacia una ruta inexistente se detecta antes de desplegar.
+
+> **Límite honesto del mecanismo:** solo cubre enlaces literales de las vistas web. Los construidos con `site_url()` o con variables dependen de datos de base, y esos se verifican en las pruebas funcionales de cada módulo; los enlaces del documento Markdown y de la app móvil no entran en este cotejo.
 
 ---
 
@@ -1403,10 +1448,10 @@ Los capítulos anteriores de este documento están organizados **por tema técni
 | Fase | Qué se hizo | Evidencia verificable en el repositorio | Detalle temático |
 |---|---|---|---|
 | **1. Análisis y levantamiento en campo** | Reuniones en Presidencia (área de TI) y entrevista en Tránsito y Seguridad | Directiva de framework (§11.1.1), catálogos y módulos derivados del proceso de ventanilla (§11.1.2) | §§1, 6, 7 |
-| **2. Diseño y validación de interfaces** | Portal ciudadano y panel; iteración sobre los 7 trámites; *mobile-first* | `app/Views/` (61 vistas), 3 *layouts*, `public/css/custom.css` (1 892 líneas), auditoría de desbordes (§9.8) | §9 |
-| **3. Diseño e implementación de la base de datos** | Modelado relacional y su construcción automatizada | 22 migraciones PHP en `app/Database/Migrations/`, 8 migraciones SQL en `supabase/migrations/`, 21 tablas + `ci_sessions` | §3 |
-| **4. Programación del backend y reglas de negocio** | MVC, gestión documental, seguridad por roles, tarifario, máquina de estados | 25 controladores, 20 modelos, 11 bibliotecas de servicio, 5 filtros propios | §§2, 4, 6, 7, 8 |
-| **5. Frontend y despliegue en producción** | Vistas conectadas al controlador, pruebas end-to-end, publicación serverless | `vercel.json`, `scripts/vercel-install.sh`, tabla `ci_sessions`, suite de 210 casos | §§5, 10 |
+| **2. Diseño y validación de interfaces** | Portal ciudadano y panel; iteración sobre los 7 trámites; *mobile-first* | `app/Views/` (62 vistas), 3 *layouts*, `public/css/custom.css` (1 892 líneas), auditoría de desbordes (§9.8) | §9 |
+| **3. Diseño e implementación de la base de datos** | Modelado relacional, su construcción automatizada y la corrección de la deriva con la base instalada | 24 migraciones PHP en `app/Database/Migrations/`, 10 migraciones SQL en `supabase/migrations/`, 22 tablas + `ci_sessions`, verificador `scripts/verificar_esquema_bd.php` | §3, §11.3.4 |
+| **4. Programación del backend y reglas de negocio** | MVC, gestión documental, seguridad por roles, tarifario, máquina de estados | 26 controladores, 20 modelos, 11 bibliotecas de servicio, 5 filtros propios | §§2, 4, 6, 7, 8 |
+| **5. Frontend y despliegue en producción** | Vistas conectadas al controlador, pruebas end-to-end, publicación serverless | `vercel.json`, `scripts/vercel-install.sh`, tabla `ci_sessions`, suite de 247 casos | §§5, 10 |
 
 ---
 
@@ -1480,9 +1525,9 @@ La creación de las tablas (usuarios, solicitudes, documentos, catálogos) **no 
 
 | Aspecto | Valor real del repositorio |
 |---|---|
-| Migraciones PHP (esquema) | 22 archivos en `app/Database/Migrations/`, con prefijo de fecha y secuencia (`2026-01-01-000005_CreateSolicitudesTable.php`) |
-| Migraciones SQL complementarias (Supabase) | 8 archivos en `supabase/migrations/`, entre ellas `0003_ci_sessions.sql` |
-| Tablas del modelo relacional | 21 + `ci_sessions` (sesiones) |
+| Migraciones PHP (esquema) | 24 archivos en `app/Database/Migrations/`, con prefijo de fecha y secuencia (`2026-01-01-000005_CreateSolicitudesTable.php`) |
+| Migraciones SQL complementarias (Supabase) | 10 archivos en `supabase/migrations/`, entre ellas `0003_ci_sessions.sql`, `0008_completar_esquema_pendiente.sql` y `0009_concesion_id_sin_cascade.sql` |
+| Tablas del modelo relacional | 22 definidas por el repositorio, entre ellas `ci_sessions` (sesiones); la base instalada reporta 25 porque conserva además `migrations` —el historial que escribe CI4— y `ciudadanos` / `administradores`, herencia del levantamiento inicial |
 | Definición | `Forge` de CodeIgniter: `$this->forge->addField([...])`, `addKey('id', true)`, `addForeignKey(...)` |
 
 **Extracto real de una migración del proyecto** (`app/Database/Migrations/2026-01-01-000005_CreateSolicitudesTable.php`, con omisiones marcadas):
@@ -1557,6 +1602,20 @@ Accediendo al panel visual de la plataforma se comprobó que las entidades queda
 2. **Traza inmutable de decisiones.** `historial_estatus` guarda cada cambio de estado con funcionario responsable, fecha y comentario obligatorio; `auditoria` registra eventos sensibles con IP. Son la base de la validez administrativa del expediente (§7.4).
 3. **Origen del trámite como dato, no como esquema.** El canal (`portal` o `presencial`) se registra como un atributo en `solicitud_datos`, de modo que las dos vías de radicación comparten folio, tarifario, estados y expediente en lugar de duplicarlos (§7.6.5).
 
+#### 11.3.4. Deriva de esquema entre el repositorio y la base instalada (el caso real de 0008 y 0009)
+
+El punto 2 de la sección anterior —"las migraciones construyen el esquema"— es cierto para el harness de pruebas y **no lo fue para la base de producción**. La base institucional se levantó pegando a mano los archivos de `supabase/migrations/` en el SQL Editor de Supabase, mientras que las pruebas levantan el esquema desde las migraciones PHP de `app/Database/Migrations/`. Son **dos rutas hacia el mismo esquema**, y cuando una se queda atrás el fallo no aparece hasta que alguien abre la pantalla en producción.
+
+Eso fue exactamente lo que pasó: `/admin/verificaciones` y el alta presencial de UR-01 respondían error, `/admin/convocatorias` mostraba un estado vacío imposible de salir, el desglose reportaba "no hay valor de UMA vigente" y UR-02/03/06 no podían vincular su concesión. Ninguna prueba lo detectaba porque **la suite siempre construía el esquema completo desde cero** y por tanto nunca veía la base real.
+
+**Cómo se cerró, y en qué orden:**
+
+1. **Medir antes de tocar.** Se escribió un verificador de deriva **de solo lectura**, `scripts/verificar_esquema_bd.php`: compara los nombres de tabla y de columna que el repositorio declara en sus migraciones contra los que existen realmente en la base del `.env`, y con `--formato=sql` imprime el `CREATE`/`ALTER` faltante. Compara nombres, no tipos, porque `DECIMAL` y `NUMERIC` son el mismo tipo en PostgreSQL y marcarlos como diferencia genera ruido.
+2. **Entregar el DDL, no ejecutarlo.** Regla de trabajo acordada con la institución: **el desarrollo no lanza sentencias de alteración contra la base institucional**; entrega el SQL para que la persona responsable lo aplique en el SQL Editor de Supabase. Por eso `0008_completar_esquema_pendiente.sql` y `0009_concesion_id_sin_cascade.sql` son archivos del repositorio, pensados para pegarse completos: **idempotentes** (`CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`, `DROP CONSTRAINT IF EXISTS`), **dentro de transacción** y **con su consulta de verificación al final** para que la aplicación quede comprobada en el mismo acto.
+3. **Comprobar después de aplicar.** Volver a correr el verificador: 22 tablas definidas por el repositorio presentes, historial de migraciones en 24 registros y la llave de `concesion_id` reportando `RESTRICT`.
+
+**Lección metodológica:** una base construida a mano no puede verificarse "abriendo pantallas". El verificador de deriva quedó en el repositorio y forma parte del procedimiento de despliegue: se corre contra la base real, y cualquier divergencia se resuelve **regresando migraciones al repositorio**, nunca editando la base en silencio.
+
 ---
 
 ### 11.4. Fase de Programación del Backend y Reglas de Negocio
@@ -1569,10 +1628,10 @@ Se programaron los *Models* para interactuar de forma segura con la base de dato
 
 | Capa | Cantidad | Detalle |
 |---|---|---|
-| Controladores | 25 | 3 de acceso e inicio (`AuthController`, `Home`, `ArchivosLocalesController`), 12 del panel, 9 del portal, 2 API REST |
+| Controladores | 26 | 3 de acceso e inicio (`AuthController`, `Home`, `ArchivosLocalesController`), 12 del panel, 9 del portal, 2 API REST |
 | Modelos | 20 | uno por entidad persistible, todos sobre `BaseModel` con *prepared statements* de PDO |
 | Bibliotecas de servicio | 11 | lógica que no pertenece ni al controlador ni al modelo (§11.4.5) |
-| Vistas PHP | 61 | organizadas por destino: `admin/`, `portal/`, `auth/`, `layouts/`, `errors/` |
+| Vistas PHP | 62 | organizadas por destino: `admin/`, `portal/`, `auth/`, `layouts/`, `errors/` |
 | Filtros propios | 5 | `AuthFilter`, `RoleFilter`, `PermisoOperadorFilter`, `AdminRedirectFilter`, `AgenteTokenFilter` |
 
 **Controladores independientes por trámite.** Se desarrolló un controlador dedicado para cada uno de los 7 trámites operativos de movilidad, asegurando que el sistema validara correctamente los campos antes de guardarlos:
@@ -1623,6 +1682,8 @@ Complemento importante para el documento final: la permisología de grano fino s
 * **Motivo obligatorio:** ningún cambio a `Prevención` o `Rechazo` se acepta sin comentario escrito, con respaldo físico en `historial_estatus.comentario` y en `solicitudes.comentario_rechazo` (§7.3, §11.3.2).
 * **Cotización dinámica:** `TarifarioService` resuelve el monto a partir de tarifas vigentes por periodo y, cuando aplica, del valor de la UMA; `ResolverMontoInfraccionService` hace lo propio con los rangos mínimo/máximo de las infracciones (§6.2).
 * **Folio único:** `FolioGenerator` produce un identificador de 20 caracteres derivados de un UUID v4, usado como llave visible del expediente y como criterio de búsqueda en ambos canales (§7.6).
+* **Integridad histórica del padrón:** ningún catálogo puede borrarse si tiene expedientes vinculados. Se aplica dos veces a propósito —en el controlador y en la llave foránea `ON DELETE RESTRICT`— porque el guardado de aplicación no protege un `DELETE` lanzado desde fuera (§3.1, §11.3.4).
+* **El ciudadano elige, el sistema no adivina:** cuando existen varias convocatorias abiertas, UR-01 presenta la lista y obliga a elegir; el parámetro de URL solo preselecciona dentro de lo que realmente está abierto (§6.1).
 
 #### 11.4.5. Desplazamiento de lógica a servicios (por qué no todo va en el controlador)
 
@@ -1639,7 +1700,7 @@ La última etapa de desarrollo consistió en programar las **vistas** (*Views*) 
 * **El Portal Ciudadano:** permite iniciar trámites, subir documentos y cuenta con un **simulador de pago en línea** para cambiar el estatus del expediente. El simulador no es un adorno del frontend: está aislado tras la interfaz `PaymentGatewayInterface` y su implementación `BanbajioMockGateway`, con tres endpoints `pagar` reales (`carga-descarga`, `permiso-eventual`, `cierre-calle`) que invocan la pasarela, registran `fecha_pago` y hacen avanzar la máquina de estados. Cambiar el proveedor real exige **sustituir la implementación, no reescribir el portal** (§2.4, §6.3).
 * **El Panel Administrativo Web:** desarrollado desde cero con un *dashboard* de control para funcionarios, con desglose navegable (cada tarjeta de métrica lleva a su detalle), bandeja maestra de expedientes, visor documental, agenda de inspecciones, radicación presencial y administración de catálogos. Se incluyó una **regla de negocio estricta**: si un operador rechaza un trámite ciudadano, el sistema lo obliga a escribir el motivo del rechazo para que el ciudadano pueda subsanarlo (§7.3).
 
-**Convención de capa de vista adoptada en la fase final.** Las 61 vistas se unificaron tras la convención `/** @var */` + lectura de `$this->data` (§10.5), y las páginas de error por defecto del marco se sustituyeron por cuatro páginas propias en español (`app/Views/errors/html/`: `error_400.php`, `error_404.php`, `error_exception.php` y `production.php`), de modo que un 404 o un 400 no muestre ni trazas técnicas ni texto en inglés a la ciudadanía.
+**Convención de capa de vista adoptada en la fase final.** Las 62 vistas se unificaron tras la convención `/** @var */` + lectura de `$this->data` (§10.5), y las páginas de error por defecto del marco se sustituyeron por cuatro páginas propias en español (`app/Views/errors/html/`: `error_400.php`, `error_404.php`, `error_exception.php` y `production.php`), de modo que un 404 o un 400 no muestre ni trazas técnicas ni texto en inglés a la ciudadanía. Los enlaces escritos a mano en esas páginas son los que destaparon el defecto de enrutamiento de §7.8 y motivaron el cotejo automático de §10.7.
 
 #### 11.5.2. Pruebas y despliegue
 
@@ -1723,8 +1784,8 @@ La arquitectura construida para el **Portal Ciudadano y Panel Administrativo Web
 3. **Mantenibilidad y Escalabilidad:** El desacoplamiento mediante patrones de diseño (EAV para trámites heterogéneos, Feature Flags para control de versiones y Gateway para pagos) proporciona al H. Ayuntamiento una base tecnológica sólida. El catálogo declarativo de campos (§7.6.2) demostró su valor concreto: agregar un trámite nuevo al canal presencial es **añadir una entrada al arreglo**, no escribir un controlador y una vista nuevos.
 4. **Cobertura del Mundo Real (Canal Híbrido):** El sistema no asume un ciudadano digitalmente competente. La coexistencia del portal de autogestión (§6) y la radicación presencial con validez idéntica (§7.6), ambas escribiendo en el mismo expediente y compartiendo folio, tarifario y máquina de estados, es la decisión que convierte la plataforma en una herramienta **usable por la totalidad de la población** y no solo por su segmento conectado.
 5. **Usabilidad Multidispositiva como Requisito, no como Adorno:** El diseño *mobile-first* con objetivos táctiles de 44 px, navegación inferior en el portal, gaveta lateral con áreas seguras en el panel y una portada que degrada el desenfoque para priorizar contraste (§9) responde al dispositivo real con el que la gente tramita. La corrección del servidor de borde para recursos estáticos (§9.6) dejó registrada una restricción de arquitectura que de otra forma se manifestaría como fallos silenciosos en producción.
-6. **Calidad Comprobable:** La verificación no es una afirmación sino un resultado reproducible: **210 casos de prueba y 845 aserciones en verde**, en 24 clases, sobre un harness SQLite aislado de los datos institucionales (§10), con cobertura de permisos, estados, montos dinámicos, validaciones por trámite, renderizado de vistas y blindajes de almacenamiento.
-7. **Medir en Lugar de Suponer:** Dos hallazgos del cierre del proyecto no habrían aparecido con una revisión visual: el título de todas las páginas administrativas se pintaba vacío (§10.5) y el texto largo del panel se recortaba en silencio por debajo del *overflow-x: hidden* (§9.8). Ambos se detectaron con instrumentación —barrido de HTML producido y medición a 360/320/290 px con página de control— y ambos se convirtieron en candados automatizados para que no puedan regresar.
+6. **Calidad Comprobable:** La verificación no es una afirmación sino un resultado reproducible: **247 casos de prueba y 931 aserciones en verde**, en 27 clases, sobre un harness SQLite aislado de los datos institucionales (§10), con cobertura de permisos, estados, montos dinámicos, validaciones por trámite, renderizado de vistas, candados de integridad del padrón, cotejo estático de enlaces y blindajes de almacenamiento.
+7. **Medir en Lugar de Suponer:** Tres hallazgos del cierre del proyecto no habrían aparecido con una revisión visual: el título de todas las páginas administrativas se pintaba vacío (§10.5), el texto largo del panel se recortaba en silencio por debajo del *overflow-x: hidden* (§9.8) y el botón "Iniciar sesión" de la página 404 propia llevaba a otro 404 porque CI4 descartaba el atajo por colisión de nombre con la ruta (§7.8, §10.7). El cuarto caso es inverso y también vale: la queja de que el haz publicado de la app móvil seguía en inglés se descartó con evidencia —reexportar produjo salida **idéntica byte a byte** y el bundle servido en producción no contenía esa cadena—, lo que demuestra que medir también sirve para no "arreglar" algo que no está roto. Los tres defectos reales se detectaron con instrumentación —barrido de HTML producido, medición a 360/320/290 px con página de control y sondeo de la URL desplegada— y los tres se convirtieron en candados automatizados para que no puedan regresar.
 8. **El Proceso También Es Resultado:** La secuencia iterativa e incremental (§1.3) y el levantamiento presencial en dos vertientes (§11.1) no son un preámbulo del trabajo sino parte de él: explican por qué el andamiaje soportó siete trámites sin reescribirse, por qué el esquema de datos es portable entre PostgreSQL y SQLite y por qué el panel habla el vocabulario operativo de la dependencia en lugar de imponer otro.
 
 ### Cómo usar este documento en el informe final

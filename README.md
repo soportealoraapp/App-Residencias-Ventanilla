@@ -26,7 +26,7 @@ El ecosistema digital integra tres ramas de desarrollo comunicadas a través de 
 1. **Backend Centralizado (API & Core):** Desarrollado en CodeIgniter 4 sobre PHP 8.2 en arquitectura serverless. Controla la lógica de negocio, validaciones documentales, pasarela mock de pago, servicios de tarifario y endpoints REST para clientes externos.
 2. **Portal Ciudadano y Panel Administrativo Web:**
    * **Portal Ciudadano (`/portal/`):** Plataforma web responsiva donde los ciudadanos y concesionarios gestionan los 7 trámites oficiales (UR-TT-T-01 al UR-TT-T-07), consultan expedientes y realizan pagos en línea simulados. El ciudadano **se autorregistra** sin intermediarios.
-   * **Panel Administrativo (`/admin/`):** Consola para funcionarios municipales con control de acceso por roles (`administrador`, `operador_ventanilla`) y **permisos configurables por sección**, tableros analíticos en tiempo real, validación de expedientes con comentarios obligatorios, **radicación presencial de solicitudes para el ciudadano que acude a ventanilla**, padrón inmutable de auditoría y gestión de catálogos (tarifas, concesiones, convocatorias, formatos y cuentas de usuario).
+   * **Panel Administrativo (`/admin/`):** Consola para funcionarios municipales con control de acceso por roles (`administrador`, `operador_ventanilla`) y **permisos configurables por sección**, tableros analíticos en tiempo real, validación de expedientes con comentarios obligatorios, **radicación presencial de solicitudes para el ciudadano que acude a ventanilla**, padrón inmutable de auditoría y gestión de catálogos (tarifas, concesiones, **convocatorias con CRUD completo y publicación de bases**, formatos y cuentas de usuario). Ninguna concesión ni convocatoria con expedientes vinculados puede borrarse: se da de baja cambiando su estatus, para que el historial del ciudadano sobreviva.
 3. **App Móvil para Agentes de Tránsito (`/agentes/`):** Aplicación desarrollada con Expo SDK 57 / React Native / TypeScript, utilizable en dispositivos móviles o vía Web SPA. Diseñada para operación *Offline-First*, cálculo automático de multas en UMA, captura fotográfica geolocalizada y sincronización directa con Supabase.
 
 ---
@@ -42,7 +42,7 @@ El ecosistema digital integra tres ramas de desarrollo comunicadas a través de 
 | **Frontend Web** | Bootstrap 5.3.2, Bootstrap Icons 1.11.1, Plus Jakarta Sans, CSS *mobile-first* con design tokens |
 | **App Móvil & SPA** | React Native 0.86, Expo SDK 57, TypeScript, AsyncStorage, `@supabase/supabase-js` |
 | **Despliegue & Cloud** | Vercel Serverless (`vercel-php@0.7.4`), CI/CD automatizado vía Git |
-| **Pruebas** | PHPUnit 10.5 (210 casos / 845 aserciones en 24 clases) sobre harness SQLite aislado; verificador propio de la app (`node tests/auth-flow.test.cjs`, 18 casos) |
+| **Pruebas** | PHPUnit 10.5 (247 casos / 931 aserciones en 27 clases) sobre harness SQLite aislado; verificador propio de la app (`node tests/auth-flow.test.cjs`, 18 casos) |
 
 ---
 
@@ -56,11 +56,11 @@ composer install
 ```
 
 ### 2. Configurar Variables de Entorno
-Copia `env` a `.env` y define tus credenciales de Supabase:
+Copia `.env.example` a `.env` y define tus credenciales de Supabase:
 ```bash
-cp env .env
+cp .env.example .env
 ```
-*(Consulta el diccionario completo de variables en [DOCUMENTACION_GENERAL.md](./DOCUMENTACION_GENERAL.md#5-diccionario-de-variables-de-entorno-env)).*
+*(El diccionario de variables está en el propio [`.env.example`](./.env.example), agrupado por sección: entorno, app, base de datos —con los tres formatos que acepta el proyecto—, Supabase, cifrado, CSRF, cookies, *feature flags* y correo.)*
 
 > **Documentos de los trámites:** si `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` están configurados, los archivos se suben a Supabase Storage. Si no (lo normal en local), se guardan en `writable/uploads/storage/` (carpeta privada, no accesible por web) y se descargan con enlaces firmados que caducan en 1 hora. Puedes cambiar la carpeta con `STORAGE_LOCAL_PATH`.
 
@@ -70,17 +70,20 @@ php spark migrate
 php spark db:seed DatabaseSeeder
 ```
 
-> ⚠️ **Cada vez que hagas `git pull`, vuelve a ejecutar `php spark migrate`.** Si falta una migración (por ejemplo la tabla de tokens de agentes), el login de la app móvil falla. Si el equipo usa la base en Supabase, aplica también los archivos nuevos de `supabase/migrations/`.
+> ⚠️ **Cada vez que hagas `git pull`, vuelve a ejecutar `php spark migrate`.** Si falta una migración (por ejemplo la tabla de tokens de agentes), el login de la app móvil falla. Si el equipo usa la base en Supabase, aplica también los archivos nuevos de `supabase/migrations/` en el **SQL Editor** de la plataforma.
 >
 > En Windows, si `php` no está en el PATH, usa el PHP incluido en el repo: `./php82/php.exe spark migrate`.
+>
+> Para comprobar que la base real no se haya quedado atrás respecto al repositorio: `./php82/php.exe scripts/verificar_esquema_bd.php` (solo lectura; agrega `--formato=sql` para que imprima el DDL faltante).
 
 ### 4. Compilar la App Móvil (Expo Web)
 ```bash
 cd mobile/agentes-transito
 npm install --legacy-peer-deps
-npx expo export --platform web --output-dir ../../public/agentes --clear
 cd ../..
+powershell -File scripts/exportar_agentes_web.ps1
 ```
+> No uses `npx expo export` suelto. El script exporta a `public/agentes`, vuelve a copiar las fuentes de iconos `.ttf` que Expo borra en el export (hoy son 19) y pasa `scripts/localizar_shell_agentes.php`, que deja el shell HTML en español (`lang`, `<title>`, aviso `noscript`) y **termina con código de error si todavía queda texto en inglés**. Los mensajes de las pantallas no viven en el shell: vienen en el `entry-*.js`, así que si algo sale en inglés hay que corregirlo en el código de `mobile/agentes-transito/src` y volver a exportar.
 
 ### 5. Iniciar Servidor
 ```bash
@@ -121,7 +124,7 @@ npx expo start -c
 | `operador1@uriangato.gob.mx` | `operador_ventanilla` | Panel Administrativo (`/admin/`) |
 | `ciudadano@example.com` | `ciudadano` | Portal Ciudadano (`/portal/`) |
 
-> **El ciudadano se autorregistra** en el portal ([`/auth/register`](http://localhost:8080/auth/register)); el sistema solo produce cuentas con rol `ciudadano`.
+> **El ciudadano se autorregistra** en el portal ([`/auth/register`](http://localhost:8080/auth/register) — también funciona el atajo corto [`/register`](http://localhost:8080/register)); el sistema solo produce cuentas con rol `ciudadano`.
 >
 > Lo que **no** puede crearse desde el registro público son cuentas de **operador**, **administrador** o **agente de tránsito**: esas las da de alta el administrador desde **Panel → Usuarios y ciudadanos** (`/admin/usuarios`) y **Panel → App Tránsito → Agentes** (`/admin/app-transito`), porque son personal con capacidad de sanción y su identidad debe verificarse físicamente.
 
@@ -135,7 +138,7 @@ Para ejecutar la suite de pruebas unitarias y de integración:
 ```
 En Windows, si `php` no está en el PATH: `./php82/php.exe vendor/bin/phpunit`.
 
-Las pruebas (**210 casos / 845 aserciones / 24 clases**) cubren: control de acceso por rol, permisos configurables del operador, validaciones de los 7 trámites, cálculo dinámico de tarifas (incluido el monto por camiones de UR-07), reglas de transición de la máquina de estados, radicación presencial, trazas de auditoría e historial, endpoints REST de agentes, el blindaje del almacenamiento local (firma HMAC, caducidad y rechazo de travesía de ruta), el **desglose navegable del tablero** y el **barrido de renderizado de vistas** (que el HTML producido lleve título, cabecera y el número correcto de filas).
+Las pruebas (**247 casos / 931 aserciones / 27 clases**) cubren: control de acceso por rol, permisos configurables del operador, validaciones de los 7 trámites, cálculo dinámico de tarifas (incluido el monto por camiones de UR-07), reglas de transición de la máquina de estados, radicación presencial, trazas de auditoría e historial, endpoints REST de agentes, el blindaje del almacenamiento local (firma HMAC, caducidad y rechazo de travesía de ruta), el **desglose navegable del tablero**, el **CRUD de convocatorias**, el **candado que impide borrar concesiones o convocatorias con expedientes vinculados**, el **cotejo de los 133 enlaces literales de las vistas contra el mapa de rutas real** y el **barrido de renderizado de vistas** (que el HTML producido lleve título, cabecera y el número correcto de filas).
 
 La suite corre contra **SQLite en memoria** con prefijo `db_`, nunca contra la base institucional. Requiere que las migraciones estén aplicadas (`php spark migrate`).
 
@@ -161,6 +164,8 @@ Ambas interfaces son *mobile-first*: el ciudadano y el operador pueden usarlas d
 * **Accesibilidad:** respeta `prefers-reduced-motion`, conserva foco visible por teclado y un modo de impresión que oculta la interfaz para imprimir expedientes.
 
 > ⚠️ **Restricción de despliegue:** en Vercel solo se sirve lo declarado en `vercel.json`; todo lo demás cae en el comodín que entrega la petición a PHP y devuelve 404. **Si agregas una imagen, icono o archivo estático a `public/`, añade su ruta al arreglo `routes`** y verifica la URL ya desplegada (en local `spark serve` sí sirve todo el directorio, así que el fallo no se ve antes de producción).
+>
+> ⚠️ **Restricción de enrutado (CodeIgniter 4):** una ruta cuyo *from* coincida con el **nombre** ya asignado con `['as' => ...]` a otra ruta **se descarta en silencio**, sin error. Por eso los atajos `/login`, `/register` y `/logout` llevan nombre propio (`acceso`, `registro`, `salida`). Si una ruta definida en `app/Config/Routes.php` no responde, compruébala con `php spark routes` antes de sospechar del despliegue: **declarada no es lo mismo que registrada**.
 
 ---
 
