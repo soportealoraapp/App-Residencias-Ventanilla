@@ -173,4 +173,23 @@ class AuthFormsRenderTest extends CIUnitTestCase
             self::assertSame(0, substr_count($cuerpo, '"') % 2, $ruta . ' deja comillas dobles sin cerrar.');
         }
     }
+
+    /**
+     * Los atajos /login y /register estuvieron definidos desde el primer commit
+     * pero CI4 los descartaba en silencio: su ruta coincidia con el nombre que ya
+     * traia ['as' => 'login'] en auth/login. La pagina 404 propia enlaza a
+     * /login, asi que el boton "Iniciar sesion" llevaba a otro 404.
+     */
+    public function testLosAtajosDeAccesoResponden(): void
+    {
+        foreach (['/login', '/register'] as $atajo) {
+            $respuesta = $this->get($atajo);
+            self::assertSame(200, $respuesta->response()->getStatusCode(), $atajo . ' no tiene ruta registrada.');
+        }
+    }
+
+    public function testCerrarSesionPorAtajoRedirige(): void
+    {
+        $this->get('/logout')->assertRedirect();
+    }
 }

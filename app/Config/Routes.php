@@ -125,9 +125,14 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
 $routes->get('archivos/(:segment)', 'ArchivosLocalesController::servir/$1');
 
 $routes->get('/', 'Home::index');
-$routes->get('login', 'AuthController::login');
-$routes->get('register', 'AuthController::register');
-$routes->get('logout', 'AuthController::logout');
+
+// Atajos de acceso. Necesitan su propio nombre ('as') porque las rutas cortas
+// coinciden con los nombres ya asignados arriba (login/register/logout en
+// auth/login, auth/register y auth/logout); sin 'as', CI4 descarta la definición
+// en silencio y el atajo responde 404.
+$routes->get('login', 'AuthController::login', ['as' => 'acceso']);
+$routes->get('register', 'AuthController::register', ['as' => 'registro']);
+$routes->get('logout', 'AuthController::logout', ['as' => 'salida']);
 
 
 $routes->group('portal', ['filter' => 'auth'], static function ($routes) {
