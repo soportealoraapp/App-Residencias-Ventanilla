@@ -1,5 +1,33 @@
 <?php declare(strict_types=1);
 
+if (!function_exists('nombre_mes')) {
+    /**
+     * Nombre en español del mes (por número o por fecha YYYY-MM).
+     * date('F') devuelve el nombre en inglés, así que los rótulos de las
+     * gráficas y series mensuales se arman con esta función.
+     */
+    function nombre_mes(int|string|null $mes = null): string
+    {
+        static $nombres = [
+            1 => 'enero', 2 => 'febrero', 3 => 'marzo', 4 => 'abril', 5 => 'mayo', 6 => 'junio',
+            7 => 'julio', 8 => 'agosto', 9 => 'septiembre', 10 => 'octubre', 11 => 'noviembre', 12 => 'diciembre',
+        ];
+
+        if ($mes === null || $mes === '') {
+            return $nombres[(int) date('n')];
+        }
+
+        if (is_string($mes)) {
+            if (preg_match('/^\d{4}-(\d{2})/', $mes, $m) === 1) {
+                return $nombres[(int) $m[1]] ?? $mes;
+            }
+            $mes = (int) $mes;
+        }
+
+        return $nombres[$mes] ?? (string) $mes;
+    }
+}
+
 if (!function_exists('es_municipio_uriangato')) {
     function es_municipio_uriangato(): bool
     {
@@ -41,6 +69,64 @@ if (!function_exists('tramite_nombre')) {
             'UR-TT-T-07' => 'Permiso de Carga y Descarga',
             default       => $clave,
         };
+    }
+}
+
+if (!function_exists('tipo_documento_nombre')) {
+    /**
+     * Etiqueta legible del tipo de archivo.
+     *
+     * El tipo llega del nombre del campo del formulario, así que no hay catálogo
+     * cerrado: se traducen los conocidos y el resto se humaniza sin guiones bajos
+     * para que el administrador nunca vea un `identificacion_oficial` en crudo.
+     */
+    function tipo_documento_nombre(?string $tipo): string
+    {
+        $tipo = trim((string) $tipo);
+        if ($tipo === '') {
+            return 'Sin clasificar';
+        }
+
+        $nombre = match ($tipo) {
+            'identificacion_oficial'   => 'Identificación oficial',
+            'tarjeta_circulacion'      => 'Tarjeta de circulación',
+            'documento_carga_descarga' => 'Documento de carga y descarga',
+            'titulo_concesion_original' => 'Título de concesión (original)',
+            'documentos_capacidad'     => 'Documentos de capacidad',
+            'comprobante_domicilio'    => 'Comprobante de domicilio',
+            'ine_frente'              => 'INE (frente)',
+            'ine_reverso'             => 'INE (reverso)',
+            default                    => '',
+        };
+
+        if ($nombre !== '') {
+            return $nombre;
+        }
+
+        return ucfirst(str_replace('_', ' ', $tipo));
+    }
+}
+
+if (!function_exists('formato_bytes')) {
+    /**
+     * Peso legible de un archivo o de un almacén completo.
+     */
+    function formato_bytes(int|float|null $bytes): string
+    {
+        $bits = (float) $bytes;
+
+        if ($bits >= 1073741824) {
+            return number_format($bits / 1073741824, 2) . ' GB';
+        }
+        if ($bits >= 1048576) {
+            return number_format($bits / 1048576, 1) . ' MB';
+        }
+        if ($bits > 0) {
+            // Un decimal: un archivo de 300 bytes no debe leerse como «0 KB».
+            return number_format($bits / 1024, 1) . ' KB';
+        }
+
+        return '0 KB';
     }
 }
 

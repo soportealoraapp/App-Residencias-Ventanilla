@@ -1,4 +1,9 @@
 <?php declare(strict_types=1);
+// Variables inyectadas por el controlador: se leen del ambito real para que el
+// analisis estatico no las marque como indefinidas; en runtime gana el valor enviado.
+$__view = get_defined_vars();
+/** @var float $tarifaMonto */
+$tarifaMonto = $__view['tarifaMonto'] ?? 0.0;
 $validation = \Config\Services::validation();
 $oldNumTitulo = old('numero_titulo_concesion', '');
 $oldNombreTitular = old('nombre_titular', '');
@@ -52,7 +57,7 @@ $oldMotivo = old('motivo_despintado', '');
                                 <label for="numero_titulo_concesion" class="form-label fw-semibold">
                                     Número de Título de Concesión <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" class="form-control font-monospace" id="numero_titulo_concesion" name="numero_titulo_concesion" required maxlength="50" value="<?= esc($oldNumTitulo) ?>" placeholder="Ej: CONC-URI-2024-0001">
+                                <input type="text" class="form-control font-monospace" id="numero_titulo_concesion" name="numero_titulo_concesion" required maxlength="50" value="<?= esc($oldNumTitulo) ?>" placeholder="Ej: CONC-URI-2024-0001" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next">
                                 <?php if ($validation->getError('numero_titulo_concesion')): ?>
                                     <div class="text-danger small mt-1"><?= $validation->getError('numero_titulo_concesion') ?></div>
                                 <?php endif; ?>
@@ -61,7 +66,7 @@ $oldMotivo = old('motivo_despintado', '');
                                 <label for="nombre_titular" class="form-label fw-semibold">
                                     Nombre completo del titular / concesionario <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" class="form-control" id="nombre_titular" name="nombre_titular" required maxlength="180" value="<?= esc($oldNombreTitular) ?>" placeholder="Nombre completo">
+                                <input type="text" class="form-control" id="nombre_titular" name="nombre_titular" required maxlength="180" value="<?= esc($oldNombreTitular) ?>" placeholder="Nombre completo" autocomplete="name" autocapitalize="words" spellcheck="false" enterkeyhint="next">
                                 <?php if ($validation->getError('nombre_titular')): ?>
                                     <div class="text-danger small mt-1"><?= $validation->getError('nombre_titular') ?></div>
                                 <?php endif; ?>
@@ -80,7 +85,7 @@ $oldMotivo = old('motivo_despintado', '');
                                 <label for="vehiculo_placas" class="form-label fw-semibold">
                                     Placas actuales del vehículo <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" class="form-control text-uppercase" id="vehiculo_placas" name="vehiculo_placas" required maxlength="20" value="<?= esc($oldPlacas) ?>" placeholder="Ej: GTO-543-A">
+                                <input type="text" class="form-control text-uppercase" id="vehiculo_placas" name="vehiculo_placas" required maxlength="20" value="<?= esc($oldPlacas) ?>" placeholder="Ej: GTO-543-A" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next">
                                 <?php if ($validation->getError('vehiculo_placas')): ?>
                                     <div class="text-danger small mt-1"><?= $validation->getError('vehiculo_placas') ?></div>
                                 <?php endif; ?>
@@ -89,7 +94,7 @@ $oldMotivo = old('motivo_despintado', '');
                                 <label for="vehiculo_num_serie" class="form-label fw-semibold">
                                     Número de Serie (VIN) <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" class="form-control text-uppercase" id="vehiculo_num_serie" name="vehiculo_num_serie" required maxlength="30" value="<?= esc($oldNumSerie) ?>" placeholder="Ej: 3VWSK7AN1RM000001">
+                                <input type="text" class="form-control text-uppercase" id="vehiculo_num_serie" name="vehiculo_num_serie" required maxlength="30" value="<?= esc($oldNumSerie) ?>" placeholder="Ej: 3VWSK7AN1RM000001" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next">
                                 <?php if ($validation->getError('vehiculo_num_serie')): ?>
                                     <div class="text-danger small mt-1"><?= $validation->getError('vehiculo_num_serie') ?></div>
                                 <?php endif; ?>

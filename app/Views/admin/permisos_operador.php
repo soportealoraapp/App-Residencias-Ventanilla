@@ -50,8 +50,9 @@ foreach ($definiciones as $clave => $_d) {
     <?= csrf_field() ?>
     <div class="row g-3">
         <?php foreach ($definiciones as $clave => $def): ?>
+            <?php $rutaSeccion = $def['rutas'][0] ?? null; ?>
             <div class="col-12 col-md-6 col-xl-4">
-                <div class="card h-100 border-0 shadow-sm permiso-card">
+                <div class="card h-100 border-0 shadow-sm permiso-card" title="Toca la ficha para cambiar el permiso">
                     <div class="card-body d-flex gap-3 align-items-start p-4">
                         <div class="stat-icon-wrapper bg-primary-subtle text-primary flex-shrink-0">
                             <i class="bi bi-<?= esc($def['icono']) ?>"></i>
@@ -68,9 +69,14 @@ foreach ($definiciones as $clave => $_d) {
                                 </div>
                             </div>
                             <p class="text-muted small mb-0"><?= esc($def['descripcion']) ?></p>
-                            <label for="perm-<?= esc($clave) ?>" class="hint mt-2 mb-0 d-block">
-                                <?= !empty($permisos[$clave]) ? '<i class="bi bi-check2-circle text-success me-1"></i>Permitido' : '<i class="bi bi-dash-circle text-muted me-1"></i>Bloqueado' ?>
-                            </label>
+                            <div class="d-flex justify-content-between align-items-end gap-2 mt-2">
+                                <label for="perm-<?= esc($clave) ?>" class="hint mb-0">
+                                    <?= !empty($permisos[$clave]) ? '<i class="bi bi-check2-circle text-success me-1"></i>Permitido' : '<i class="bi bi-dash-circle text-muted me-1"></i>Bloqueado' ?>
+                                </label>
+                                <?php if ($rutaSeccion !== null): ?>
+                                    <a class="btn btn-outline-secondary btn-sm flex-shrink-0" href="/<?= esc($rutaSeccion) ?>" title="Abrir la sección: <?= esc($def['nombre'], 'attr') ?>"><i class="bi bi-box-arrow-up-right me-1"></i>Abrir</a>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -117,6 +123,20 @@ foreach ($definiciones as $clave => $_d) {
     switches.forEach(function (s) { s.addEventListener('change', actualizarEtiquetas); });
     document.getElementById('btnPermisosTodo').addEventListener('click', function () { marcar(true); });
     document.getElementById('btnPermisosNinguno').addEventListener('click', function () { marcar(false); });
+
+    // El interruptor es un objetivo pequeño en el teléfono: toda la ficha lo cambia.
+    document.querySelectorAll('.permiso-card').forEach(function (card) {
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', function (event) {
+            if (event.target.closest('input, label, a, button')) {
+                return;
+            }
+            var interruptor = card.querySelector('input[type="checkbox"]');
+            if (!interruptor) return;
+            interruptor.checked = !interruptor.checked;
+            actualizarEtiquetas();
+        });
+    });
 })();
 </script>
 <?= $this->endSection() ?>

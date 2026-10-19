@@ -1,4 +1,23 @@
 <?php declare(strict_types=1);
+
+/**
+ * Variables inyectadas por Ciudadano\PortalController::verSolicitud() vía view(..., $data).
+ * Se leen desde get_defined_vars() para que el analizador estático no las marque
+ * como "undefined" sin alterar el runtime de CI4.
+ */
+$__view = get_defined_vars();
+
+/** @var object|null $solicitud */
+$solicitud    = $__view['solicitud'] ?? null;
+/** @var array<string, mixed> $datos */
+$datos        = (array) ($__view['datos'] ?? []);
+/** @var list<object> $documentos */
+$documentos   = (array) ($__view['documentos'] ?? []);
+/** @var list<object> $historial */
+$historial    = (array) ($__view['historial'] ?? []);
+/** @var object|null $verificacion */
+$verificacion = $__view['verificacion'] ?? null;
+
 $labelsDatos = [
     'tipo_solicitante' => 'Tipo de solicitante',
     'razon_social_o_nombre' => 'Nombre / Razón social',
@@ -116,6 +135,15 @@ $tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa', 'fisica' =>
                     <div class="text-muted" style="font-size: 0.72rem;"><?= $pasoActual >= 4 ? 'Aprobado' : 'Por emitir' ?></div>
                 </div>
             </div>
+        </div>
+        <?php
+        // En el teléfono el nombre de cada paso se oculta para que quepan los cuatro
+        // iconos. Esta línea recupera el nombre del paso en curso sin agrandar la tarjeta.
+        $nombresPaso = ['Radicación', 'Pago / Derechos', 'Inspección / Revisión', 'Dictamen Final'];
+        $pasoEnCurso = max(1, min(4, (int) $pasoActual));
+        ?>
+        <div class="d-sm-none text-center small text-muted mt-3 mb-0">
+            Vas en el paso <?= $pasoEnCurso ?> de 4: <strong class="text-dark"><?= esc($nombresPaso[$pasoEnCurso - 1]) ?></strong>
         </div>
     </div>
 </div>
@@ -310,14 +338,8 @@ $tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa', 'fisica' =>
                 <?php else: ?>
                 <div class="list-group list-group-flush">
                 <?php foreach ($documentos as $doc):
-                    $tipoNombre = match ($doc->tipo_documento) {
-                        'identificacion_oficial' => 'Identificación oficial',
-                        'tarjeta_circulacion' => 'Tarjeta de circulación',
-                        'documento_carga_descarga' => 'Documento de carga/descarga',
-                        default => $doc->tipo_documento,
-                    };
-                    $tamanoKB = round((int)$doc->tamano_bytes / 1024, 1);
-                    $tamanoStr = $tamanoKB >= 1024 ? round($tamanoKB / 1024, 2) . ' MB' : $tamanoKB . ' KB';
+                    $tipoNombre = tipo_documento_nombre($doc->tipo_documento);
+                    $tamanoStr  = formato_bytes((int) $doc->tamano_bytes);
                     $icono = match ($doc->mime_type) {
                         'application/pdf' => 'bi-filetype-pdf text-danger',
                         'image/png', 'image/jpeg' => 'bi-filetype-image text-success',
@@ -329,7 +351,7 @@ $tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa', 'fisica' =>
                             <i class="bi <?= $icono ?> fs-3 me-3 flex-shrink-0"></i>
                             <div class="min-w-0">
                                 <div class="fw-semibold small text-truncate"><?= esc($tipoNombre) ?></div>
-                                <div class="small text-muted text-truncate" style="max-width: 200px;">
+                                <div class="small text-muted text-break">
                                     <?= esc($doc->nombre_original) ?>
                                     <span class="mx-1">·</span>
                                     <?= $tamanoStr ?>

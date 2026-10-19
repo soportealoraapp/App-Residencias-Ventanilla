@@ -1,4 +1,13 @@
 <?php declare(strict_types=1);
+// Variables inyectadas por el controlador: se leen del ambito real para que el
+// analisis estatico no las marque como indefinidas; en runtime gana el valor enviado.
+$__view = get_defined_vars();
+/** @var object $solicitud */
+$solicitud = $__view['solicitud'] ?? null;
+/** @var array<string, string> $datos */
+$datos = $__view['datos'] ?? [];
+/** @var array<int, object> $documentos */
+$documentos = $__view['documentos'] ?? [];
 $labels = ['nombre_razon_social' => 'Nombre o razón social', 'tipo_persona' => 'Tipo de persona', 'rfc' => 'RFC', 'domicilio' => 'Domicilio', 'tipo_servicio' => 'Tipo de servicio', 'tipo_unidad' => 'Tipo de unidades', 'cantidad_unidades' => 'Cantidad de unidades', 'lugar_servicio' => 'Lugar del servicio', 'zona_servicio' => 'Zona o ruta', 'motivo_necesidad' => 'Motivo', 'descripcion_necesidad' => 'Descripción', 'vigencia_observacion' => 'Vigencia solicitada'];
 ?>
 <?= $this->extend('layouts/portal') ?>

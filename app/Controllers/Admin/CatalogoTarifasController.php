@@ -14,16 +14,20 @@ class CatalogoTarifasController extends Controller
     {
         $tarifaModel = new TarifaModel();
 
-        $tramite = $this->request->getGet('tramite') ?? '';
+        $tramite    = (string) ($this->request->getGet('tramite') ?? '');
+        // 'no_oficial' aísla los montos que aún son referencia y no tarifario oficial.
+        $referencia = (string) ($this->request->getGet('referencia') ?? '');
 
-        $tramites = ['UR-TT-T-01', 'UR-TT-T-02', 'UR-TT-T-03', 'UR-TT-T-04', 'UR-TT-T-05'];
-        if (FeatureFlags::habilitarUrTtT06()) {
-            $tramites[] = 'UR-TT-T-06';
-        }
-        $tramites[] = 'UR-TT-T-07';
+        $tramites = $this->tramitesHabilitados();
 
         if ($tramite !== '') {
             $tarifaModel->where('tramite', $tramite);
+        }
+
+        if ($referencia === 'no_oficial') {
+            $tarifaModel->where('placeholder_oficial', 1);
+        } elseif ($referencia === 'oficial') {
+            $tarifaModel->where('placeholder_oficial', 0);
         }
 
         $tarifaModel->orderBy('tramite', 'ASC')
@@ -33,23 +37,64 @@ class CatalogoTarifasController extends Controller
         $tarifas = $tarifaModel->findAll();
 
         $filtros = [
-            'tramite' => $tramite,
+            'tramite'    => $tramite,
+            'referencia' => $referencia,
         ];
 
         return view('admin/catalogos/tarifas_index', [
-            'tarifas' => $tarifas,
-            'filtros' => $filtros,
+            'tarifas'  => $tarifas,
+            'filtros'  => $filtros,
             'tramites' => $tramites,
+            'conteos'  => $this->conteosTarifas(),
         ]);
     }
 
-    public function formNuevo()
+    /**
+     * Códigos de trámite habilitados según los feature flags.
+     *
+     * @return list<string>
+     */
+    private function tramitesHabilitados(): array
     {
         $tramites = ['UR-TT-T-01', 'UR-TT-T-02', 'UR-TT-T-03', 'UR-TT-T-04', 'UR-TT-T-05'];
         if (FeatureFlags::habilitarUrTtT06()) {
             $tramites[] = 'UR-TT-T-06';
         }
         $tramites[] = 'UR-TT-T-07';
+
+        return $tramites;
+    }
+
+    /**
+     * Cuántas tarifas hay por trámite, para que cada filtro rápido muestre su
+     * cantidad real en lugar de un número genérico.
+     *
+     * @return array{total: int, por_tramite: array<string, int>, no_oficiales: int}
+     */
+    private function conteosTarifas(): array
+    {
+        $db = \Config\Database::connect();
+
+        $porTramite = [];
+        $filas = $db->table('tarifas')
+            ->select('tramite, COUNT(*) AS total')
+            ->groupBy('tramite')
+            ->get()
+            ->getResultArray();
+        foreach ($filas as $fila) {
+            $porTramite[(string) $fila['tramite']] = (int) $fila['total'];
+        }
+
+        return [
+            'total'        => $db->table('tarifas')->countAllResults(),
+            'por_tramite'  => $porTramite,
+            'no_oficiales' => $db->table('tarifas')->where('placeholder_oficial', 1)->countAllResults(),
+        ];
+    }
+
+    public function formNuevo()
+    {
+        $tramites = $this->tramitesHabilitados();
 
         $hoy = date('Y-m-d');
 
@@ -139,11 +184,7 @@ class CatalogoTarifasController extends Controller
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
 
-        $tramites = ['UR-TT-T-01', 'UR-TT-T-02', 'UR-TT-T-03', 'UR-TT-T-04', 'UR-TT-T-05'];
-        if (FeatureFlags::habilitarUrTtT06()) {
-            $tramites[] = 'UR-TT-T-06';
-        }
-        $tramites[] = 'UR-TT-T-07';
+        $tramites = $this->tramitesHabilitados();
 
         return view('admin/catalogos/tarifas_form', [
             'tarifa'   => $tarifa,

@@ -1,4 +1,12 @@
-<?php declare(strict_types=1); ?>
+<?php declare(strict_types=1);
+// Variables inyectadas por el controlador: se leen del ambito real para que el
+// analisis estatico no las marque como indefinidas; en runtime gana el valor enviado.
+$__view = get_defined_vars();
+/** @var array<string, object> $formatosMap */
+$formatosMap = $__view['formatosMap'] ?? [];
+/** @var bool $habilitaT06 */
+$habilitaT06 = $__view['habilitaT06'] ?? false;
+?>
 <?= $this->extend('layouts/portal') ?>
 <?= $this->section('title') ?>Trámites Disponibles - Portal Ciudadano Uriangato<?= $this->endSection() ?>
 <?= $this->section('content') ?>
@@ -52,7 +60,7 @@
             <div class="col-12 col-md-6">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                    <input type="text" id="filtroTextoTramites" class="form-control border-start-0" 
+                    <input autocomplete="off" spellcheck="false" enterkeyhint="search" type="text" id="filtroTextoTramites" class="form-control border-start-0" 
                         placeholder="Buscar por nombre, palabra clave o código (ej. UR-01, placas, carga)..." 
                         aria-label="Buscar trámite">
                     <button class="btn btn-outline-secondary" type="button" id="btnLimpiarFiltro" title="Limpiar búsqueda">
@@ -107,7 +115,7 @@
                     </ul>
                 </div>
                 <div>
-                    <a href="<?= site_url('/portal/tramites/concesion-transporte') ?>" class="btn btn-success btn-lg w-100 shadow-sm">
+                    <a href="<?= site_url('/portal/tramites/concesion-transporte') ?>" class="btn btn-success btn-lg w-100 shadow-sm stretched-link">
                         <i class="bi bi-play-circle me-2"></i>Ver convocatoria / Postular
                     </a>
                 </div>
@@ -116,7 +124,7 @@
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible bajo Convocatoria</span>
                     <?php if (!empty($formatosMap['UR-TT-T-01'])): ?>
-                        <a href="<?= site_url('/portal/formato/UR-TT-T-01') ?>" class="btn btn-sm btn-outline-secondary">
+                        <a href="<?= site_url('/portal/formato/UR-TT-T-01') ?>" class="btn btn-sm btn-outline-secondary" style="position: relative; z-index: 2;">
                             <i class="bi bi-file-earmark-arrow-down me-1"></i>Formato
                         </a>
                     <?php endif; ?>
@@ -149,7 +157,7 @@
                     </ul>
                 </div>
                 <div>
-                    <a href="<?= site_url('/portal/tramites/constancia-despintado') ?>" class="btn btn-primary btn-lg w-100 shadow-sm">
+                    <a href="<?= site_url('/portal/tramites/constancia-despintado') ?>" class="btn btn-primary btn-lg w-100 shadow-sm stretched-link">
                         <i class="bi bi-play-circle me-2"></i>Iniciar trámite
                     </a>
                 </div>
@@ -158,7 +166,7 @@
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
                     <?php if (!empty($formatosMap['UR-TT-T-02'])): ?>
-                        <a href="<?= site_url('/portal/formato/UR-TT-T-02') ?>" class="btn btn-sm btn-outline-secondary">
+                        <a href="<?= site_url('/portal/formato/UR-TT-T-02') ?>" class="btn btn-sm btn-outline-secondary" style="position: relative; z-index: 2;">
                             <i class="bi bi-file-earmark-arrow-down me-1"></i>Formato
                         </a>
                     <?php endif; ?>
@@ -192,7 +200,7 @@
                     </ul>
                 </div>
                 <div>
-                    <a href="<?= site_url('/portal/tramites/orden-plaqueo') ?>" class="btn btn-primary btn-lg w-100 shadow-sm">
+                    <a href="<?= site_url('/portal/tramites/orden-plaqueo') ?>" class="btn btn-primary btn-lg w-100 shadow-sm stretched-link">
                         <i class="bi bi-play-circle me-2"></i>Iniciar trámite
                     </a>
                 </div>
@@ -201,7 +209,7 @@
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
                     <?php if (!empty($formatosMap['UR-TT-T-03'])): ?>
-                        <a href="<?= site_url('/portal/formato/UR-TT-T-03') ?>" class="btn btn-sm btn-outline-secondary">
+                        <a href="<?= site_url('/portal/formato/UR-TT-T-03') ?>" class="btn btn-sm btn-outline-secondary" style="position: relative; z-index: 2;">
                             <i class="bi bi-file-earmark-arrow-down me-1"></i>Formato
                         </a>
                     <?php endif; ?>
@@ -233,7 +241,7 @@
                         <li>Costo de referencia: <strong>$156.94</strong></li>
                     </ul>
                 </div>
-                <a href="<?= site_url('/portal/tramites/permiso-eventual') ?>" class="btn btn-primary btn-lg w-100 shadow-sm">
+                <a href="<?= site_url('/portal/tramites/permiso-eventual') ?>" class="btn btn-primary btn-lg w-100 shadow-sm stretched-link">
                     <i class="bi bi-play-circle me-2"></i>Iniciar trámite
                 </a>
             </div>
@@ -241,7 +249,7 @@
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
                     <?php if (!empty($formatosMap['UR-TT-T-04'])): ?>
-                        <a href="<?= site_url('/portal/formato/UR-TT-T-04') ?>" class="btn btn-sm btn-outline-secondary">
+                        <a href="<?= site_url('/portal/formato/UR-TT-T-04') ?>" class="btn btn-sm btn-outline-secondary" style="position: relative; z-index: 2;">
                             <i class="bi bi-file-earmark-arrow-down me-1"></i>Formato
                         </a>
                     <?php endif; ?>
@@ -271,7 +279,7 @@
                         <li>Costo de referencia: <strong>$287.00</strong></li>
                     </ul>
                 </div>
-                <a href="<?= site_url('/portal/tramites/cierre-calle') ?>" class="btn btn-primary btn-lg w-100 shadow-sm">
+                <a href="<?= site_url('/portal/tramites/cierre-calle') ?>" class="btn btn-primary btn-lg w-100 shadow-sm stretched-link">
                     <i class="bi bi-play-circle me-2"></i>Iniciar trámite
                 </a>
             </div>
@@ -279,7 +287,7 @@
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
                     <?php if (!empty($formatosMap['UR-TT-T-05'])): ?>
-                        <a href="<?= site_url('/portal/formato/UR-TT-T-05') ?>" class="btn btn-sm btn-outline-secondary">
+                        <a href="<?= site_url('/portal/formato/UR-TT-T-05') ?>" class="btn btn-sm btn-outline-secondary" style="position: relative; z-index: 2;">
                             <i class="bi bi-file-earmark-arrow-down me-1"></i>Formato
                         </a>
                     <?php endif; ?>
@@ -313,7 +321,7 @@
                     </ul>
                 </div>
                 <div>
-                    <a href="<?= site_url('/portal/tramites/cesion-concesion') ?>" class="btn btn-success btn-lg w-100 shadow-sm">
+                    <a href="<?= site_url('/portal/tramites/cesion-concesion') ?>" class="btn btn-success btn-lg w-100 shadow-sm stretched-link">
                         <i class="bi bi-play-circle me-2"></i>Iniciar trámite
                     </a>
                 </div>
@@ -322,7 +330,7 @@
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
                     <?php if (!empty($formatosMap['UR-TT-T-06'])): ?>
-                        <a href="<?= site_url('/portal/formato/UR-TT-T-06') ?>" class="btn btn-sm btn-outline-secondary">
+                        <a href="<?= site_url('/portal/formato/UR-TT-T-06') ?>" class="btn btn-sm btn-outline-secondary" style="position: relative; z-index: 2;">
                             <i class="bi bi-file-earmark-arrow-down me-1"></i>Formato
                         </a>
                     <?php endif; ?>
@@ -357,7 +365,7 @@
                     </ul>
                 </div>
                 <div>
-                    <a href="<?= site_url('/portal/tramites/carga-descarga/formulario') ?>" class="btn btn-primary btn-lg w-100 shadow-sm">
+                    <a href="<?= site_url('/portal/tramites/carga-descarga/formulario') ?>" class="btn btn-primary btn-lg w-100 shadow-sm stretched-link">
                         <i class="bi bi-play-circle me-2"></i>Iniciar trámite
                     </a>
                 </div>
@@ -366,7 +374,7 @@
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Disponible para solicitud</span>
                     <?php if (!empty($formatosMap['UR-TT-T-07'])): ?>
-                        <a href="<?= site_url('/portal/formato/UR-TT-T-07') ?>" class="btn btn-sm btn-outline-secondary">
+                        <a href="<?= site_url('/portal/formato/UR-TT-T-07') ?>" class="btn btn-sm btn-outline-secondary" style="position: relative; z-index: 2;">
                             <i class="bi bi-file-earmark-arrow-down me-1"></i>Formato
                         </a>
                     <?php endif; ?>

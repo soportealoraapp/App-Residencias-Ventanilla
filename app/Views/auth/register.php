@@ -49,7 +49,8 @@
             <label for="curp" class="form-label small fw-semibold">CURP <span class="text-danger">*</span></label>
             <div class="input-group">
                 <span class="input-group-text bg-light text-muted"><i class="bi bi-person-vcard"></i></span>
-                <input type="text" class="form-control text-uppercase" id="curp" name="curp" value="<?= old('curp') ?>" placeholder="Ingresa tu CURP" maxlength="18" required>
+                <input type="text" class="form-control text-uppercase" id="curp" name="curp" value="<?= old('curp') ?>" placeholder="Ingresa tu CURP" maxlength="18" required
+                       autocomplete="off" autocapitalize="characters" spellcheck="false">
             </div>
             <span class="hint">18 caracteres, tal como aparece en tu constancia de CURP.</span>
         </div>
@@ -57,11 +58,11 @@
         <div class="row g-2 mb-3">
             <div class="col-sm-6">
                 <label for="nombre" class="form-label small fw-semibold">Nombre(s) <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="nombre" name="nombre" value="<?= old('nombre') ?>" placeholder="Nombre(s)" required>
+                <input type="text" class="form-control" id="nombre" name="nombre" value="<?= old('nombre') ?>" placeholder="Nombre(s)" required autocomplete="given-name">
             </div>
             <div class="col-sm-6">
                 <label for="apellido" class="form-label small fw-semibold">Apellido(s) <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="apellido" name="apellido" value="<?= old('apellido') ?>" placeholder="Apellido paterno y materno" required>
+                <input type="text" class="form-control" id="apellido" name="apellido" value="<?= old('apellido') ?>" placeholder="Apellido paterno y materno" required autocomplete="family-name">
             </div>
         </div>
 
@@ -69,18 +70,19 @@
             <label for="telefono" class="form-label small fw-semibold">Teléfono <span class="text-danger">*</span></label>
             <div class="input-group">
                 <span class="input-group-text bg-light text-muted"><i class="bi bi-telephone"></i></span>
-                <input type="text" class="form-control" id="telefono" name="telefono" value="<?= old('telefono') ?>" placeholder="Ej. 445 123 4567" required>
+                <input type="tel" class="form-control" id="telefono" name="telefono" value="<?= old('telefono') ?>" placeholder="Ej. 445 123 4567" required
+                       autocomplete="tel" inputmode="tel" enterkeyhint="next">
             </div>
         </div>
 
         <div class="row g-2 mb-3">
             <div class="col-sm-6">
                 <label for="estado" class="form-label small fw-semibold">Estado <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="estado" name="estado" value="<?= old('estado', 'Guanajuato') ?>" placeholder="Ej. Guanajuato" required>
+                <input type="text" class="form-control" id="estado" name="estado" value="<?= old('estado', 'Guanajuato') ?>" placeholder="Ej. Guanajuato" required autocomplete="address-level1">
             </div>
             <div class="col-sm-6">
                 <label for="ciudad" class="form-label small fw-semibold">Ciudad / Municipio <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="ciudad" name="ciudad" value="<?= old('ciudad', 'Uriangato') ?>" placeholder="Ej. Uriangato" required>
+                <input type="text" class="form-control" id="ciudad" name="ciudad" value="<?= old('ciudad', 'Uriangato') ?>" placeholder="Ej. Uriangato" required autocomplete="address-level2">
             </div>
         </div>
 
@@ -88,7 +90,7 @@
             <label for="domicilio" class="form-label small fw-semibold">Dirección <span class="text-danger">*</span></label>
             <div class="input-group">
                 <span class="input-group-text bg-light text-muted"><i class="bi bi-geo-alt"></i></span>
-                <input type="text" class="form-control" id="domicilio" name="domicilio" value="<?= old('domicilio') ?>" placeholder="Calle, número, colonia, CP" required>
+                <input type="text" class="form-control" id="domicilio" name="domicilio" value="<?= old('domicilio') ?>" placeholder="Calle, número, colonia, CP" required autocomplete="street-address">
             </div>
         </div>
 
@@ -96,43 +98,48 @@
             <label for="email" class="form-label small fw-semibold">Correo electrónico <span class="text-danger">*</span></label>
             <div class="input-group">
                 <span class="input-group-text bg-light text-muted"><i class="bi bi-envelope"></i></span>
-                <input type="email" class="form-control" id="email" name="email" value="<?= old('email') ?>" placeholder="tucorreo@ejemplo.com" required>
+                <input type="email" class="form-control" id="email" name="email" value="<?= old('email') ?>" placeholder="tucorreo@ejemplo.com" required
+                       autocomplete="email" inputmode="email" spellcheck="false" enterkeyhint="next">
             </div>
         </div>
 
         <div class="row g-2 mb-3">
             <div class="col-sm-7">
                 <label for="username" class="form-label small fw-semibold">Usuario <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="username" name="username" value="<?= old('username') ?>" placeholder="Mínimo 5 letras/números" required>
+                <input type="text" class="form-control" id="username" name="username" value="<?= old('username') ?>" placeholder="Mínimo 5 letras/números" required
+                       autocomplete="username" spellcheck="false" enterkeyhint="next">
             </div>
             <div class="col-sm-5">
                 <label for="rfc" class="form-label small fw-semibold">RFC <span class="text-muted">(opcional)</span></label>
-                <input type="text" class="form-control text-uppercase" id="rfc" name="rfc" value="<?= old('rfc') ?>" placeholder="XAXX010101000" maxlength="13">
+                <input type="text" class="form-control text-uppercase" id="rfc" name="rfc" value="<?= old('rfc') ?>" placeholder="XAXX010101000" maxlength="13"
+                       autocomplete="off" autocapitalize="characters" spellcheck="false">
             </div>
         </div>
 
         <div class="row g-2 mb-3">
             <div class="col-sm-6">
                 <label for="password" class="form-label small fw-semibold">Contraseña <span class="text-danger">*</span></label>
-                <input type="password" class="form-control" id="password" name="password" placeholder="Mínimo 8 caracteres" required>
+                <input type="password" class="form-control" id="password" name="password" placeholder="Mínimo 8 caracteres" required autocomplete="new-password">
                 <span class="hint">Al menos una letra y un número.</span>
             </div>
             <div class="col-sm-6">
                 <label for="password_confirm" class="form-label small fw-semibold">Confirmar <span class="text-danger">*</span></label>
-                <input type="password" class="form-control" id="password_confirm" name="password_confirm" placeholder="Repite tu contraseña" required>
+                <input type="password" class="form-control" id="password_confirm" name="password_confirm" placeholder="Repite tu contraseña" required autocomplete="new-password" enterkeyhint="done">
             </div>
         </div>
 
         <div class="mb-3">
-            <label class="form-label small fw-semibold mb-1">INE <span class="text-muted">(opcional)</span></label>
+            <div class="form-label small fw-semibold mb-1">INE <span class="text-muted">(opcional)</span></div>
             <div class="row g-2">
                 <div class="col-sm-6">
+                    <label for="ine_frente" class="small fw-semibold text-muted">Frente</label>
                     <input type="file" class="form-control form-control-sm" id="ine_frente" name="ine_frente" accept="image/jpeg,image/png">
-                    <span class="hint">Frente (JPG/PNG, máx. 5 MB).</span>
+                    <span class="hint">JPG/PNG, máx. 5 MB.</span>
                 </div>
                 <div class="col-sm-6">
+                    <label for="ine_reverso" class="small fw-semibold text-muted">Reverso</label>
                     <input type="file" class="form-control form-control-sm" id="ine_reverso" name="ine_reverso" accept="image/jpeg,image/png">
-                    <span class="hint">Reverso.</span>
+                    <span class="hint">La parte de atrás.</span>
                 </div>
             </div>
             <span class="hint">Puedes omitirlo y entregarlo después en la ventanilla.</span>

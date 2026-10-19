@@ -40,8 +40,11 @@ class AuditoriaModel extends Model
                 'accion'            => $accion,
                 'usuario_id'        => $usuarioId,
                 'fecha'             => $fecha,
-                'detalle'           => $detalle !== null ? json_encode($detalle) : null,
-                'registro_borrados' => $registroBorrado !== null ? (is_string($registroBorrado) ? $registroBorrado : json_encode($registroBorrado)) : null,
+                // Sin escapar el unicode para que el detalle se lea en español,
+                // y sustituyendo bytes inválidos: un nombre de archivo mal codificado
+                // no debe dejar el registro de auditoría sin detalle.
+                'detalle'           => $detalle !== null ? json_encode($detalle, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) : null,
+                'registro_borrados' => $registroBorrado !== null ? (is_string($registroBorrado) ? $registroBorrado : json_encode($registroBorrado, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE)) : null,
                 'created_at'        => $fecha,
             ];
 
@@ -138,6 +141,14 @@ class AuditoriaModel extends Model
         }
         if (! empty($filtros['accion'])) {
             $this->where('auditoria.accion', $filtros['accion']);
+        }
+        // Identificador del registro afectado: permite abrir la trazabilidad de
+        // una sola solicitud, documento o boleta desde su propio expediente.
+        // La columna es BIGINT: solo se acepta un valor numérico para no enviar
+        // texto a una comparación entera.
+        $entidadId = (string) ($filtros['entidad_id'] ?? '');
+        if ($entidadId !== '' && ctype_digit($entidadId)) {
+            $this->where('auditoria.entidad_id', (int) $entidadId);
         }
         if (! empty($filtros['usuario_id']) && ctype_digit((string) $filtros['usuario_id'])) {
             $this->where('auditoria.usuario_id', (int) $filtros['usuario_id']);

@@ -1,4 +1,11 @@
 <?php declare(strict_types=1);
+// Variables inyectadas por el controlador: se leen del ambito real para que el
+// analisis estatico no las marque como indefinidas; en runtime gana el valor enviado.
+$__view = get_defined_vars();
+/** @var object|null $convocatoria */
+$convocatoria = $__view['convocatoria'] ?? null;
+/** @var float $tarifaMonto */
+$tarifaMonto = $__view['tarifaMonto'] ?? 0.0;
 $validation = \Config\Services::validation();
 $oldNombre = old('solicitante_nombre', '');
 $oldTipoPersona = old('tipo_persona', 'fisica');
@@ -105,7 +112,7 @@ $oldNumVehiculos = old('num_vehiculos', '1');
                                     <label for="solicitante_nombre" class="form-label fw-semibold">
                                         Nombre completo o Razón Social <span class="text-danger">*</span>
                                     </label>
-                                    <input type="text" class="form-control" id="solicitante_nombre" name="solicitante_nombre" required maxlength="180" value="<?= esc($oldNombre) ?>" placeholder="Nombre completo del participante">
+                                    <input type="text" class="form-control" id="solicitante_nombre" name="solicitante_nombre" required maxlength="180" value="<?= esc($oldNombre) ?>" placeholder="Nombre completo del participante" autocomplete="name" enterkeyhint="next">
                                     <?php if ($validation->getError('solicitante_nombre')): ?>
                                         <div class="text-danger small mt-1"><?= $validation->getError('solicitante_nombre') ?></div>
                                     <?php endif; ?>
@@ -114,7 +121,7 @@ $oldNumVehiculos = old('num_vehiculos', '1');
                                     <label for="rfc" class="form-label fw-semibold">
                                         RFC con Homoclave <span class="text-danger">*</span>
                                     </label>
-                                    <input type="text" class="form-control text-uppercase" id="rfc" name="rfc" required minlength="12" maxlength="13" pattern="[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}" title="12 caracteres (persona moral) o 13 (persona física)" value="<?= esc($oldRfc) ?>" placeholder="Ej. GODE561231GR8">
+                                    <input type="text" class="form-control text-uppercase" id="rfc" name="rfc" required minlength="12" maxlength="13" pattern="[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}" title="12 caracteres (persona moral) o 13 (persona física)" value="<?= esc($oldRfc) ?>" placeholder="Ej. GODE561231GR8" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next">
                                     <?php if ($validation->getError('rfc')): ?>
                                         <div class="text-danger small mt-1"><?= $validation->getError('rfc') ?></div>
                                     <?php endif; ?>
@@ -136,7 +143,7 @@ $oldNumVehiculos = old('num_vehiculos', '1');
                                     <label for="tipo_servicio" class="form-label fw-semibold">
                                         Tipo de Servicio Pretendido <span class="text-danger">*</span>
                                     </label>
-                                    <input type="text" class="form-control" id="tipo_servicio" name="tipo_servicio" required maxlength="100" value="<?= esc($oldServicio) ?>" placeholder="Ej: Colectivo Urbano, Ruta 4, Taxi Colectivo">
+                                    <input type="text" class="form-control" id="tipo_servicio" name="tipo_servicio" required maxlength="100" value="<?= esc($oldServicio) ?>" placeholder="Ej: Colectivo Urbano, Ruta 4, Taxi Colectivo" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="next">
                                     <?php if ($validation->getError('tipo_servicio')): ?>
                                         <div class="text-danger small mt-1"><?= $validation->getError('tipo_servicio') ?></div>
                                     <?php endif; ?>
@@ -145,7 +152,7 @@ $oldNumVehiculos = old('num_vehiculos', '1');
                                     <label for="num_vehiculos" class="form-label fw-semibold">
                                         Número de Unidades Propuestas <span class="text-danger">*</span>
                                     </label>
-                                    <input type="number" class="form-control" id="num_vehiculos" name="num_vehiculos" required min="1" max="50" value="<?= esc($oldNumVehiculos) ?>">
+                                    <input type="number" class="form-control" id="num_vehiculos" name="num_vehiculos" required min="1" max="50" value="<?= esc($oldNumVehiculos) ?>" inputmode="numeric">
                                     <?php if ($validation->getError('num_vehiculos')): ?>
                                         <div class="text-danger small mt-1"><?= $validation->getError('num_vehiculos') ?></div>
                                     <?php endif; ?>

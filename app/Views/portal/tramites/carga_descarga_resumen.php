@@ -1,4 +1,15 @@
 <?php declare(strict_types=1);
+// Variables inyectadas por el controlador: se leen del ambito real para que el
+// analisis estatico no las marque como indefinidas; en runtime gana el valor enviado.
+$__view = get_defined_vars();
+/** @var object $solicitud */
+$solicitud = $__view['solicitud'] ?? null;
+/** @var array<string, string> $datos */
+$datos = $__view['datos'] ?? [];
+/** @var array<int, object> $documentos */
+$documentos = $__view['documentos'] ?? [];
+/** @var bool $placeholder */
+$placeholder = $__view['placeholder'] ?? false;
 $labelsDatos = [
     'tipo_solicitante' => 'Tipo de solicitante',
     'razon_social_o_nombre' => 'Nombre / Razón social',
@@ -141,8 +152,8 @@ $puedePagar = $solicitud->estatus === 'Pago pendiente';
                                     </div>
                                 </div>
                             </div>
-                            <a href="<?= site_url('/portal/tramites/carga-descarga/' . $solicitud->folio . '/descargar/' . $doc->id) ?>" class="btn btn-sm btn-outline-primary flex-shrink-0 ms-2">
-                                <i class="bi bi-download"></i>
+                            <a href="<?= site_url('/portal/tramites/carga-descarga/' . $solicitud->folio . '/descargar/' . $doc->id) ?>" class="btn btn-sm btn-outline-primary flex-shrink-0 ms-2" title="Descargar <?= esc($doc->nombre_original) ?>" aria-label="Descargar <?= esc($doc->nombre_original) ?>">
+                                <i class="bi bi-download" aria-hidden="true"></i>
                             </a>
                         </div>
                     </div>

@@ -67,6 +67,18 @@ final class PermisosOperador
             'icono'       => 'shield-check',
             'rutas'       => ['admin/auditoria'],
         ],
+        'documentos' => [
+            'nombre'      => 'Documentos recibidos',
+            'descripcion' => 'Consultar el almacén de archivos subidos por los ciudadanos y ubicar su expediente.',
+            'icono'       => 'file-earmark',
+            'rutas'       => ['admin/documentos'],
+        ],
+        'verificaciones' => [
+            'nombre'      => 'Verificaciones físicas',
+            'descripcion' => 'Consultar la agenda de inspecciones y qué dictamen lleva cada cita.',
+            'icono'       => 'clipboard2-check',
+            'rutas'       => ['admin/verificaciones'],
+        ],
         'convocatorias' => [
             'nombre'      => 'Convocatorias UR-01',
             'descripcion' => 'Evaluar convocatorias y seleccionar ganadores de licencias.',
@@ -90,6 +102,12 @@ final class PermisosOperador
             'descripcion' => 'Administrar el catálogo de infracciones y sus UMA.',
             'icono'       => 'journal-bookmark',
             'rutas'       => ['admin/app-transito/catalogo'],
+        ],
+        'app_transito_sesiones' => [
+            'nombre'      => 'App Tránsito: sesiones de acceso',
+            'descripcion' => 'Consultar qué accesos de la app están vigentes, vencidos o revocados. Nunca se muestra el token.',
+            'icono'       => 'key',
+            'rutas'       => ['admin/sesiones-app'],
         ],
     ];
 

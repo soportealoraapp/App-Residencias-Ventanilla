@@ -46,6 +46,9 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->group('', ['filter' => 'role:administrador,operador_ventanilla'], function($routes) {
         $routes->get('dashboard', 'Admin\\AdminController::dashboard', ['as' => 'admin.dashboard']);
         $routes->get('auditoria', 'Admin\\AdminController::auditoria', ['as' => 'admin.auditoria']);
+        $routes->get('documentos', 'Admin\\DocumentosController::index', ['as' => 'admin.documentos']);
+        $routes->get('verificaciones', 'Admin\\VerificacionesController::index', ['as' => 'admin.verificaciones']);
+        $routes->get('sesiones-app', 'Admin\\SesionesAppController::index', ['as' => 'admin.sesiones_app']);
         $routes->get('solicitudes', 'Admin\\AdminController::listaSolicitudes', ['as' => 'admin.solicitudes']);
         $routes->get('solicitudes/nueva', 'Admin\\SolicitudPresencialController::index');
         $routes->post('solicitudes/nueva/buscar-ciudadano', 'Admin\\SolicitudPresencialController::buscarCiudadano');
@@ -57,6 +60,7 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->post('solicitudes/ur05/validacion/(:num)', 'Admin\\AdminController::validarCierreCalleUr05/$1');
         $routes->post('solicitudes/dictamen-ur02/(:num)', 'Admin\\AdminController::registrarDictamenUr02/$1');
         $routes->get('solicitudes/descargar-documento/(:num)', 'Admin\\AdminController::descargarDocumento/$1');
+        $routes->post('solicitudes/validar-documento/(:num)', 'Admin\\AdminController::validarDocumento/$1');
         $routes->get('tarifas', 'Admin\\CatalogoTarifasController::index');
         $routes->get('tarifas/nuevo', 'Admin\\CatalogoTarifasController::formNuevo');
         $routes->post('tarifas/guardar', 'Admin\\CatalogoTarifasController::guardar');
@@ -73,6 +77,7 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->post('convocatorias/(:num)/seleccionar', 'Admin\\AdminController::seleccionarGanadorConvocatoria/$1');
 
         $routes->get('formatos', 'Admin\\AdminController::formatos');
+        $routes->get('formatos/ver/(:segment)', 'Admin\\AdminController::verFormato/$1');
         $routes->post('formatos/subir', 'Admin\\AdminController::subirFormato');
         $routes->post('formatos/eliminar', 'Admin\\AdminController::eliminarFormato');
 
@@ -100,6 +105,8 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->group('', ['filter' => 'role:administrador'], function($routes) {
         $routes->get('permisos-operador', 'Admin\\PermisosController::index');
         $routes->post('permisos-operador/guardar', 'Admin\\PermisosController::guardar');
+        // Desglose global: todas las metricas del sistema con su desglose navegable.
+        $routes->get('desglose', 'Admin\\DesgloseController::index', ['as' => 'admin.desglose']);
         $routes->post('usuarios/eliminar/(:num)', 'Admin\\UsuariosController::eliminar/$1');
         $routes->post('app-transito/agentes/eliminar/(:num)', 'Admin\\AppTransitoController::eliminarAgente/$1');
         $routes->post('app-transito/boletas/eliminar/(:num)', 'Admin\\AppTransitoController::eliminarBoleta/$1');

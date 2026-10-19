@@ -1,4 +1,9 @@
 <?php
+// Variables inyectadas por el controlador: se leen del ambito real para que el
+// analisis estatico no las marque como indefinidas; en runtime gana el valor enviado.
+$__view = get_defined_vars();
+/** @var \CodeIgniter\Pager\PagerRenderer $pager */
+$pager = $__view['pager'] ?? null;
 $pager->setSurroundCount(2);
 ?>
 

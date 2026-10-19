@@ -4,7 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#111827">
-    <title><?= $this->renderSection('pageTitle') ? esc($this->renderSection('pageTitle')) . ' - Panel Admin' : 'Panel Administrativo - Ventanilla Uriangato' ?></title>
+<?php
+// renderSection() consume la seccion la primera vez que la lee. Se pide aqui con
+// $saveData = true para no dejar vacio el <h1> de la barra superior, que la
+// reutiliza mas abajo.
+$__tituloPagina = trim($this->renderSection('pageTitle', true));
+?>
+    <title><?= $__tituloPagina !== '' ? esc($__tituloPagina) . ' - Panel Admin' : 'Panel Administrativo - Ventanilla Uriangato' ?></title>
     <!-- Bootstrap 5.3 & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
@@ -13,7 +19,7 @@
     <link rel="apple-touch-icon" href="/logo-uri.webp">
     <link href="/css/custom.css" rel="stylesheet">
 </head>
-<body>
+<body class="has-admin-bottom-nav">
 
 <div class="admin-wrapper">
     <!-- Mobile Backdrop Overlay -->
@@ -59,8 +65,8 @@
                 }
                 return $permisosOp[$clave] ?? true;
             };
-            $hayAppTransito = $permitido('app_transito_config') || $permitido('app_transito_boletas') || $permitido('app_transito_catalogo');
-            $hayCatalogos = $permitido('tarifas') || $permitido('concesiones') || $permitido('formatos') || $permitido('auditoria') || $permitido('convocatorias');
+            $hayAppTransito = $permitido('app_transito_config') || $permitido('app_transito_boletas') || $permitido('app_transito_catalogo') || $permitido('app_transito_sesiones');
+            $hayCatalogos = $permitido('tarifas') || $permitido('concesiones') || $permitido('formatos') || $permitido('auditoria') || $permitido('documentos') || $permitido('verificaciones') || $permitido('convocatorias');
         ?>
 
         <div class="sidebar-alcance">
@@ -73,6 +79,12 @@
             <i class="bi bi-speedometer2 me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Inicio</span>
         </a>
+        <?php if ($esAdministrador): ?>
+        <a href="/admin/desglose" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/desglose') ? 'active' : '' ?>">
+            <i class="bi bi-graph-up-arrow me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Desglose del sistema</span>
+        </a>
+        <?php endif; ?>
         <?php if ($permitido('solicitudes')): ?>
         <a href="/admin/solicitudes" class="sidebar-link <?= $isAllSolicitudes ? 'active' : '' ?>">
             <i class="bi bi-folder2-open me-2 sidebar-link-icon"></i>
@@ -148,6 +160,18 @@
             <span class="sidebar-text">Auditoría</span>
         </a>
         <?php endif; ?>
+        <?php if ($permitido('documentos')): ?>
+        <a href="/admin/documentos" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/documentos') ? 'active' : '' ?>">
+            <i class="bi bi-file-earmark me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Documentos recibidos</span>
+        </a>
+        <?php endif; ?>
+        <?php if ($permitido('verificaciones')): ?>
+        <a href="/admin/verificaciones" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/verificaciones') ? 'active' : '' ?>">
+            <i class="bi bi-clipboard2-check me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Verificaciones físicas</span>
+        </a>
+        <?php endif; ?>
         <?php if ($permitido('convocatorias')): ?>
         <a href="/admin/convocatorias/1/evaluacion" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/convocatorias') ? 'active' : '' ?>">
             <i class="bi bi-award-fill me-2 sidebar-link-icon"></i>
@@ -174,6 +198,12 @@
         <a href="/admin/app-transito/catalogo" class="sidebar-link <?= uri_string() === 'admin/app-transito/catalogo' ? 'active' : '' ?>">
             <i class="bi bi-journal-bookmark me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Catálogo de Faltas</span>
+        </a>
+        <?php endif; ?>
+        <?php if ($permitido('app_transito_sesiones')): ?>
+        <a href="/admin/sesiones-app" class="sidebar-link <?= uri_string() === 'admin/sesiones-app' ? 'active' : '' ?>">
+            <i class="bi bi-key me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Sesiones de la app</span>
         </a>
         <?php endif; ?>
         <?php endif; ?>
@@ -249,6 +279,42 @@
     </div>
 </div>
 
+<?php
+// Navegación rápida del panel en teléfono: el cajón lateral obliga a abrir y
+// cerrar, así que las cuatro rutas del día a día se quedan siempre visibles.
+$uriActual     = uri_string();
+$esNuevaSol    = str_starts_with($uriActual, 'admin/solicitudes/nueva');
+$activarInicio = $uriActual === 'admin/dashboard' || $uriActual === 'admin';
+$activarLista  = str_starts_with($uriActual, 'admin/solicitudes') && ! $esNuevaSol;
+$activarDesglose = str_starts_with($uriActual, 'admin/desglose');
+?>
+<nav class="admin-bottom-bar" aria-label="Navegación rápida del panel">
+    <a href="/admin/dashboard" class="admin-bottom-item <?= $activarInicio ? 'active' : '' ?>" <?= $activarInicio ? 'aria-current="page"' : '' ?>>
+        <i class="bi bi-speedometer2" aria-hidden="true"></i>
+        <span>Inicio</span>
+    </a>
+    <?php if ($permitido('solicitudes')): ?>
+    <a href="/admin/solicitudes" class="admin-bottom-item <?= $activarLista ? 'active' : '' ?>" <?= $activarLista ? 'aria-current="page"' : '' ?>>
+        <i class="bi bi-folder2-open" aria-hidden="true"></i>
+        <span>Solicitudes</span>
+    </a>
+    <a href="/admin/solicitudes/nueva" class="admin-bottom-item admin-bottom-item--cta <?= $esNuevaSol ? 'active' : '' ?>" <?= $esNuevaSol ? 'aria-current="page"' : '' ?>>
+        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+        <span>Nueva</span>
+    </a>
+    <?php endif; ?>
+    <?php if ($esAdministrador): ?>
+    <a href="/admin/desglose" class="admin-bottom-item <?= $activarDesglose ? 'active' : '' ?>" <?= $activarDesglose ? 'aria-current="page"' : '' ?>>
+        <i class="bi bi-graph-up-arrow" aria-hidden="true"></i>
+        <span>Desglose</span>
+    </a>
+    <?php endif; ?>
+    <button type="button" class="admin-bottom-item" id="btnBottomMenu" aria-controls="sidebarAdmin" aria-expanded="false" aria-label="Abrir menú completo">
+        <i class="bi bi-list" aria-hidden="true"></i>
+        <span>Menú</span>
+    </button>
+</nav>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/js/formularios.js"></script>
 <!-- UI base: tooltips globales + helper de copiar al portapapeles -->
@@ -320,6 +386,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const backdrop = document.getElementById('sidebarBackdrop');
     const toggleBtn = document.getElementById('btnSidebarToggle');
     const closeBtn = document.getElementById('btnCloseSidebar');
+    // El botón "Menú" de la barra inferior abre el mismo cajón que el topbar.
+    const bottomMenuBtn = document.getElementById('btnBottomMenu');
     const body = document.body;
 
     var MOBILE_BREAKPOINT = 991.98;
@@ -348,6 +416,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (toggleBtn) {
             toggleBtn.setAttribute('aria-expanded', String(value));
             toggleBtn.setAttribute('aria-label', value ? 'Cerrar menú' : 'Abrir menú');
+        }
+        // Las dos puertas del mismo cajón deben decir lo mismo para quien navega
+        // con lector de pantalla o sin vista.
+        if (bottomMenuBtn) {
+            bottomMenuBtn.setAttribute('aria-expanded', String(value));
+            bottomMenuBtn.setAttribute('aria-label', value ? 'Cerrar menú completo' : 'Abrir menú completo');
         }
     }
 
@@ -394,6 +468,18 @@ document.addEventListener('DOMContentLoaded', function() {
     if (toggleBtn) toggleBtn.addEventListener('click', handleToggleBtnClick);
     if (closeBtn) closeBtn.addEventListener('click', closeSidebarMobile);
     if (backdrop) backdrop.addEventListener('click', closeSidebarMobile);
+
+    // El botón "Menú" de la barra inferior usa el mismo cajón que el topbar.
+    if (bottomMenuBtn) {
+        bottomMenuBtn.addEventListener('click', function () {
+            var abierto = sidebar ? sidebar.classList.contains('show') : false;
+            if (abierto) {
+                closeSidebarMobile();
+            } else {
+                openSidebarMobile();
+            }
+        });
+    }
 
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && window.matchMedia('(max-width: ' + MD_BREAKPOINT + 'px)').matches) {

@@ -1,4 +1,11 @@
 <?php declare(strict_types=1);
+// Variables inyectadas por el controlador: se leen del ambito real para que el
+// analisis estatico no las marque como indefinidas; en runtime gana el valor enviado.
+$__view = get_defined_vars();
+/** @var object $solicitud */
+$solicitud = $__view['solicitud'] ?? null;
+/** @var object|null $verificacion */
+$verificacion = $__view['verificacion'] ?? null;
 $validation = \Config\Services::validation();
 $citaActual = !empty($verificacion->fecha_cita) ? $verificacion->fecha_cita : '';
 $fechaMinima = date('Y-m-d\TH:i', strtotime('+1 day 09:00'));

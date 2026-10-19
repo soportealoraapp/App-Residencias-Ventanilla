@@ -72,13 +72,24 @@ $solicitudes = $__view['solicitudes'] ?? [];
 </div>
 
 <?php
+    // Un mismo listado alimenta la tabla de escritorio y las fichas del teléfono.
+    $participantes = [];
+    foreach ($solicitudes as $item) {
+        $sol = is_array($item) ? (object) ($item['solicitud'] ?? []) : (is_object($item) && isset($item->solicitud) ? $item->solicitud : $item);
+        $participantes[] = [
+            'sol'              => $sol,
+            'datos'            => is_array($item) && isset($item['datos']) ? $item['datos'] : [],
+            'esGanador'        => (($sol->estatus ?? '') === 'Seleccionado'),
+            'esNoSeleccionado' => (($sol->estatus ?? '') === 'No seleccionado'),
+        ];
+    }
+
     $tieneGanador = false;
     $ganadorFolio = null;
-    foreach ($solicitudes as $item) {
-        $sol = is_array($item) ? (object)$item['solicitud'] : (is_object($item) && isset($item->solicitud) ? $item->solicitud : $item);
-        if ($sol && isset($sol->estatus) && $sol->estatus === 'Seleccionado') {
+    foreach ($participantes as $p) {
+        if ($p['esGanador']) {
             $tieneGanador = true;
-            $ganadorFolio = $sol->folio;
+            $ganadorFolio = $p['sol']->folio ?? null;
             break;
         }
     }
@@ -108,7 +119,7 @@ $solicitudes = $__view['solicitudes'] ?? [];
             <i class="bi bi-table me-2 text-primary"></i>Cuadro Comparativo de Solicitantes
         </h5>
     </div>
-    <div class="table-responsive">
+    <div class="table-responsive d-none d-md-block">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-dark">
                 <tr>
@@ -122,7 +133,7 @@ $solicitudes = $__view['solicitudes'] ?? [];
                 </tr>
             </thead>
             <tbody>
-                <?php if (empty($solicitudes)): ?>
+                <?php if (empty($participantes)): ?>
                     <tr>
                         <td colspan="7" class="text-center py-5 text-muted">
                             <i class="bi bi-folder-x fs-1 d-block mb-2 text-secondary"></i>
@@ -130,11 +141,11 @@ $solicitudes = $__view['solicitudes'] ?? [];
                         </td>
                     </tr>
                 <?php else: ?>
-                    <?php foreach ($solicitudes as $item): 
-                        $sol = is_array($item) ? (object)$item['solicitud'] : (is_object($item) && isset($item->solicitud) ? $item->solicitud : $item);
-                        $datos = is_array($item) && isset($item['datos']) ? $item['datos'] : [];
-                        $esGanador = ($sol->estatus === 'Seleccionado');
-                        $esNoSeleccionado = ($sol->estatus === 'No seleccionado');
+                    <?php foreach ($participantes as $p):
+                        $sol = $p['sol'];
+                        $datos = $p['datos'];
+                        $esGanador = $p['esGanador'];
+                        $esNoSeleccionado = $p['esNoSeleccionado'];
                     ?>
                     <tr class="<?= $esGanador ? 'table-success border-success' : ($esNoSeleccionado ? 'opacity-75 bg-light' : '') ?>">
                         <td>
@@ -142,7 +153,7 @@ $solicitudes = $__view['solicitudes'] ?? [];
                                 <?php if ($esGanador): ?>
                                     <i class="bi bi-trophy-fill text-warning me-1"></i>
                                 <?php endif; ?>
-                                <code><?= esc($sol->folio) ?></code>
+                                <a class="text-decoration-none" href="<?= site_url('/admin/solicitudes/' . $sol->folio) ?>" title="Ver expediente completo"><code><?= esc($sol->folio) ?></code></a>
                             </div>
                             <div>
                                 <?php if ($esGanador): ?>
@@ -176,7 +187,7 @@ $solicitudes = $__view['solicitudes'] ?? [];
                         </td>
                         <td class="text-end">
                             <div class="btn-group">
-                                <a href="<?= site_url('/admin/solicitudes/' . $sol->folio) ?>" class="btn btn-sm btn-outline-secondary" title="Ver Expediente Completo">
+                                <a href="<?= site_url('/admin/solicitudes/' . $sol->folio) ?>" class="btn btn-sm btn-outline-secondary" title="Ver expediente completo">
                                     <i class="bi bi-folder2-open me-1"></i>Expediente
                                 </a>
                                 <?php if (! $esGanador): ?>
@@ -195,6 +206,60 @@ $solicitudes = $__view['solicitudes'] ?? [];
                 <?php endif; ?>
             </tbody>
         </table>
+    </div>
+
+    <!-- Fichas para el teléfono: el cuadro comparativo de siete columnas no cabe -->
+    <div class="d-block d-md-none">
+        <?php if (empty($participantes)): ?>
+            <div class="p-4 text-center text-muted">
+                <i class="bi bi-folder-x fs-1 d-block mb-2 text-secondary"></i>
+                No hay participantes registrados en esta convocatoria.
+            </div>
+        <?php else: ?>
+            <?php foreach ($participantes as $p):
+                $sol = $p['sol'];
+                $datos = $p['datos'];
+            ?>
+            <div class="p-3 border-bottom <?= $p['esGanador'] ? 'table-success' : ($p['esNoSeleccionado'] ? 'opacity-75' : '') ?>">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <div class="overflow-hidden">
+                        <a class="fw-bold font-monospace text-decoration-none" href="<?= site_url('/admin/solicitudes/' . $sol->folio) ?>">
+                            <?= $p['esGanador'] ? '<i class="bi bi-trophy-fill text-warning me-1"></i>' : '' ?><?= esc($sol->folio) ?>
+                        </a>
+                        <div class="fw-semibold small"><?= esc($datos['solicitante_nombre'] ?? '—') ?></div>
+                    </div>
+                    <?php if ($p['esGanador']): ?>
+                        <span class="badge bg-success flex-shrink-0">Seleccionado</span>
+                    <?php elseif ($p['esNoSeleccionado']): ?>
+                        <span class="badge bg-secondary flex-shrink-0">No seleccionado</span>
+                    <?php else: ?>
+                        <span class="badge bg-primary flex-shrink-0"><?= esc($sol->estatus) ?></span>
+                    <?php endif; ?>
+                </div>
+                <div class="d-flex flex-wrap gap-2 small text-muted mt-2">
+                    <span><i class="bi bi-person-vcard me-1"></i><?= esc(ucfirst($datos['tipo_persona'] ?? 'fisica')) ?></span>
+                    <span class="font-monospace"><?= esc($datos['rfc'] ?? '—') ?></span>
+                    <span><i class="bi bi-bus-front me-1"></i><?= esc($datos['tipo_servicio'] ?? 'Transporte Público') ?> · <?= esc($datos['num_vehiculos'] ?? '1') ?> unidad(es)</span>
+                    <span><i class="bi bi-calendar3 me-1"></i><?= formatear_fecha($sol->fecha_solicitud) ?></span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <span class="fw-bold">$ <?= number_format((float) $sol->monto, 2) ?></span>
+                    <a class="btn btn-sm btn-outline-secondary" href="<?= site_url('/admin/solicitudes/' . $sol->folio) ?>" title="Ver expediente completo">
+                        <i class="bi bi-folder2-open me-1"></i>Expediente
+                    </a>
+                </div>
+                <?php if (! $p['esGanador']): ?>
+                    <form method="post" action="<?= site_url('admin/convocatorias/' . $convocatoria->id . '/seleccionar') ?>" class="mt-2" onsubmit="return confirm('¿Confirmas seleccionar a la solicitud <?= esc($sol->folio) ?> como GANADORA de la convocatoria? Esto actualizará a los demás participantes a No seleccionado.');">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="solicitud_id" value="<?= esc($sol->id) ?>">
+                        <button type="submit" class="btn btn-sm btn-success fw-bold w-100">
+                            <i class="bi bi-trophy me-1"></i>Seleccionar Ganador
+                        </button>
+                    </form>
+                <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
+        <?php endif; ?>
     </div>
 </div>
 

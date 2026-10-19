@@ -53,7 +53,7 @@ $oldNumSerie = old('vehiculo_num_serie', '');
 
                         <div class="mb-3">
                             <label for="solicitante_nombre" class="form-label fw-semibold">Nombre completo del solicitante <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="solicitante_nombre" name="solicitante_nombre" required maxlength="180" value="<?= esc($oldNombre) ?>" placeholder="Ingresa nombre completo">
+                            <input type="text" class="form-control" id="solicitante_nombre" name="solicitante_nombre" required maxlength="180" value="<?= esc($oldNombre) ?>" placeholder="Ingresa nombre completo" autocomplete="name" enterkeyhint="next">
                             <?php if ($validation->getError('solicitante_nombre')): ?>
                                 <div class="text-danger small mt-1"><?= $validation->getError('solicitante_nombre') ?></div>
                             <?php endif; ?>
@@ -88,7 +88,7 @@ $oldNumSerie = old('vehiculo_num_serie', '');
 
                         <div class="mb-3">
                             <label for="numero_titulo_concesion" class="form-label fw-semibold">Número de título de concesión <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="numero_titulo_concesion" name="numero_titulo_concesion" required maxlength="50" value="<?= esc($oldNumTitulo) ?>" placeholder="Ej: CONC-2025-00123">
+                            <input type="text" class="form-control" id="numero_titulo_concesion" name="numero_titulo_concesion" required maxlength="50" value="<?= esc($oldNumTitulo) ?>" placeholder="Ej: CONC-2025-00123" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next">
                             <div id="concesion_resultado" class="mt-2"></div>
                             <?php if ($validation->getError('numero_titulo_concesion')): ?>
                                 <div class="text-danger small mt-1"><?= $validation->getError('numero_titulo_concesion') ?></div>
@@ -98,14 +98,14 @@ $oldNumSerie = old('vehiculo_num_serie', '');
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label for="vehiculo_placas" class="form-label fw-semibold">Placas del vehículo <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="vehiculo_placas" name="vehiculo_placas" required maxlength="10" value="<?= esc($oldPlacas) ?>" placeholder="Ej: ABC123">
+                                <input type="text" class="form-control" id="vehiculo_placas" name="vehiculo_placas" required maxlength="10" value="<?= esc($oldPlacas) ?>" placeholder="Ej: ABC123" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next">
                                 <?php if ($validation->getError('vehiculo_placas')): ?>
                                     <div class="text-danger small mt-1"><?= $validation->getError('vehiculo_placas') ?></div>
                                 <?php endif; ?>
                             </div>
                             <div class="col-md-6">
                                 <label for="vehiculo_num_serie" class="form-label fw-semibold">Número de serie (VIN) <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="vehiculo_num_serie" name="vehiculo_num_serie" required maxlength="20" value="<?= esc($oldNumSerie) ?>" placeholder="Ej: 1HGCM82633A004352">
+                                <input type="text" class="form-control" id="vehiculo_num_serie" name="vehiculo_num_serie" required maxlength="20" value="<?= esc($oldNumSerie) ?>" placeholder="Ej: 1HGCM82633A004352" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next">
                                 <?php if ($validation->getError('vehiculo_num_serie')): ?>
                                     <div class="text-danger small mt-1"><?= $validation->getError('vehiculo_num_serie') ?></div>
                                 <?php endif; ?>

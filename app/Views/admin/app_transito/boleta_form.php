@@ -1,4 +1,14 @@
-<?php declare(strict_types=1); ?>
+<?php declare(strict_types=1);
+// Variables inyectadas por el controlador: se leen del ambito real para que el
+// analisis estatico no las marque como indefinidas; en runtime gana el valor enviado.
+$__view = get_defined_vars();
+/** @var object $boleta */
+$boleta = $__view['boleta'] ?? null;
+/** @var array $estados */
+$estados = $__view['estados'] ?? [];
+/** @var array $tipos */
+$tipos = $__view['tipos'] ?? [];
+?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('pageTitle') ?>Editar boleta <?= esc($boleta->folio) ?><?= $this->endSection() ?>
 <?= $this->section('content') ?>
@@ -46,7 +56,7 @@ $horaActual = substr((string) $valor('hora_infraccion'), 0, 5);
             </div>
             <div class="col-md-4">
                 <label for="lugar" class="form-label fw-semibold">Lugar <span class="text-danger">*</span></label>
-                <input type="text" id="lugar" name="lugar" class="form-control" required maxlength="255" value="<?= esc($valor('lugar')) ?>">
+                <input autocomplete="off" autocapitalize="words" spellcheck="false" type="text" id="lugar" name="lugar" class="form-control" required maxlength="255" value="<?= esc($valor('lugar')) ?>">
             </div>
         </div>
 
@@ -61,15 +71,15 @@ $horaActual = substr((string) $valor('hora_infraccion'), 0, 5);
             </div>
             <div class="col-md-5">
                 <label for="infractor_nombre" class="form-label fw-semibold">Nombre</label>
-                <input type="text" id="infractor_nombre" name="infractor_nombre" class="form-control" maxlength="180" value="<?= esc($valor('infractor_nombre')) ?>">
+                <input autocomplete="off" autocapitalize="words" spellcheck="false" type="text" id="infractor_nombre" name="infractor_nombre" class="form-control" maxlength="180" value="<?= esc($valor('infractor_nombre')) ?>">
             </div>
             <div class="col-md-3">
                 <label for="infractor_licencia" class="form-label fw-semibold">Licencia</label>
-                <input type="text" id="infractor_licencia" name="infractor_licencia" class="form-control text-uppercase" maxlength="50" value="<?= esc($valor('infractor_licencia')) ?>">
+                <input autocomplete="off" autocapitalize="characters" spellcheck="false" type="text" id="infractor_licencia" name="infractor_licencia" class="form-control text-uppercase" maxlength="50" value="<?= esc($valor('infractor_licencia')) ?>">
             </div>
             <div class="col-md-4">
                 <label for="infractor_domicilio" class="form-label fw-semibold">Domicilio</label>
-                <input type="text" id="infractor_domicilio" name="infractor_domicilio" class="form-control" maxlength="255" value="<?= esc($valor('infractor_domicilio')) ?>">
+                <input autocomplete="off" autocapitalize="words" spellcheck="false" type="text" id="infractor_domicilio" name="infractor_domicilio" class="form-control" maxlength="255" value="<?= esc($valor('infractor_domicilio')) ?>">
             </div>
         </div>
 
@@ -77,7 +87,7 @@ $horaActual = substr((string) $valor('hora_infraccion'), 0, 5);
         <div class="row g-3 mb-4">
             <div class="col-md-2">
                 <label for="vehiculo_placas" class="form-label fw-semibold">Placas</label>
-                <input type="text" id="vehiculo_placas" name="vehiculo_placas" class="form-control text-uppercase" maxlength="20" value="<?= esc($valor('vehiculo_placas')) ?>">
+                <input autocomplete="off" autocapitalize="characters" spellcheck="false" type="text" id="vehiculo_placas" name="vehiculo_placas" class="form-control text-uppercase" maxlength="20" value="<?= esc($valor('vehiculo_placas')) ?>">
                 <div class="form-check mt-1">
                     <input type="hidden" name="sin_placas" value="0">
                     <input class="form-check-input" type="checkbox" id="sin_placas" name="sin_placas" value="1" <?= (string) $valor('sin_placas') === '1' ? 'checked' : '' ?>>
@@ -86,15 +96,15 @@ $horaActual = substr((string) $valor('hora_infraccion'), 0, 5);
             </div>
             <div class="col-md-2">
                 <label for="vehiculo_marca" class="form-label fw-semibold">Marca</label>
-                <input type="text" id="vehiculo_marca" name="vehiculo_marca" class="form-control" maxlength="60" value="<?= esc($valor('vehiculo_marca')) ?>">
+                <input autocomplete="off" autocapitalize="words" spellcheck="false" type="text" id="vehiculo_marca" name="vehiculo_marca" class="form-control" maxlength="60" value="<?= esc($valor('vehiculo_marca')) ?>">
             </div>
             <div class="col-md-3">
                 <label for="vehiculo_linea" class="form-label fw-semibold">Línea / modelo</label>
-                <input type="text" id="vehiculo_linea" name="vehiculo_linea" class="form-control" maxlength="80" value="<?= esc($valor('vehiculo_linea')) ?>">
+                <input autocomplete="off" autocapitalize="words" spellcheck="false" type="text" id="vehiculo_linea" name="vehiculo_linea" class="form-control" maxlength="80" value="<?= esc($valor('vehiculo_linea')) ?>">
             </div>
             <div class="col-md-2">
                 <label for="vehiculo_color" class="form-label fw-semibold">Color</label>
-                <input type="text" id="vehiculo_color" name="vehiculo_color" class="form-control" maxlength="40" value="<?= esc($valor('vehiculo_color')) ?>">
+                <input autocomplete="off" autocapitalize="words" spellcheck="false" type="text" id="vehiculo_color" name="vehiculo_color" class="form-control" maxlength="40" value="<?= esc($valor('vehiculo_color')) ?>">
             </div>
             <div class="col-md-3">
                 <label for="vehiculo_tipo" class="form-label fw-semibold">Tipo <span class="text-danger">*</span></label>

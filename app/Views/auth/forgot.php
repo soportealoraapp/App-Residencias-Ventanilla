@@ -31,7 +31,7 @@
             <label for="email" class="form-label small fw-semibold">Correo electrónico</label>
             <div class="input-group">
                 <span class="input-group-text bg-light text-muted"><i class="bi bi-envelope"></i></span>
-                <input type="email" class="form-control" id="email" name="email" value="<?= old('email') ?>" placeholder="correo@ejemplo.com" required autofocus>
+                <input autocomplete="email" inputmode="email" spellcheck="false" type="email" class="form-control" id="email" name="email" value="<?= old('email') ?>" placeholder="correo@ejemplo.com" required autofocus>
             </div>
             <div class="form-text small">Te enviaremos las instrucciones de recuperación.</div>
         </div>

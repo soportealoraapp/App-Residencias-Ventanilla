@@ -107,27 +107,37 @@
             <div><?= esc(session('error')) ?></div>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
         </div>
-    <?php endif ?>
+    <?php endif; ?>
 
     <?= $this->renderSection('content') ?>
 </main>
 
 <?php if (session('user_id')): ?>
-<!-- Mobile Bottom Navigation Bar (< 768px) -->
+<!-- Barra de navegación fija para teléfono (menos de 768 px) -->
 <nav class="mobile-bottom-bar" aria-label="Navegación móvil">
-    <a href="/portal/dashboard" class="mobile-bottom-item <?= uri_string() === 'portal/dashboard' || uri_string() === 'portal' ? 'active' : '' ?>">
+    <?php
+    // Ruta activa calculada una sola vez para los cuatro destinos del día a día.
+    // El inicio se compara en exacto: 'portal' es prefijo de todo el portal.
+    $uriPortal = uri_string();
+    $activoInicio        = in_array($uriPortal, ['portal', 'portal/dashboard', 'portal/'], true);
+    $activoTramites      = $uriPortal === 'portal/tramites' || str_starts_with($uriPortal, 'portal/tramites/');
+    $activoSolicitudes   = $uriPortal === 'portal/mis-solicitudes' || str_starts_with($uriPortal, 'portal/mis-solicitudes/')
+        || $uriPortal === 'portal/solicitud' || str_starts_with($uriPortal, 'portal/solicitud/');
+    $activoPerfil        = $uriPortal === 'portal/mi-perfil' || str_starts_with($uriPortal, 'portal/mi-perfil/');
+    ?>
+    <a href="/portal/dashboard" class="mobile-bottom-item <?= $activoInicio ? 'active' : '' ?>" <?= $activoInicio ? 'aria-current="page"' : '' ?>>
         <i class="bi bi-house-door"></i>
         <span>Inicio</span>
     </a>
-    <a href="/portal/tramites" class="mobile-bottom-item <?= str_starts_with(uri_string(), 'portal/tramites') ? 'active' : '' ?>">
+    <a href="/portal/tramites" class="mobile-bottom-item <?= $activoTramites ? 'active' : '' ?>" <?= $activoTramites ? 'aria-current="page"' : '' ?>>
         <i class="bi bi-clipboard-check"></i>
         <span>Trámites</span>
     </a>
-    <a href="/portal/mis-solicitudes" class="mobile-bottom-item <?= str_starts_with(uri_string(), 'portal/mis-solicitudes') || str_starts_with(uri_string(), 'portal/solicitud') ? 'active' : '' ?>">
+    <a href="/portal/mis-solicitudes" class="mobile-bottom-item <?= $activoSolicitudes ? 'active' : '' ?>" <?= $activoSolicitudes ? 'aria-current="page"' : '' ?>>
         <i class="bi bi-journal-text"></i>
         <span>Solicitudes</span>
     </a>
-    <a href="/portal/mi-perfil" class="mobile-bottom-item <?= uri_string() === 'portal/mi-perfil' ? 'active' : '' ?>">
+    <a href="/portal/mi-perfil" class="mobile-bottom-item <?= $activoPerfil ? 'active' : '' ?>" <?= $activoPerfil ? 'aria-current="page"' : '' ?>>
         <i class="bi bi-person-gear"></i>
         <span>Perfil</span>
     </a>

@@ -1,4 +1,9 @@
 <?php declare(strict_types=1);
+// Variables inyectadas por el controlador: se leen del ambito real para que el
+// analisis estatico no las marque como indefinidas; en runtime gana el valor enviado.
+$__view = get_defined_vars();
+/** @var float $tarifaMonto */
+$tarifaMonto = $__view['tarifaMonto'] ?? 0.0;
 $validation = \Config\Services::validation();
 $oldTipoPersona = old('tipo_persona', 'fisica');
 $files = [
@@ -58,7 +63,7 @@ $files = [
                             <label for="nombre_razon_social" class="form-label fw-semibold">
                                 Nombre o Razón Social <span class="text-danger">*</span>
                             </label>
-                            <input id="nombre_razon_social" class="form-control" name="nombre_razon_social" value="<?= esc(old('nombre_razon_social')) ?>" maxlength="180" placeholder="Nombre completo o denominación social" required>
+                            <input id="nombre_razon_social" class="form-control" name="nombre_razon_social" value="<?= esc(old('nombre_razon_social')) ?>" maxlength="180" placeholder="Nombre completo o denominación social" required autocomplete="name" autocapitalize="words" spellcheck="false" enterkeyhint="next">
                             <?= validation_show_error('nombre_razon_social') ?>
                         </div>
                         <div class="col-md-4">
@@ -76,14 +81,14 @@ $files = [
                             <label for="rfc" class="form-label fw-semibold">
                                 RFC <span class="text-danger">*</span>
                             </label>
-                            <input id="rfc" class="form-control text-uppercase" name="rfc" minlength="12" maxlength="13" pattern="[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}" title="12 caracteres (persona moral) o 13 (persona física)" value="<?= esc(old('rfc')) ?>" placeholder="Ej. GODE561231GR8" required>
+                            <input id="rfc" class="form-control text-uppercase" name="rfc" minlength="12" maxlength="13" pattern="[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}" title="12 caracteres (persona moral) o 13 (persona física)" value="<?= esc(old('rfc')) ?>" placeholder="Ej. GODE561231GR8" required autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next">
                             <?= validation_show_error('rfc') ?>
                         </div>
                         <div class="col-md-8">
                             <label for="domicilio" class="form-label fw-semibold">
                                 Domicilio fiscal o particular <span class="text-danger">*</span>
                             </label>
-                            <input id="domicilio" class="form-control" name="domicilio" value="<?= esc(old('domicilio')) ?>" maxlength="250" placeholder="Calle, número, colonia, municipio" required>
+                            <input id="domicilio" class="form-control" name="domicilio" value="<?= esc(old('domicilio')) ?>" maxlength="250" placeholder="Calle, número, colonia, municipio" required autocomplete="street-address" autocapitalize="words" spellcheck="false" enterkeyhint="next">
                             <?= validation_show_error('domicilio') ?>
                         </div>
                     </div>
@@ -97,23 +102,23 @@ $files = [
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Tipo de servicio <span class="text-danger">*</span></label>
-                            <input class="form-control" name="tipo_servicio" value="<?= esc(old('tipo_servicio')) ?>" placeholder="Ej. Transporte urbano / suburbano" required>
+                            <input class="form-control" name="tipo_servicio" value="<?= esc(old('tipo_servicio')) ?>" placeholder="Ej. Transporte urbano / suburbano" required autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="next">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Tipo de unidad(es) <span class="text-danger">*</span></label>
-                            <input class="form-control" name="tipo_unidad" value="<?= esc(old('tipo_unidad')) ?>" placeholder="Ej. Autobús, Minibús, Vagoneta" required>
+                            <input class="form-control" name="tipo_unidad" value="<?= esc(old('tipo_unidad')) ?>" placeholder="Ej. Autobús, Minibús, Vagoneta" required autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="next">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Cantidad de unidades <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" name="cantidad_unidades" min="1" max="50" value="<?= esc(old('cantidad_unidades', '1')) ?>" required>
+                            <input type="number" class="form-control" name="cantidad_unidades" min="1" max="50" value="<?= esc(old('cantidad_unidades', '1')) ?>" required inputmode="numeric" enterkeyhint="next">
                         </div>
                         <div class="col-md-8">
                             <label class="form-label fw-semibold">Lugar o origen/destino del servicio <span class="text-danger">*</span></label>
-                            <input class="form-control" name="lugar_servicio" value="<?= esc(old('lugar_servicio')) ?>" placeholder="Recorrido o puntos de prestación" required>
+                            <input class="form-control" name="lugar_servicio" value="<?= esc(old('lugar_servicio')) ?>" placeholder="Recorrido o puntos de prestación" required autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="next">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Zona o ruta <span class="text-danger">*</span></label>
-                            <input class="form-control" name="zona_servicio" value="<?= esc(old('zona_servicio')) ?>" placeholder="Ruta específica o sector del municipio" required>
+                            <input class="form-control" name="zona_servicio" value="<?= esc(old('zona_servicio')) ?>" placeholder="Ruta específica o sector del municipio" required autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="next">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Motivo de la necesidad <span class="text-danger">*</span></label>
@@ -130,7 +135,7 @@ $files = [
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold">Periodo o vigencia solicitada <span class="text-danger">*</span></label>
-                            <input class="form-control" name="vigencia_observacion" value="<?= esc(old('vigencia_observacion', 'Durante el tiempo que subsista la contingencia justificada')) ?>" required>
+                            <input class="form-control" name="vigencia_observacion" value="<?= esc(old('vigencia_observacion', 'Durante el tiempo que subsista la contingencia justificada')) ?>" required autocomplete="off" autocapitalize="sentences" enterkeyhint="done">
                         </div>
                     </div>
                 </fieldset>

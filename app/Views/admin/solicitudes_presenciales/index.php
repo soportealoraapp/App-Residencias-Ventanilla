@@ -34,7 +34,7 @@ $q = $__view['q'] ?? '';
         <form method="get" action="/admin/solicitudes/nueva" class="row g-2 align-items-end">
             <div class="col-12 col-md-8">
                 <label for="q" class="form-label small fw-semibold">Buscar por nombre, username, email, RFC o CURP</label>
-                <input type="text" name="q" id="q" class="form-control form-control-sm"
+                <input autocomplete="off" spellcheck="false" enterkeyhint="search" type="text" name="q" id="q" class="form-control form-control-sm"
                     placeholder="Escribe al menos 2 caracteres..." value="<?= esc($q) ?>">
             </div>
             <div class="col-12 col-md-2 d-grid">
@@ -52,7 +52,7 @@ $q = $__view['q'] ?? '';
                     Puedes continuar sin vincular una cuenta.
                 </div>
             <?php else: ?>
-                <div class="table-responsive">
+                <div class="table-responsive d-none d-md-block">
                     <table class="table table-sm table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
@@ -65,7 +65,11 @@ $q = $__view['q'] ?? '';
                         <tbody>
                             <?php foreach ($ciudadanos as $c): ?>
                             <tr>
-                                <td class="fw-semibold"><?= esc($c->nombre_completo ?? $c->username) ?></td>
+                                <td class="fw-semibold">
+                                    <a class="text-decoration-none fw-semibold btn-seleccionar-ciudadano" href="#"
+                                        data-id="<?= (int)$c->id ?>"
+                                        data-nombre="<?= esc($c->nombre_completo ?? $c->username) ?>"><?= esc($c->nombre_completo ?? $c->username) ?></a>
+                                </td>
                                 <td class="small text-muted"><?= esc($c->email ?? '—') ?></td>
                                 <td class="small font-monospace"><?= esc($c->rfc ?? '—') ?></td>
                                 <td class="text-end">
@@ -79,6 +83,24 @@ $q = $__view['q'] ?? '';
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                </div>
+                <!-- En el teléfono cada ciudadano es una ficha completa: la tabla de 4 columnas aprieta demasiado -->
+                <div class="d-block d-md-none">
+                    <?php foreach ($ciudadanos as $c): ?>
+                        <div class="border rounded-3 p-2 mb-2">
+                            <div class="d-flex justify-content-between align-items-center gap-2">
+                                <div class="overflow-hidden">
+                                    <div class="fw-semibold small"><?= esc($c->nombre_completo ?? $c->username) ?></div>
+                                    <div class="small text-muted text-truncate"><?= esc($c->email ?? '—') ?> · <?= esc($c->rfc ?? '—') ?></div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary flex-shrink-0 btn-seleccionar-ciudadano"
+                                    data-id="<?= (int)$c->id ?>"
+                                    data-nombre="<?= esc($c->nombre_completo ?? $c->username) ?>">
+                                    Usar
+                                </button>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             <?php endif; ?>
         <?php endif; ?>
@@ -108,7 +130,7 @@ $q = $__view['q'] ?? '';
         <div class="row g-3">
             <?php foreach ($tramites as $clave => $info): ?>
             <div class="col-12 col-sm-6 col-lg-4">
-                <div class="border rounded-3 p-3 h-100 d-flex flex-column gap-2 tramite-option"
+                <div class="border rounded-3 p-3 h-100 d-flex flex-column gap-2 tramite-option position-relative"
                     data-tramite="<?= esc($clave) ?>" style="cursor:pointer; transition: all 0.15s;">
                     <div class="d-flex align-items-center gap-2">
                         <i class="bi <?= esc($info['icono']) ?> fs-4 text-primary"></i>
@@ -119,8 +141,12 @@ $q = $__view['q'] ?? '';
                     </div>
                     <div class="mt-auto">
                         <a href="/admin/solicitudes/nueva/<?= esc($clave) ?>"
-                            class="btn btn-sm btn-primary w-100 btn-tramite">
+                            class="btn btn-sm btn-primary w-100 btn-tramite stretched-link">
                             <i class="bi bi-arrow-right me-1"></i>Continuar
+                        </a>
+                        <a href="/admin/solicitudes?tramite=<?= esc($clave) ?>"
+                            class="small text-decoration-none mt-2 d-inline-block position-relative" style="z-index: 2;">
+                            <i class="bi bi-list-check me-1"></i>Ver solicitudes de este trámite
                         </a>
                     </div>
                 </div>
@@ -148,16 +174,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectedNombre = document.getElementById('nombreCiudadano');
     const cardCiudadano = document.getElementById('cardCiudadano');
 
-    // Select citizen
+    // La ventanilla elige al ciudadano de la búsqueda antes de continuar.
     document.querySelectorAll('.btn-seleccionar-ciudadano').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function(event) {
+            event.preventDefault();
             const id = this.dataset.id;
             const nombre = this.dataset.nombre;
             selectedCiudadanoId.value = id;
             selectedNombre.textContent = nombre;
             cardCiudadano.classList.remove('d-none');
             cardCiudadano.scrollIntoView({behavior: 'smooth', block: 'center'});
-            // Update all tramite links
+            // El ciudadano elegido viaja en el enlace de cada trámite.
             document.querySelectorAll('.btn-tramite').forEach(a => {
                 const url = new URL(a.href);
                 url.searchParams.set('ciudadano_id', id);
@@ -166,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Cambiar ciudadano
+    // Volver a buscar a otro ciudadano.
     document.getElementById('btnCambiarCiudadano')?.addEventListener('click', function() {
         selectedCiudadanoId.value = '';
         cardCiudadano.classList.add('d-none');
@@ -178,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('q').focus();
     });
 
-    // Hover effect on tramite cards
+    // Resalte de la ficha de trámite al pasar el cursor (escritorio).
     document.querySelectorAll('.tramite-option').forEach(card => {
         card.addEventListener('mouseenter', () => card.style.borderColor = 'var(--primary-color, #2563eb)');
         card.addEventListener('mouseleave', () => card.style.borderColor = '');

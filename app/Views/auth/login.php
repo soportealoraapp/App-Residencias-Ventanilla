@@ -54,7 +54,8 @@
             <label for="username" class="form-label small fw-semibold">Usuario o Correo</label>
             <div class="input-group">
                 <span class="input-group-text bg-light text-muted"><i class="bi bi-person"></i></span>
-                <input type="text" class="form-control" id="username" name="username" value="<?= old('username') ?>" placeholder="admin o tu correo" required autofocus>
+                <input type="text" class="form-control" id="username" name="username" value="<?= old('username') ?>" placeholder="admin o tu correo" required autofocus
+                       autocomplete="username" inputmode="email" spellcheck="false" enterkeyhint="next">
             </div>
         </div>
         <div class="mb-3">
@@ -64,7 +65,8 @@
             </div>
             <div class="input-group mt-1">
                 <span class="input-group-text bg-light text-muted"><i class="bi bi-lock"></i></span>
-                <input type="password" class="form-control" id="password" name="password" placeholder="Tu contraseña" required>
+                <input type="password" class="form-control" id="password" name="password" placeholder="Tu contraseña" required
+                       autocomplete="current-password" enterkeyhint="go">
                 <button class="btn btn-outline-secondary" type="button" id="togglePasswordBtn" title="Mostrar/ocultar contraseña" tabindex="-1">
                     <i class="bi bi-eye" id="togglePasswordIcon"></i>
                 </button>

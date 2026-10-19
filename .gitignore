@@ -46,6 +46,9 @@ writable/test_tmp/
 *.key
 composer.phar
 scripts/*secret*
+# Directorio de trabajo de los scripts de despliegue: guarda logs de login OAuth
+# y volcados de pruebas que nunca deben llegar al repositorio.
+.vercel-tmp/
 
 # Runtime local distribuido para pruebas
 php82/

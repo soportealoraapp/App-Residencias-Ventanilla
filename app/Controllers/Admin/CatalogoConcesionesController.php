@@ -52,7 +52,34 @@ class CatalogoConcesionesController extends Controller
             'pager'          => $pager,
             'filtros'        => $filtros,
             'estatusOpciones' => $estatusOpciones,
+            'conteos'        => $this->conteosConcesiones(),
         ]);
+    }
+
+    /**
+     * Cuántas concesiones hay por estatus, sin importar la búsqueda en curso,
+     * para que cada filtro rápido del listado muestre su cantidad real.
+     *
+     * @return array{total: int, por_estatus: array<string, int>}
+     */
+    private function conteosConcesiones(): array
+    {
+        $db = \Config\Database::connect();
+
+        $porEstatus = [];
+        $filas = $db->table('concesiones')
+            ->select('estatus, COUNT(*) AS total')
+            ->groupBy('estatus')
+            ->get()
+            ->getResultArray();
+        foreach ($filas as $fila) {
+            $porEstatus[(string) $fila['estatus']] = (int) $fila['total'];
+        }
+
+        return [
+            'total'       => $db->table('concesiones')->countAllResults(),
+            'por_estatus' => $porEstatus,
+        ];
     }
 
     public function formNuevo()

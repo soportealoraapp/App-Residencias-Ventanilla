@@ -72,8 +72,42 @@ class UsuariosController extends Controller
             'pager'         => $this->userModel->pager,
             'filtros'       => ['q' => $q, 'rol' => $rol, 'estado' => $estado],
             'roles'         => self::ROLES,
+            'conteos'       => $this->conteosCuentas(),
             'esAdmin'       => $this->esAdministrador(),
         ]);
+    }
+
+    /**
+     * Totales globales para los filtros rápidos de cuentas.
+     *
+     * Son conteos de todo el padrón, no del resultado filtrado: los chips deben
+     * decir cuántas hay antes de tocarlas, igual que en el desglose.
+     *
+     * @return array{total: int, activos: int, inactivos: int, roles: array<string, int>}
+     */
+    private function conteosCuentas(): array
+    {
+        $db = \Config\Database::connect();
+
+        $conteos = [
+            'total'     => $db->table('users')->countAllResults(),
+            'activos'   => $db->table('users')->where('activo', 1)->countAllResults(),
+            'inactivos' => $db->table('users')->where('activo', 0)->countAllResults(),
+            'roles'     => [],
+        ];
+
+        $porRol = $db->table('user_roles ur')
+            ->select('r.nombre AS rol, COUNT(*) AS total')
+            ->join('roles r', 'r.id = ur.role_id')
+            ->groupBy('r.nombre')
+            ->get()
+            ->getResultArray();
+
+        foreach ($porRol as $fila) {
+            $conteos['roles'][(string) $fila['rol']] = (int) $fila['total'];
+        }
+
+        return $conteos;
     }
 
     public function formNuevo()

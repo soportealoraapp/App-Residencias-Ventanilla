@@ -1,4 +1,10 @@
-<?php declare(strict_types=1); ?>
+<?php declare(strict_types=1);
+// Variables inyectadas por el controlador: se leen del ambito real para que el
+// analisis estatico no las marque como indefinidas; en runtime gana el valor enviado.
+$__view = get_defined_vars();
+/** @var float $tarifaMonto */
+$tarifaMonto = $__view['tarifaMonto'] ?? 0.0;
+?>
 <?= $this->extend('layouts/portal') ?>
 <?= $this->section('title') ?>UR-TT-T-05 Permiso para Cierre de Calle - Portal Ciudadano Uriangato<?= $this->endSection() ?>
 <?= $this->section('content') ?>
@@ -48,14 +54,14 @@
                             <label for="nombre_solicitante" class="form-label fw-semibold">
                                 Nombre completo del solicitante o responsable <span class="text-danger">*</span>
                             </label>
-                            <input id="nombre_solicitante" class="form-control" name="nombre_solicitante" value="<?= old('nombre_solicitante') ?>" maxlength="180" placeholder="Nombre completo" required>
+                            <input autocomplete="name" autocapitalize="words" spellcheck="false" id="nombre_solicitante" class="form-control" name="nombre_solicitante" value="<?= old('nombre_solicitante') ?>" maxlength="180" placeholder="Nombre completo" required>
                             <?= validation_show_error('nombre_solicitante') ?>
                         </div>
                         <div class="col-md-5">
                             <label for="domicilio" class="form-label fw-semibold">
                                 Domicilio en Uriangato <span class="text-danger">*</span>
                             </label>
-                            <input id="domicilio" class="form-control" name="domicilio" value="<?= old('domicilio') ?>" maxlength="250" placeholder="Calle, número, colonia" required>
+                            <input autocomplete="street-address" autocapitalize="words" spellcheck="false" id="domicilio" class="form-control" name="domicilio" value="<?= old('domicilio') ?>" maxlength="250" placeholder="Calle, número, colonia" required>
                             <?= validation_show_error('domicilio') ?>
                         </div>
                     </div>
@@ -92,14 +98,14 @@
                             <label for="calle_tramo" class="form-label fw-semibold">
                                 Calle o tramo a cerrar <span class="text-danger">*</span>
                             </label>
-                            <input id="calle_tramo" class="form-control" name="calle_tramo" value="<?= old('calle_tramo') ?>" placeholder="Calle principal y entre qué calles" required>
+                            <input autocomplete="street-address" autocapitalize="words" spellcheck="false" id="calle_tramo" class="form-control" name="calle_tramo" value="<?= old('calle_tramo') ?>" placeholder="Calle principal y entre qué calles" required>
                             <?= validation_show_error('calle_tramo') ?>
                         </div>
                         <div class="col-md-4">
                             <label for="colonia" class="form-label fw-semibold">
                                 Colonia o Fraccionamiento <span class="text-danger">*</span>
                             </label>
-                            <input id="colonia" class="form-control" name="colonia" value="<?= old('colonia') ?>" placeholder="Colonia" required>
+                            <input autocomplete="street-address" autocapitalize="words" spellcheck="false" id="colonia" class="form-control" name="colonia" value="<?= old('colonia') ?>" placeholder="Colonia" required>
                             <?= validation_show_error('colonia') ?>
                         </div>
                         <div class="col-md-4">
@@ -117,7 +123,7 @@
                             <label for="motivo_evento" class="form-label fw-semibold">
                                 Motivo del evento o actividad <span class="text-danger">*</span>
                             </label>
-                            <input id="motivo_evento" class="form-control" name="motivo_evento" value="<?= old('motivo_evento') ?>" placeholder="Ej. Evento cívico, deportivo, cultural o particular" required>
+                            <input autocomplete="off" autocapitalize="words" spellcheck="false" id="motivo_evento" class="form-control" name="motivo_evento" value="<?= old('motivo_evento') ?>" placeholder="Ej. Evento cívico, deportivo, cultural o particular" required>
                             <?= validation_show_error('motivo_evento') ?>
                         </div>
                         <div class="col-12">

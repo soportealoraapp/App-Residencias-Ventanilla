@@ -27,6 +27,23 @@ $datosSolicitud = $__view['datosSolicitud'] ?? [];
 
 /** @var \App\Models\VerificacionFisicaModel|null $verificacion */
 $verificacion = $__view['verificacion'] ?? null;
+
+/**
+ * URL del listado de solicitudes con los filtros que se indiquen. Cada etiqueta
+ * del expediente apunta a la lista que reproduce exactamente ese valor.
+ *
+ * @param array<string, string> $cambios
+ */
+$urlSolicitudes = static function (array $cambios): string {
+    $limpia = array_filter($cambios, static fn ($v): bool => $v !== '' && $v !== null);
+
+    return site_url('admin/solicitudes' . ($limpia === [] ? '' : '?' . http_build_query($limpia)));
+};
+
+/** Trazabilidad de un solo registro (solicitud o documento) en la auditoría. */
+$urlAuditoriaRegistro = static function (string $entidad, int $entidadId): string {
+    return site_url('admin/auditoria?' . http_build_query(['entidad' => $entidad, 'entidad_id' => (string) $entidadId]));
+};
 ?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('pageTitle') ?>Detalle solicitud <?= esc($solicitud->folio) ?><?= $this->endSection() ?>
@@ -84,15 +101,23 @@ $claveEtiquetas = [
                 <dl class="row mb-0">
                     <dt class="col-sm-4">Trámite</dt>
                     <dd class="col-sm-8">
-                        <?= tramite_nombre($solicitud->tramite) ?>
+                        <a href="<?= $urlSolicitudes(['tramite' => (string) $solicitud->tramite]) ?>" class="fw-semibold text-decoration-none" title="Ver todas las solicitudes de este trámite">
+                            <?= tramite_nombre($solicitud->tramite) ?> <i class="bi bi-arrow-right-short" aria-hidden="true"></i>
+                        </a>
                         <div class="small text-muted"><?= esc($solicitud->tramite) ?></div>
                     </dd>
                     <dt class="col-sm-4">Ciudadano</dt>
                     <dd class="col-sm-8">
                         <?php if ($ciudadano): ?>
-                            <div><?= esc($ciudadano->nombre_completo ?? $ciudadano->username ?? '—') ?></div>
+                            <a href="<?= $urlSolicitudes(['q' => (string) ($ciudadano->nombre_completo ?: $ciudadano->username ?? '')]) ?>" class="text-decoration-none" title="Ver otras solicitudes capturadas con este nombre">
+                                <?= esc($ciudadano->nombre_completo ?? $ciudadano->username ?? '—') ?>
+                            </a>
                             <?php if (!empty($ciudadano->email)): ?>
-                                <div class="small text-muted"><?= esc($ciudadano->email) ?></div>
+                                <div class="small text-muted">
+                                    <a href="<?= site_url('admin/usuarios?' . http_build_query(['q' => (string) $ciudadano->email])) ?>" class="text-decoration-none" title="Ver la cuenta registrada">
+                                        <i class="bi bi-person-gear me-1" aria-hidden="true"></i><?= esc($ciudadano->email) ?>
+                                    </a>
+                                </div>
                             <?php endif; ?>
                             <?php if (!empty($ciudadano->telefono)): ?>
                                 <div class="small text-muted"><?= esc($ciudadano->telefono) ?></div>
@@ -109,9 +134,14 @@ $claveEtiquetas = [
                     <dd class="col-sm-8 fw-bold fs-5"><?= formatear_dinero((float)$solicitud->monto) ?></dd>
                     <dt class="col-sm-4">Estatus</dt>
                     <dd class="col-sm-8">
-                        <span class="badge fs-6 estatus-badge <?= estatus_badge($solicitud->estatus) ?>">
-                            <?= esc($solicitud->estatus) ?>
-                        </span>
+                        <a href="<?= $urlSolicitudes(['estatus' => (string) $solicitud->estatus]) ?>" class="text-decoration-none" title="Ver todas las solicitudes en este estatus">
+                            <span class="badge fs-6 estatus-badge <?= estatus_badge($solicitud->estatus) ?>">
+                                <?= esc($solicitud->estatus) ?>
+                            </span>
+                        </a>
+                        <a href="<?= $urlAuditoriaRegistro('solicitudes', (int) $solicitud->id) ?>" class="small text-muted ms-1" title="Eventos de auditoría de este folio">
+                            <i class="bi bi-clock-history" aria-hidden="true"></i> Trazabilidad
+                        </a>
                     </dd>
                 </dl>
             </div>
@@ -252,8 +282,8 @@ $claveEtiquetas = [
                 <div class="col-12"><label class="form-label small fw-bold">Observaciones del estudio técnico</label><textarea name="observaciones_estudio_tecnico" class="form-control" rows="2"><?= esc($datosSolicitud['observaciones_estudio_tecnico'] ?? '') ?></textarea></div>
                 <div class="col-md-6"><label class="form-label small fw-bold">Resultado de revista mecánica</label><select name="resultado_revista_mecanica" class="form-select"><option value="">Pendiente</option><option value="aprobada" <?= ($datosSolicitud['resultado_revista_mecanica'] ?? '') === 'aprobada' ? 'selected' : '' ?>>Aprobada</option><option value="no_aprobada" <?= ($datosSolicitud['resultado_revista_mecanica'] ?? '') === 'no_aprobada' ? 'selected' : '' ?>>No aprobada</option></select></div>
                 <div class="col-md-6"><label class="form-label small fw-bold">Seguro validado</label><select name="seguro_validado" class="form-select"><option value="">Pendiente</option><option value="si" <?= ($datosSolicitud['seguro_validado'] ?? '') === 'si' ? 'selected' : '' ?>>Sí</option><option value="no" <?= ($datosSolicitud['seguro_validado'] ?? '') === 'no' ? 'selected' : '' ?>>No</option></select></div>
-                <div class="col-md-6"><label class="form-label small fw-bold">Número de póliza</label><input name="numero_poliza" class="form-control" value="<?= esc($datosSolicitud['numero_poliza'] ?? '') ?>"></div>
-                <div class="col-md-6"><label class="form-label small fw-bold">Aseguradora</label><input name="aseguradora" class="form-control" value="<?= esc($datosSolicitud['aseguradora'] ?? '') ?>"></div>
+                <div class="col-md-6"><label class="form-label small fw-bold">Número de póliza</label><input autocomplete="off" autocapitalize="characters" spellcheck="false" name="numero_poliza" class="form-control" value="<?= esc($datosSolicitud['numero_poliza'] ?? '') ?>"></div>
+                <div class="col-md-6"><label class="form-label small fw-bold">Aseguradora</label><input autocomplete="off" autocapitalize="words" spellcheck="false" name="aseguradora" class="form-control" value="<?= esc($datosSolicitud['aseguradora'] ?? '') ?>"></div>
                 <div class="col-12"><label class="form-label small fw-bold">Observaciones de inspección</label><textarea name="observaciones_inspeccion" class="form-control" rows="2"><?= esc($datosSolicitud['observaciones_inspeccion'] ?? '') ?></textarea></div>
                 <div class="col-12"><label class="form-label small fw-bold">Observaciones de revista / seguro</label><textarea name="observaciones_revista_mecanica" class="form-control" rows="2"><?= esc($datosSolicitud['observaciones_revista_mecanica'] ?? '') ?></textarea><textarea name="observaciones_seguro" class="form-control mt-2" rows="2"><?= esc($datosSolicitud['observaciones_seguro'] ?? '') ?></textarea></div>
             </div>
@@ -311,45 +341,97 @@ $claveEtiquetas = [
 </div>
 
 <div class="card mb-3">
-    <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
         <h6 class="mb-0">Documentos adjuntos (<?= count($documentos) ?>)</h6>
+        <a href="<?= $urlAuditoriaRegistro('documentos', (int) $solicitud->id) ?>" class="small text-muted text-decoration-none" title="Validaciones y movimientos de estos documentos">
+            <i class="bi bi-clock-history" aria-hidden="true"></i> Auditoría de documentos
+        </a>
     </div>
-    <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>Tipo</th>
-                    <th>Nombre original</th>
-                    <th>Tamaño</th>
-                    <th>SHA256</th>
-                    <th>Validado</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($documentos)): ?>
+
+    <?php if (empty($documentos)): ?>
+        <div class="empty-state">
+            <i class="bi bi-file-earmark-x fs-1 text-muted d-block mb-2" aria-hidden="true"></i>
+            <p class="mb-0 text-muted">No hay documentos adjuntos a esta solicitud.</p>
+        </div>
+    <?php else: ?>
+        <?php
+        // Una sola fuente de verdad para el escritorio y el teléfono.
+        $archivos = [];
+        foreach ($documentos as $doc): ?>
+            <?php $archivos[] = [
+                'id'             => (int) $doc->id,
+                'tipo'           => (string) $doc->tipo_documento,
+                'nombre'         => (string) $doc->nombre_original,
+                'kb'             => number_format(ceil((int) $doc->tamano_bytes / 1024)),
+                'hash'           => (string) ($doc->hash_sha256 ?? ''),
+                'validado'       => !empty($doc->validado),
+            ]; ?>
+        <?php endforeach; ?>
+
+        <!-- Teléono: la tabla de seis columnas no cabe en una pantalla angosta -->
+        <div class="d-block d-md-none">
+            <?php foreach ($archivos as $a): ?>
+                <div class="p-3 border-bottom">
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                        <span class="fw-bold small"><?= esc($a['tipo']) ?></span>
+                        <?php if ($a['validado']): ?>
+                            <span class="badge bg-success estatus-badge"><i class="bi bi-check2" aria-hidden="true"></i> Validado</span>
+                        <?php else: ?>
+                            <span class="badge bg-secondary estatus-badge">Pendiente</span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="small text-break"><?= esc($a['nombre']) ?></div>
+                    <div class="small text-muted mt-1">
+                        <?= $a['kb'] ?> KB
+                        <?php if ($a['hash'] !== ''): ?>
+                            · <code title="<?= esc($a['hash']) ?>"><?= esc(substr($a['hash'], 0, 12)) ?>...</code>
+                        <?php endif; ?>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        <a class="btn btn-outline-primary btn-sm" href="<?= site_url('admin/solicitudes/descargar-documento/' . $a['id']) ?>">
+                            <i class="bi bi-download me-1" aria-hidden="true"></i>Descargar
+                        </a>
+                        <form method="post" action="<?= site_url('admin/solicitudes/validar-documento/' . $a['id']) ?>" class="d-inline">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="btn btn-sm <?= $a['validado'] ? 'btn-outline-danger' : 'btn-outline-success' ?>">
+                                <i class="bi <?= $a['validado'] ? 'bi-x-circle' : 'bi-check2-circle' ?> me-1" aria-hidden="true"></i><?= $a['validado'] ? 'Quitar validación' : 'Validar' ?>
+                            </button>
+                        </form>
+                        <a class="btn btn-link btn-sm text-decoration-none" href="<?= $urlAuditoriaRegistro('documentos', $a['id']) ?>">
+                            Trazabilidad
+                        </a>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+        <div class="table-responsive d-none d-md-block">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-4">
-                            No hay documentos adjuntos a esta solicitud.
-                        </td>
+                        <th>Tipo</th>
+                        <th>Nombre original</th>
+                        <th>Tamaño</th>
+                        <th>SHA256</th>
+                        <th>Validado</th>
+                        <th>Acciones</th>
                     </tr>
-                <?php else: ?>
-                    <?php foreach ($documentos as $doc): ?>
+                </thead>
+                <tbody>
+                    <?php foreach ($archivos as $a): ?>
                         <tr>
-                            <td class="fw-bold"><?= esc($doc->tipo_documento) ?></td>
-                            <td><?= esc($doc->nombre_original) ?></td>
-                            <td class="text-nowrap"><?= number_format(ceil($doc->tamano_bytes / 1024)) ?> KB</td>
+                            <td class="fw-bold"><?= esc($a['tipo']) ?></td>
+                            <td class="text-break"><?= esc($a['nombre']) ?></td>
+                            <td class="text-nowrap"><?= $a['kb'] ?> KB</td>
                             <td>
-                                <?php if (!empty($doc->hash_sha256)): ?>
-                                    <code class="small" title="<?= esc($doc->hash_sha256) ?>">
-                                        <?= esc(substr($doc->hash_sha256, 0, 12)) ?>...
-                                    </code>
+                                <?php if ($a['hash'] !== ''): ?>
+                                    <code class="small" title="<?= esc($a['hash']) ?>"><?= esc(substr($a['hash'], 0, 12)) ?>...</code>
                                 <?php else: ?>
                                     <span class="text-muted">—</span>
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <?php if (!empty($doc->validado)): ?>
+                                <?php if ($a['validado']): ?>
                                     <span class="badge bg-success estatus-badge"><i class="bi bi-check2" aria-hidden="true"></i> Validado</span>
                                 <?php else: ?>
                                     <span class="badge bg-secondary estatus-badge">Pendiente</span>
@@ -357,20 +439,23 @@ $claveEtiquetas = [
                             </td>
                             <td class="text-nowrap">
                                 <a class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Descargar documento"
-                                    href="<?= site_url('admin/solicitudes/descargar-documento/' . $doc->id) ?>">
+                                    href="<?= site_url('admin/solicitudes/descargar-documento/' . $a['id']) ?>">
                                     <i class="bi bi-download me-1" aria-hidden="true"></i>Descargar
                                 </a>
-                                <button type="button" class="btn btn-outline-secondary btn-sm"
-                                    data-bs-toggle="tooltip" data-bs-title="Marcar como validado (solo UI demo)">
-                                    <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Validar
-                                </button>
+                                <form method="post" action="<?= site_url('admin/solicitudes/validar-documento/' . $a['id']) ?>" class="d-inline">
+                                    <?= csrf_field() ?>
+                                    <button type="submit" class="btn btn-sm <?= $a['validado'] ? 'btn-outline-danger' : 'btn-outline-success' ?>"
+                                        data-bs-toggle="tooltip" data-bs-title="<?= $a['validado'] ? 'Revocar la validación' : 'Marcar el documento como revisado' ?>">
+                                        <i class="bi <?= $a['validado'] ? 'bi-x-circle' : 'bi-check2-circle' ?> me-1" aria-hidden="true"></i><?= $a['validado'] ? 'Revocar' : 'Validar' ?>
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                     <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
+                </tbody>
+            </table>
+        </div>
+    <?php endif; ?>
 </div>
 
 <div class="card mb-3">
