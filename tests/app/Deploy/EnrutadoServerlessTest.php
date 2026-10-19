@@ -154,6 +154,80 @@ final class EnrutadoServerlessTest extends CIUnitTestCase
             'El sondeo no debe arrastrar el HTML de la portada ni abrir sesión.');
     }
 
+    /** @return array<int, array{src: string, dest: string}> */
+    private function reglasVercel(): array
+    {
+        return json_decode((string) file_get_contents(ROOTPATH . 'vercel.json'), true, 512, JSON_THROW_ON_ERROR)['routes'] ?? [];
+    }
+
+    /**
+     * Primera regla que casa con la petición, en el orden en que Vercel las evalúa.
+     *
+     * @param array<int, array{src: string, dest: string}> $rutas
+     * @return array{src: string, dest: string}|null
+     */
+    private function reglaQueAtiende(array $rutas, string $peticion): ?array
+    {
+        foreach ($rutas as $regla) {
+            if (preg_match('#^' . $regla['src'] . '$#', $peticion) === 1) {
+                return $regla;
+            }
+        }
+
+        return null;
+    }
+
+    public function testElShellDeAgentesSeSirveParaCualquierRutaHija(): void
+    {
+        // Un enlace directo a /agentes/login, o simplemente un F5 en esa pantalla, es
+        // la forma normal de entrar a la app de agentes. Con la regla antigua
+        // `/agentes(/.*)?` el shell solo salía en `/agentes`: las rutas hijas
+        // devolvían el 404 de la plataforma.
+        $rutas = $this->reglasVercel();
+
+        foreach (['/agentes', '/agentes/', '/agentes/login', '/agentes/infracciones/40'] as $peticion) {
+            $regla = $this->reglaQueAtiende($rutas, $peticion);
+            $this->assertNotNull($regla, "{$peticion} no la atiende ninguna regla de vercel.json.");
+            $this->assertSame('/public/agentes/index.html', $regla['dest'],
+                "{$peticion} debe entregar el shell de Expo, y esa ruta se declaró con `dest` {$regla['dest']}.");
+        }
+
+        // Los archivos reales del export siguen ganando al fallback del shell.
+        $this->assertSame('/public/agentes/_expo/$1', $this->reglaQueAtiende($rutas, '/agentes/_expo/static/js/web/entry-abcd.js')['dest'] ?? null,
+            'Los bundles de _expo no pueden caer en el HTML del shell.');
+        $this->assertSame('/public/agentes/fonts/$1', $this->reglaQueAtiende($rutas, '/agentes/fonts/Ionicons.ttf')['dest'] ?? null,
+            'Las fuentes del export no pueden caer en el HTML del shell.');
+    }
+
+    public function testNingunaReglaEstaticaDejaGruposSinReferenciar(): void
+    {
+        // Vercel añade al destino la parte capturada que el destino no referencia, y
+        // así `/agentes/login` se buscaba como `/public/agentes/index.html/login`.
+        // Una regla con grupos en `src` debe usarlos todos en `dest`, o no tenerlos.
+        $ofensas = [];
+
+        foreach ($this->reglasVercel() as $regla) {
+            // Una función sí recibe la URI original, así que ahí el sobrante no daña.
+            if (str_ends_with($regla['dest'], '.php')) {
+                continue;
+            }
+
+            $capturados = preg_match_all('/\((?!\?)/', $regla['src']);
+            $usados     = 0;
+            if (preg_match_all('/\$([0-9]+)/', $regla['dest'], $marcas) > 0) {
+                $usados = count(array_unique($marcas[1]));
+            }
+
+            if ($capturados > $usados) {
+                $ofensas[] = sprintf('%s (casa %d grupos, el destino usa %d) -> %s', $regla['src'], $capturados, $usados, $regla['dest']);
+            }
+        }
+
+        $this->assertSame([], $ofensas,
+            "Reglas cuyo destino no menciona todos los grupos capturados; Vercel les anexa el sobrante y el archivo deja de existir:\n  "
+            . implode("\n  ", $ofensas));
+    }
+
     public function testElFrontControllerServerlessDejaSCRIPTNameEnLaRaiz(): void
     {
         $archivo = (string) file_get_contents(ROOTPATH . 'api/index.php');
@@ -174,7 +248,7 @@ final class EnrutadoServerlessTest extends CIUnitTestCase
         // /agentes/login; desde ahí una fuente relativa pide /Ionicons.<hash>.ttf
         // a la raíz del dominio. Si vercel.json no la lista, la petición cae en el
         // catch-all y CI4 responde su 404, así que los iconos desaparecen.
-        $rutas = json_decode((string) file_get_contents(ROOTPATH . 'vercel.json'), true, 512, JSON_THROW_ON_ERROR)['routes'] ?? [];
+        $rutas = $this->reglasVercel();
         $this->assertNotEmpty($rutas, 'vercel.json no define reglas de rutas.');
 
         $ultima = end($rutas);
@@ -188,11 +262,13 @@ final class EnrutadoServerlessTest extends CIUnitTestCase
             $resuelta = false;
 
             foreach ($rutas as $regla) {
-                if (($regla['dest'] ?? '') === '/api/index.php') {
-                    continue; // el catch-all nunca es la respuesta correcta para un estático
+                // El catch-all hacia la función nunca es la respuesta correcta para un
+                // archivo estático: CI4 respondería su propia página 404.
+                if (str_ends_with($regla['dest'], '.php')) {
+                    continue;
                 }
-                if (preg_match('#' . $regla['src'] . '#', $peticion) === 1) {
-                    $destino = preg_replace('#' . $regla['src'] . '#', $regla['dest'], $peticion);
+                if (preg_match('#^' . $regla['src'] . '$#', $peticion) === 1) {
+                    $destino = preg_replace('#^' . $regla['src'] . '$#', $regla['dest'], $peticion);
                     $this->assertFileExists(ROOTPATH . ltrim((string) $destino, '/'),
                         "{$peticion} se sirve desde {$destino}, que no existe en el repositorio.");
                     $resuelta = true;
