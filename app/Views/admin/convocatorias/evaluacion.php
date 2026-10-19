@@ -28,7 +28,7 @@ $solicitudes = $__view['solicitudes'] ?? [];
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb small">
                 <li class="breadcrumb-item"><a href="<?= site_url('/admin/dashboard') ?>">Inicio</a></li>
-                <li class="breadcrumb-item"><a href="<?= site_url('/admin/solicitudes?tramite=UR-TT-T-01') ?>">Solicitudes UR-01</a></li>
+                <li class="breadcrumb-item"><a href="<?= site_url('/admin/convocatorias') ?>">Convocatorias</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Convocatoria #<?= esc($convocatoria->id) ?></li>
             </ol>
         </nav>
@@ -43,11 +43,19 @@ $solicitudes = $__view['solicitudes'] ?? [];
                 <i class="bi bi-award fs-3"></i>
             </div>
             <div>
-                <h1 class="h4 mb-0 text-white">Convocatoria #<?= esc($convocatoria->id) ?> · Otorgamiento de Concesiones</h1>
+                <h1 class="h4 mb-0 text-white"><?= esc($convocatoria->titulo ?: 'Convocatoria #' . $convocatoria->id . ' · Otorgamiento de Concesiones') ?></h1>
                 <div class="small opacity-75">Publicada el <?= date('d/m/Y', strtotime($convocatoria->fecha_publicacion)) ?> · Estatus: <strong><?= esc($convocatoria->estatus) ?></strong></div>
             </div>
         </div>
-        <div>
+        <div class="d-flex flex-wrap gap-2 justify-content-end">
+            <a class="btn btn-sm btn-outline-light" href="<?= site_url('admin/convocatorias/editar/' . (int) $convocatoria->id) ?>">
+                <i class="bi bi-pencil me-1"></i>Editar
+            </a>
+            <?php if (! empty($convocatoria->bases_archivo)): ?>
+                <a class="btn btn-sm btn-outline-light" href="<?= site_url('admin/convocatorias/' . (int) $convocatoria->id . '/bases') ?>" target="_blank" rel="noopener">
+                    <i class="bi bi-file-earmark-pdf me-1"></i>Bases oficiales
+                </a>
+            <?php endif; ?>
             <span class="badge bg-primary fs-6 px-3 py-2">
                 <i class="bi bi-people-fill me-1"></i><?= count($solicitudes) ?> Solicitantes Participantes
             </span>
@@ -57,7 +65,7 @@ $solicitudes = $__view['solicitudes'] ?? [];
         <div class="row align-items-center">
             <div class="col-md-8">
                 <div class="small text-muted mb-1">Bases de la Convocatoria:</div>
-                <div class="fw-semibold text-dark"><?= esc($convocatoria->bases) ?></div>
+                <div class="fw-semibold text-dark"><?= esc($convocatoria->bases ?: 'Sin bases redactadas.') ?></div>
             </div>
             <div class="col-md-4 text-md-end mt-3 mt-md-0 border-start ps-md-4">
                 <div class="small text-muted">Periodo de registro:</div>

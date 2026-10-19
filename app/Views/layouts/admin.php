@@ -173,7 +173,7 @@ $__tituloPagina = trim($this->renderSection('pageTitle', true));
         </a>
         <?php endif; ?>
         <?php if ($permitido('convocatorias')): ?>
-        <a href="/admin/convocatorias/1/evaluacion" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/convocatorias') ? 'active' : '' ?>">
+        <a href="/admin/convocatorias" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/convocatorias') ? 'active' : '' ?>">
             <i class="bi bi-award-fill me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Convocatorias UR-01</span>
         </a>
@@ -256,6 +256,14 @@ $__tituloPagina = trim($this->renderSection('pageTitle', true));
             <div class="alert alert-success alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert">
                 <i class="bi bi-check-circle-fill fs-5 me-2 text-success"></i>
                 <div><?= esc(session('message')) ?></div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+            </div>
+        <?php endif; ?>
+
+        <?php if (session('error')): ?>
+            <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center shadow-sm" role="alert">
+                <i class="bi bi-x-circle-fill fs-5 me-2 text-danger"></i>
+                <div><?= esc((string) session('error')) ?></div>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
             </div>
         <?php endif; ?>

@@ -81,7 +81,7 @@ final class PermisosOperador
         ],
         'convocatorias' => [
             'nombre'      => 'Convocatorias UR-01',
-            'descripcion' => 'Evaluar convocatorias y seleccionar ganadores de licencias.',
+            'descripcion' => 'Publicar y editar convocatorias, evaluar postulaciones y seleccionar ganadores (la baja definitiva es solo del administrador).',
             'icono'       => 'award-fill',
             'rutas'       => ['admin/convocatorias'],
         ],

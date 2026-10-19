@@ -173,7 +173,16 @@ class SolicitudPresencialController extends Controller
         $extras = [];
         if ($tramite === 'UR-TT-T-01') {
             $convocatoriaModel = new ConvocatoriaModel();
-            $extras['convocatorias'] = $convocatoriaModel->where('estatus', 'vigente')->findAll();
+            // abiertasHoy() compara el estatus con el texto exacto ('Vigente') y
+            // además exige que hoy caiga dentro del periodo de registro. Antes se
+            // filtraba por 'vigente' en minúsculas, y como Postgres distingue
+            // mayúsculas la lista salía vacía aunque hubiera convocatoria.
+            try {
+                $extras['convocatorias'] = $convocatoriaModel->abiertasHoy();
+            } catch (\Throwable $e) {
+                log_message('error', 'SolicitudPresencialController::formulario no pudo leer convocatorias: ' . $e->getMessage());
+                $extras['convocatorias'] = [];
+            }
         }
 
         $tarifaMonto = $this->obtenerMontoTarifa($tramite);

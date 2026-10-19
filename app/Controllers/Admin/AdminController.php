@@ -515,70 +515,11 @@ class AdminController extends Controller
             : 'Se quitó la validación del documento.');
     }
 
-    public function evaluacionConvocatoria(int $convocatoriaId)
-    {
-        try {
-            $convocatoriaModel = new \App\Models\ConvocatoriaModel();
-            $convocatoria = $convocatoriaModel->find($convocatoriaId);
-            
-            if (!$convocatoria) {
-                $convocatoria = $convocatoriaModel->orderBy('id', 'DESC')->first();
-            }
-
-            if (!$convocatoria) {
-                return view('admin/convocatorias/sin_convocatoria');
-            }
-
-            $solicitudModel = new SolicitudModel();
-            $solicitudDatoModel = new SolicitudDatoModel();
-
-            $solicitudesRaw = $solicitudModel->where('convocatoria_id', $convocatoria->id)->findAll();
-            $solicitudes = [];
-            foreach ($solicitudesRaw as $sol) {
-                $datos = $solicitudDatoModel->porSolicitudAgrupado((int)$sol->id);
-                $solicitudes[] = [
-                    'solicitud' => $sol,
-                    'datos'     => $datos,
-                ];
-            }
-
-            return view('admin/convocatorias/evaluacion', [
-                'convocatoria' => $convocatoria,
-                'solicitudes'  => $solicitudes,
-            ]);
-        } catch (\Throwable $e) {
-            log_message('error', 'AdminController::evaluacionConvocatoria error: ' . $e->getMessage());
-            return view('admin/convocatorias/sin_convocatoria');
-        }
-    }
-
-    public function seleccionarGanadorConvocatoria(int $convocatoriaId)
-    {
-        $session = Services::session();
-        $userId = (int) $session->get('user_id');
-        $solicitudId = (int) $this->request->getPost('solicitud_id');
-
-        $solicitudModel = new SolicitudModel();
-        $solicitud = $solicitudModel->find($solicitudId);
-        if (! $solicitud || (int)$solicitud->convocatoria_id !== $convocatoriaId) {
-            return redirect()->back()->with('error', 'Solicitud no encontrada para esta convocatoria.');
-        }
-
-        $participantes = $solicitudModel->where('convocatoria_id', $convocatoriaId)->findAll();
-        $estadoService = new EstadoSolicitudService();
-
-        foreach ($participantes as $part) {
-            $partId = (int) $part->id;
-            if ($partId === $solicitudId) {
-                $estadoService->cambiarEstatus($partId, 'Seleccionado', $userId, 'Dictamen comparativo: Seleccionado como GANADOR de la Convocatoria #' . $convocatoriaId);
-            } else {
-                $estadoService->cambiarEstatus($partId, 'No seleccionado', $userId, 'Dictamen comparativo: No seleccionado en Convocatoria #' . $convocatoriaId);
-            }
-        }
-
-        return redirect()->to('/admin/convocatorias/' . $convocatoriaId . '/evaluacion')
-            ->with('message', '¡Participante seleccionado exitosamente como GANADOR de la Convocatoria!');
-    }
+    /**
+     * Las convocatorias UR-01 (evaluación comparativa y designación de ganador)
+     * viven en Admin\ConvocatoriasController, que además aporta el alta, edición
+     * y baja que antes no existían.
+     */
 
     public function formatos()
     {

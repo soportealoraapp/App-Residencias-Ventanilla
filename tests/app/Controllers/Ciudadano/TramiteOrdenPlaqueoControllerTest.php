@@ -30,7 +30,6 @@ class TramiteOrdenPlaqueoControllerTest extends DatabaseTestCase
         $GLOBALS['_POST'] = [];
         $_FILES = [];
         $_POST = [];
-        $this->request = null;
         Services::resetSingle('request');
         Services::resetSingle('validation');
         $this->seedData();
@@ -42,7 +41,6 @@ class TramiteOrdenPlaqueoControllerTest extends DatabaseTestCase
         $GLOBALS['_POST'] = [];
         $_FILES = [];
         $_POST = [];
-        $this->request = null;
         Services::resetSingle('request');
         Services::resetSingle('validation');
         parent::tearDown();
@@ -122,7 +120,6 @@ class TramiteOrdenPlaqueoControllerTest extends DatabaseTestCase
         $GLOBALS['_POST'] = [];
         $_FILES = [];
         $_POST = [];
-        $this->request = null;
         Services::injectMock('request', null);
         Services::injectMock('validation', null);
         Services::resetSingle('request');

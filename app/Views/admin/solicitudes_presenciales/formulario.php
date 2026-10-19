@@ -129,7 +129,7 @@ $tarifaMonto = $__view['tarifaMonto'] ?? null;
                 <div class="col-12">
                     <div class="alert alert-danger py-2 small mb-0">
                         <i class="bi bi-exclamation-triangle me-1"></i>
-                        <strong>No hay convocatorias vigentes.</strong> Crea una convocatoria antes de registrar solicitudes UR-01.
+                        <strong>No hay convocatorias abiertas hoy.</strong> Publica una convocatoria con estatus Vigente y periodo de registro activo, o <a href="/admin/convocatorias" class="alert-link">revisa las existentes</a>.
                     </div>
                 </div>
                 <?php endif; ?>

@@ -392,7 +392,7 @@ if (! function_exists('badge_color_estatus')) {
                 <span class="dgs-fila-etiqueta">Formatos oficiales por trámite</span>
                 <i class="bi bi-chevron-right dgs-fila-flecha" aria-hidden="true"></i>
             </a>
-            <a href="/admin/convocatorias/1/evaluacion" class="dgs-fila">
+            <a href="/admin/convocatorias" class="dgs-fila">
                 <span class="dgs-fila-etiqueta">Convocatorias</span>
                 <i class="bi bi-chevron-right dgs-fila-flecha" aria-hidden="true"></i>
             </a>

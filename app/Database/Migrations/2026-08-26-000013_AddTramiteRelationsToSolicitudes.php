@@ -16,7 +16,9 @@ class AddTramiteRelationsToSolicitudes extends Migration
         // SQLite no aplica bien FK con ALTER TABLE; en Postgre/MySQL si.
         if ($this->db->DBDriver !== 'SQLite3') {
             $this->forge->addForeignKey('concesion_id', 'concesiones', 'id', 'CASCADE', 'SET NULL');
-            $this->forge->addForeignKey('convocatoria_id', 'convocatorias', 'id', 'CASCADE', 'SET NULL');
+            // RESTRICT y no CASCADE: una convocatoria con expedientes postulados
+            // no se puede borrar. El panel lo impide y la base también.
+            $this->forge->addForeignKey('convocatoria_id', 'convocatorias', 'id', 'RESTRICT', 'SET NULL');
             $this->forge->processIndexes('solicitudes');
         }
     }

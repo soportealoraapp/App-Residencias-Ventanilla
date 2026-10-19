@@ -854,7 +854,7 @@ $verifRezagadas   = (array) ($verif['rezagadas'] ?? []);
             </a>
         </div>
         <div class="col-6 col-lg-3">
-            <a class="stat-card-elevated dgs-kpi p-3" href="/admin/convocatorias/1/evaluacion">
+            <a class="stat-card-elevated dgs-kpi p-3" href="/admin/convocatorias">
                 <div class="dgs-kpi-valor"><?= $num((int) ($catalogos['convocatorias'] ?? 0)) ?></div>
                 <small class="text-muted">convocatorias UR-01</small>
             </a>
@@ -892,7 +892,7 @@ $verifRezagadas   = (array) ($verif['rezagadas'] ?? []);
                     <div class="card-header bg-white py-2"><h3 class="h6 mb-0 fw-bold">Convocatorias por estatus</h3></div>
                     <div class="card-body p-0">
                         <?php foreach ($catalogos['convocatorias_por_estatus'] ?? [] as $c): ?>
-                            <a class="dgs-fila" href="/admin/convocatorias/1/evaluacion">
+                            <a class="dgs-fila" href="/admin/convocatorias">
                                 <span class="dgs-fila-etiqueta"><?= esc($c['estatus']) ?></span>
                                 <span class="dgs-fila-valor"><?= $num((int) $c['total']) ?></span>
                             </a>

@@ -2,7 +2,7 @@
 
 namespace Tests\Controllers\Portal;
 
-use App\Controllers\Admin\AdminController;
+use App\Controllers\Admin\ConvocatoriasController;
 use App\Controllers\Ciudadano\TramiteConcesionTransporteController;
 use App\Models\ConvocatoriaModel;
 use App\Models\DocumentoModel;
@@ -34,7 +34,6 @@ class TramiteConcesionTransporteControllerTest extends DatabaseTestCase
         $GLOBALS['_POST'] = [];
         $_FILES = [];
         $_POST = [];
-        $this->request = null;
         Services::resetSingle('request');
         Services::resetSingle('validation');
         $this->seedData();
@@ -46,7 +45,6 @@ class TramiteConcesionTransporteControllerTest extends DatabaseTestCase
         $GLOBALS['_POST'] = [];
         $_FILES = [];
         $_POST = [];
-        $this->request = null;
         Services::resetSingle('request');
         Services::resetSingle('validation');
         parent::tearDown();
@@ -249,10 +247,10 @@ class TramiteConcesionTransporteControllerTest extends DatabaseTestCase
         Services::injectMock('request', $reqEval);
         Services::session()->set($_SESSION);
 
-        $adminController = new AdminController();
-        $adminController->initController($reqEval, new Response($appConfig), Services::logger());
+        $convocatoriasController = new ConvocatoriasController();
+        $convocatoriasController->initController($reqEval, new Response($appConfig), Services::logger());
 
-        $viewRes = $adminController->evaluacionConvocatoria($this->convocatoriaId);
+        $viewRes = $convocatoriasController->evaluacion($this->convocatoriaId);
         $this->assertStringContainsString('Cuadro Comparativo de Solicitantes', (string)$viewRes);
 
         // Operador Selecciona al Ganador (sol1)
@@ -266,8 +264,8 @@ class TramiteConcesionTransporteControllerTest extends DatabaseTestCase
         Services::injectMock('request', $reqSel);
         Services::session()->set($_SESSION);
 
-        $adminController->initController($reqSel, new Response($appConfig), Services::logger());
-        $resSel = $adminController->seleccionarGanadorConvocatoria($this->convocatoriaId);
+        $convocatoriasController->initController($reqSel, new Response($appConfig), Services::logger());
+        $resSel = $convocatoriasController->seleccionar($this->convocatoriaId);
         $this->assertInstanceOf(\CodeIgniter\HTTP\RedirectResponse::class, $resSel);
 
         // Verificación de selección comparativa en BD

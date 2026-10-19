@@ -73,8 +73,14 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->get('concesiones/editar/(:num)', 'Admin\\CatalogoConcesionesController::formEditar/$1');
         $routes->post('concesiones/actualizar/(:num)', 'Admin\\CatalogoConcesionesController::actualizar/$1');
         $routes->post('concesiones/eliminar/(:num)', 'Admin\\CatalogoConcesionesController::eliminar/$1');
-        $routes->get('convocatorias/(:num)/evaluacion', 'Admin\\AdminController::evaluacionConvocatoria/$1');
-        $routes->post('convocatorias/(:num)/seleccionar', 'Admin\\AdminController::seleccionarGanadorConvocatoria/$1');
+        $routes->get('convocatorias', 'Admin\\ConvocatoriasController::index', ['as' => 'admin.convocatorias']);
+        $routes->get('convocatorias/nueva', 'Admin\\ConvocatoriasController::formNuevo');
+        $routes->post('convocatorias/guardar', 'Admin\\ConvocatoriasController::guardar');
+        $routes->get('convocatorias/editar/(:num)', 'Admin\\ConvocatoriasController::formEditar/$1');
+        $routes->post('convocatorias/actualizar/(:num)', 'Admin\\ConvocatoriasController::actualizar/$1');
+        $routes->get('convocatorias/(:num)/evaluacion', 'Admin\\ConvocatoriasController::evaluacion/$1', ['as' => 'admin.convocatoria.evaluacion']);
+        $routes->post('convocatorias/(:num)/seleccionar', 'Admin\\ConvocatoriasController::seleccionar/$1');
+        $routes->get('convocatorias/(:num)/bases', 'Admin\\ConvocatoriasController::bases/$1');
 
         $routes->get('formatos', 'Admin\\AdminController::formatos');
         $routes->get('formatos/ver/(:segment)', 'Admin\\AdminController::verFormato/$1');
@@ -111,6 +117,7 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->post('app-transito/agentes/eliminar/(:num)', 'Admin\\AppTransitoController::eliminarAgente/$1');
         $routes->post('app-transito/boletas/eliminar/(:num)', 'Admin\\AppTransitoController::eliminarBoleta/$1');
         $routes->post('app-transito/catalogo/eliminar/(:num)', 'Admin\\AppTransitoController::eliminarCatalogo/$1');
+        $routes->post('convocatorias/eliminar/(:num)', 'Admin\\ConvocatoriasController::eliminar/$1');
     });
 });
 

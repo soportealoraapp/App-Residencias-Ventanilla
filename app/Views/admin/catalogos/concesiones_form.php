@@ -10,7 +10,7 @@ $concesion = $__view['concesion'] ?? null;
 $estatusOpciones = $__view['estatusOpciones'] ?? [];
 ?>
 <?= $this->extend('layouts/admin') ?>
-<?= $this->section('pageTitle') ?><?= $modo === 'nuevo' ? 'Nueva Concesión (stub)' : 'Editar Concesión #' . $concesion->id ?><?= $this->endSection() ?>
+<?= $this->section('pageTitle') ?><?= $modo === 'nuevo' ? 'Nueva Concesión' : 'Editar Concesión #' . $concesion->id ?><?= $this->endSection() ?>
 <?= $this->section('content') ?>
 
 <div class="row mb-3">
@@ -102,7 +102,7 @@ $estatusOpciones = $__view['estatusOpciones'] ?? [];
                 <a href="/admin/concesiones" class="btn btn-secondary">Cancelar</a>
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-save me-1"></i>
-                    <?= $modo === 'nuevo' ? 'Crear concesión (stub)' : 'Guardar cambios' ?>
+                    <?= $modo === 'nuevo' ? 'Crear concesión' : 'Guardar cambios' ?>
                 </button>
             </div>
         <?= form_close() ?>
