@@ -59,24 +59,11 @@ class ConvocatoriaModel extends Model
         }
     }
 
-    public function primeraVigente(): ?object
-    {
-        try {
-            $hoy = date('Y-m-d');
-
-            return $this->where('estatus', self::VIGENTE)
-                ->where('periodo_registro_inicio <=', $hoy)
-                ->where('periodo_registro_fin >=', $hoy)
-                ->orderBy('id', 'DESC')
-                ->first();
-        } catch (\Throwable $e) {
-            log_message('error', 'ConvocatoriaModel::primeraVigente error: ' . $e->getMessage());
-            return null;
-        }
-    }
-
     /**
-     * Convocatorias que admiten postulaciones hoy. El filtro compara el texto
+     * Convocatorias que admiten postulaciones hoy, para que el ciudadano elija a
+     * cuál postula. Se ordena por fecha de cierre (la que antes vence primero) y
+     * no por id: elegir 'la más reciente' era precisamente el defecto que
+     * inscribía a alguien en un concurso que no escogió. El filtro compara el texto
      * exacto del estatus: en Postgres las cadenas son sensibles a mayúsculas,
      * así que 'vigente' en minúsculas devolvería una lista vacía.
      *

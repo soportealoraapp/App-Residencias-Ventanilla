@@ -98,7 +98,9 @@ CREATE INDEX IF NOT EXISTS verificaciones_fisicas_solicitud_id_idx
 --    migración: borrar una convocatoria con expedientes postulados debe estar
 --    prohibido también en la base de datos, no solo en el panel. Si una
 --    convocatoria ya tiene postulaciones, el camino correcto es ponerla
---    Anulada. (concesion_id se deja como lo definió la migración.)
+--    Anulada. El paralelo concesion_id se queda aquí como CASCADE porque así lo
+--    definió la migración original; 0009_concesion_id_sin_cascade.sql lo convierte
+--    a RESTRICT, así que aplique los dos bloques en orden.
 -- -----------------------------------------------------------------------------
 ALTER TABLE public.solicitudes ADD COLUMN IF NOT EXISTS concesion_id      bigint NULL;
 ALTER TABLE public.solicitudes ADD COLUMN IF NOT EXISTS convocatoria_id   bigint NULL;

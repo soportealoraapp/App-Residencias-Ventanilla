@@ -159,6 +159,75 @@ class TramiteConcesionTransporteControllerTest extends DatabaseTestCase
         $this->assertStringContainsString('No hay Convocatoria Vigente Abierta', (string) $response->response()->getBody());
     }
 
+    private function sembrarConvocatoriaAbierta(array $cambios = []): int
+    {
+        $fila = array_merge([
+            'titulo'                    => 'Convocatoria adicional abierta',
+            'fecha_publicacion'         => date('Y-m-d', strtotime('-3 days')),
+            'periodo_registro_inicio'   => date('Y-m-d', strtotime('-1 day')),
+            'periodo_registro_fin'      => date('Y-m-d', strtotime('+40 days')),
+            'bases'                     => 'Bases del segundo concurso abierto.',
+            'estatus'                   => 'Vigente',
+        ], $cambios);
+
+        $this->db->table('convocatorias')->insert($fila);
+
+        return (int) $this->db->insertID();
+    }
+
+    /**
+     * Con dos ventanas abiertas el ciudadano tiene que elegir: antes el formulario
+     * tomaba "la primera vigente" (la de id más alto) y lo inscribía en un concurso
+     * que no escogió.
+     */
+    public function testElFormularioDejaElegirCuandoHayVariasConvocatoriasAbiertas(): void
+    {
+        $segundaId = $this->sembrarConvocatoriaAbierta(['titulo' => 'Concurso Ruta Periferica Norte']);
+
+        $response = $this->sessionCiudadano()->get('portal/tramites/concesion-transporte');
+        $response->assertStatus(200);
+        $body = (string) $response->response()->getBody();
+
+        $this->assertStringContainsString('Elija la convocatoria a la que postula', $body);
+        $this->assertStringContainsString('Concurso Ruta Periferica Norte', $body);
+        $this->assertStringContainsString('value="' . $this->convocatoriaId . '"', $body);
+        $this->assertStringContainsString('value="' . $segundaId . '"', $body);
+        $this->assertStringNotContainsString('type="hidden" name="convocatoria_id"', $body);
+    }
+
+    public function testLaQueryPreseleccionaLaConvocatoriaElegida(): void
+    {
+        $segundaId = $this->sembrarConvocatoriaAbierta(['titulo' => 'Concurso Ruta Centro']);
+
+        $response = $this->sessionCiudadano()->get('portal/tramites/concesion-transporte?convocatoria=' . $segundaId);
+        $response->assertStatus(200);
+        $body = (string) $response->response()->getBody();
+
+        $this->assertStringContainsString('value="' . $segundaId . '" checked', $body);
+        $this->assertStringNotContainsString('value="' . $this->convocatoriaId . '" checked', $body);
+    }
+
+    public function testUnaQueryInventadaNoSacaAlCiudadanoDeLasConvocatoriasReales(): void
+    {
+        $this->sembrarConvocatoriaAbierta(['titulo' => 'Concurso Ruta Sur']);
+
+        $response = $this->sessionCiudadano()->get('portal/tramites/concesion-transporte?convocatoria=999999');
+        $response->assertStatus(200);
+        $body = (string) $response->response()->getBody();
+
+        $this->assertStringContainsString('value="' . $this->convocatoriaId . '" checked', $body);
+    }
+
+    public function testConUnaSolaConvocatoriaNoSePideEleccion(): void
+    {
+        $response = $this->sessionCiudadano()->get('portal/tramites/concesion-transporte');
+        $response->assertStatus(200);
+        $body = (string) $response->response()->getBody();
+
+        $this->assertStringNotContainsString('Elija la convocatoria a la que postula', $body);
+        $this->assertStringContainsString('type="hidden" name="convocatoria_id" value="' . $this->convocatoriaId . '"', $body);
+    }
+
     public function testPostulacionYSeleccionComparativaConvocatoria(): void
     {
         $tmpDir = WRITEPATH . 'test_tmp';

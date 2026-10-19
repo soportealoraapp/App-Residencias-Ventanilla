@@ -263,6 +263,12 @@ class CatalogoConcesionesController extends Controller
         return redirect()->to(site_url('admin/concesiones'))->with('message', 'Concesión actualizada correctamente.');
     }
 
+    /**
+     * Baja del padrón. Se niega si la concesión ya tiene solicitudes vinculadas:
+     * borrarla rompía el historial del ciudadano (el expediente apuntaba a una
+     * fila inexistente), así que la vía correcta para que deje de aparecer como
+     * activa es cambiarle el estatus, no eliminarla.
+     */
     public function eliminar(int $id)
     {
         $concesionModel = new ConcesionModel();
@@ -271,6 +277,16 @@ class CatalogoConcesionesController extends Controller
         $concesion = $concesionModel->find($id);
         if (!$concesion) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        $vinculadas = \Config\Database::connect()
+            ->table('solicitudes')
+            ->where('concesion_id', $id)
+            ->countAllResults();
+
+        if ($vinculadas > 0) {
+            return redirect()->to(site_url('admin/concesiones'))
+                ->with('error', "La concesión #{$id} tiene {$vinculadas} solicitud(es) vinculadas. No se puede eliminar del padrón: edita su estatus para darla de baja y conservar el historial.");
         }
 
         $concesionModel->delete($id);

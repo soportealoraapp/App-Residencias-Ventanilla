@@ -4,6 +4,11 @@
 $__view = get_defined_vars();
 /** @var object|null $convocatoria */
 $convocatoria = $__view['convocatoria'] ?? null;
+/** @var array<int, object> $convocatorias */
+$convocatorias = $__view['convocatorias'] ?? ($convocatoria === null ? [] : [$convocatoria]);
+// Con una sola convocatoria abierta el formulario no pide elegir; con varias, la
+// elección es parte del expediente porque el dictamen se resuelve por concurso.
+$hayVarias = count($convocatorias) > 1;
 /** @var float $tarifaMonto */
 $tarifaMonto = $__view['tarifaMonto'] ?? 0.0;
 $validation = \Config\Services::validation();
@@ -69,12 +74,40 @@ $oldNumVehiculos = old('num_vehiculos', '1');
                         <div>
                             <div class="badge bg-light text-success mb-1 fw-bold">CONVOCATORIA VIGENTE DE OTORGAMIENTO</div>
                             <h1 class="h4 mb-0 text-white">UR-TT-T-01 · Concesión de Transporte Público</h1>
-                            <div class="small opacity-75">Periodo de registro activo hasta el <?= date('d/m/Y', strtotime($convocatoria->periodo_registro_fin)) ?></div>
+                            <?php if ($hayVarias): ?>
+                                <div class="small opacity-75"><?= count($convocatorias) ?> convocatorias admitiendo postulaciones hoy; elija a cuál se inscribe.</div>
+                            <?php else: ?>
+                                <div class="small opacity-75">Periodo de registro activo hasta el <?= date('d/m/Y', strtotime($convocatoria->periodo_registro_fin)) ?></div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
 
                 <div class="card-body p-3 p-md-4">
+                    <?= form_open_multipart('/portal/tramites/concesion-transporte/guardar', ['id' => 'formConcesion', 'novalidate' => 'novalidate']) ?>
+
+                    <?php if ($hayVarias): ?>
+                        <div class="alert alert-warning bg-warning bg-opacity-10 border-0 mb-3">
+                            <h6 class="fw-bold mb-1"><i class="bi bi-list-check me-2"></i>Elija la convocatoria a la que postula</h6>
+                            <p class="small mb-0">El dictamen comparativo se resuelve dentro de la convocatoria elegida, así que la selección ya no puede cambiarse después de enviar el expediente.</p>
+                        </div>
+                        <?php foreach ($convocatorias as $c): ?>
+                            <?php $activa = $convocatoria !== null && (int) $c->id === (int) $convocatoria->id; ?>
+                            <label class="card mb-2 <?= $activa ? 'border-success shadow-sm' : 'border' ?>">
+                                <div class="card-body p-3 d-flex gap-2 align-items-start">
+                                    <input class="form-check-input mt-1 flex-shrink-0" type="radio" name="convocatoria_id"
+                                        value="<?= (int) $c->id ?>" <?= $activa ? 'checked' : '' ?>>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold"><?= esc($c->titulo !== null && $c->titulo !== '' ? $c->titulo : 'Convocatoria #' . (int) $c->id) ?></div>
+                                        <div class="small text-muted">Registro: <?= date('d/m/Y', strtotime((string) $c->periodo_registro_inicio)) ?> al <?= date('d/m/Y', strtotime((string) $c->periodo_registro_fin)) ?></div>
+                                        <?php if (! empty($c->bases)): ?>
+                                            <div class="small mt-1"><?= esc((string) $c->bases) ?></div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </label>
+                        <?php endforeach; ?>
+                    <?php else: ?>
                     <div class="alert alert-success bg-success bg-opacity-10 border-0 mb-4">
                         <h6 class="fw-bold text-success mb-1"><i class="bi bi-journal-text me-2"></i>Bases de la Convocatoria Activa</h6>
                         <p class="small text-muted mb-1"><?= esc($convocatoria->bases) ?></p>
@@ -83,9 +116,8 @@ $oldNumVehiculos = old('num_vehiculos', '1');
                             Registro: <?= date('d/m/Y', strtotime($convocatoria->periodo_registro_inicio)) ?> al <?= date('d/m/Y', strtotime($convocatoria->periodo_registro_fin)) ?>
                         </div>
                     </div>
-
-                    <?= form_open_multipart('/portal/tramites/concesion-transporte/guardar', ['id' => 'formConcesion', 'novalidate' => 'novalidate']) ?>
-                        <input type="hidden" name="convocatoria_id" value="<?= esc($convocatoria->id) ?>">
+                    <input type="hidden" name="convocatoria_id" value="<?= esc($convocatoria->id) ?>">
+                    <?php endif; ?>
 
                         <!-- SECCIÓN 1: Datos del Postulante -->
                         <fieldset class="mb-4">
