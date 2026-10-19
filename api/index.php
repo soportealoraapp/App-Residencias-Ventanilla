@@ -34,6 +34,18 @@ $rootDir = dirname(__DIR__);
 // Oculta la version de PHP en las respuestas.
 header_remove('X-Powered-By');
 
+// -----------------------------------------------------------------------------
+// Vercel invoca este archivo como función, así que SCRIPT_NAME llega como
+// '/api/index.php'. CodeIgniter recorta el SCRIPT_NAME segmento a segmento del
+// REQUEST_URI (SiteURIFactory::parseRequestURI), de modo que la petición
+// '/api/parametros' se convertía en 'parametros' y ninguna ruta declarada con
+// el prefijo 'api/' coincidía: en producción los endpoints de la app de
+// agentes respondían 404 mientras el resto del sitio funcionaba. El propio
+// marco trae la solución en system/rewrite.php: declarar que todas las
+// peticiones las atiende /index.php, que es lo que vercel.json reescribe.
+// -----------------------------------------------------------------------------
+$_SERVER['SCRIPT_NAME'] = '/index.php';
+
 define('FCPATH', $rootDir . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR);
 if (getcwd() . DIRECTORY_SEPARATOR !== FCPATH) {
     chdir(FCPATH);
