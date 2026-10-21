@@ -221,6 +221,15 @@ class InfraccionesApiController extends Controller
             $folio = trim((string)($b['folio'] ?? ''));
             $placa = strtoupper(trim((string)($b['agente_placa'] ?? '')));
 
+            foreach (['conductor_ausente', 'sin_placas'] as $campoBooleano) {
+                if (! array_key_exists($campoBooleano, $b) || ! is_bool($b[$campoBooleano])) {
+                    return $this->response->setStatusCode(422)->setJSON([
+                        'success' => false,
+                        'message' => "El campo {$campoBooleano} de la boleta {$folio} debe ser booleano.",
+                    ]);
+                }
+            }
+
             if ($placa !== '' && $placa !== $placaAgente) {
                 return $this->response->setStatusCode(403)->setJSON([
                     'success' => false,
@@ -268,12 +277,12 @@ class InfraccionesApiController extends Controller
                 'lugar'                 => $b['lugar'] ?? 'No especificado',
                 'latitud'               => isset($b['latitud']) && is_numeric($b['latitud']) ? (float)$b['latitud'] : null,
                 'longitud'              => isset($b['longitud']) && is_numeric($b['longitud']) ? (float)$b['longitud'] : null,
-                'conductor_ausente'     => !empty($b['conductor_ausente']) ? 1 : 0,
+                'conductor_ausente'     => $b['conductor_ausente'],
                 'infractor_nombre'      => $b['infractor_nombre'] ?? null,
                 'infractor_domicilio'   => $b['infractor_domicilio'] ?? null,
                 'infractor_licencia'    => $b['infractor_licencia'] ?? null,
                 'vehiculo_placas'       => $b['vehiculo_placas'] ?? null,
-                'sin_placas'            => !empty($b['sin_placas']) ? 1 : 0,
+                'sin_placas'            => $b['sin_placas'],
                 'vehiculo_marca'        => $b['vehiculo_marca'] ?? null,
                 'vehiculo_linea'        => $b['vehiculo_linea'] ?? null,
                 'vehiculo_color'        => $b['vehiculo_color'] ?? null,

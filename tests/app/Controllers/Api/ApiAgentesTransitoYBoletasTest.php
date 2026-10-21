@@ -120,10 +120,10 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
             'lugar'                  => 'Portal Independencia y Morelos',
             'latitud'                => 20.1412,
             'longitud'               => -101.1432,
-            'conductor_ausente'      => 0,
+            'conductor_ausente'      => true,
             'infractor_nombre'       => 'Juan Pérez',
             'vehiculo_placas'        => 'GT-884-A',
-            'sin_placas'             => 0,
+            'sin_placas'             => false,
             'vehiculo_marca'         => 'Nissan',
             'vehiculo_linea'         => 'Tsuru',
             'vehiculo_color'         => 'Rojo',
@@ -139,6 +139,7 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
         ];
 
         $response = $this->withHeaders(['Authorization' => 'Bearer ' . $this->loginToken()])
+            ->withBodyFormat('json')
             ->post('api/infracciones/sincronizar', $payload);
         $response->assertStatus(200);
 
@@ -153,14 +154,55 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
         $this->assertEquals('AGT-TEST-1', $guardada->agente_placa);
         $this->assertEquals('Juan Pérez', $guardada->infractor_nombre);
         $this->assertEquals('GT-884-A', $guardada->vehiculo_placas);
+        $this->assertTrue((bool) $guardada->conductor_ausente);
+        $this->assertFalse((bool) $guardada->sin_placas);
+
+        $payload['conductor_ausente'] = false;
+        $payload['sin_placas'] = true;
+        $this->withHeaders(['Authorization' => 'Bearer ' . $this->loginToken()])
+            ->withBodyFormat('json')
+            ->post('api/infracciones/sincronizar', $payload)
+            ->assertStatus(200);
+
+        $actualizada = $boletaModel->where('folio', $folioTest)->first();
+        $this->assertFalse((bool) $actualizada->conductor_ausente);
+        $this->assertTrue((bool) $actualizada->sin_placas);
 
         // Limpiar
         $boletaModel->where('folio', $folioTest)->delete();
     }
 
+    public function testSincronizar_RechazaBooleanoEnteroSinGuardar(): void
+    {
+        $payload = $this->boleta('FOLIO-BOOLEANO-ENTERO', 'AGT-TEST-1');
+        $payload['conductor_ausente'] = 1;
+
+        $response = $this->withHeaders(['Authorization' => 'Bearer ' . $this->loginToken()])
+            ->withBodyFormat('json')
+            ->post('api/infracciones/sincronizar', $payload);
+
+        $response->assertStatus(422);
+        $this->assertFalse(json_decode($response->getJSON(), true)['success']);
+        $this->assertNull((new BoletaInfraccionModel())->where('folio', 'FOLIO-BOOLEANO-ENTERO')->first());
+    }
+
+    public function testSincronizar_RechazaBooleanoAusenteSinGuardar(): void
+    {
+        $payload = $this->boleta('FOLIO-BOOLEANO-AUSENTE', 'AGT-TEST-1');
+        unset($payload['sin_placas']);
+
+        $response = $this->withHeaders(['Authorization' => 'Bearer ' . $this->loginToken()])
+            ->withBodyFormat('json')
+            ->post('api/infracciones/sincronizar', $payload);
+
+        $response->assertStatus(422);
+        $this->assertFalse(json_decode($response->getJSON(), true)['success']);
+        $this->assertNull((new BoletaInfraccionModel())->where('folio', 'FOLIO-BOOLEANO-AUSENTE')->first());
+    }
+
     public function testSincronizar_SinToken_Retorna401YNoGuarda(): void
     {
-        $response = $this->post('api/infracciones/sincronizar', $this->boleta('FOLIO-SIN-TOKEN', 'AGT-TEST-1'));
+        $response = $this->withBodyFormat('json')->post('api/infracciones/sincronizar', $this->boleta('FOLIO-SIN-TOKEN', 'AGT-TEST-1'));
 
         $response->assertStatus(401);
         $this->assertFalse(json_decode($response->getJSON(), true)['success']);
@@ -170,6 +212,7 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
     public function testSincronizar_ConTokenInvalido_Retorna401(): void
     {
         $response = $this->withHeaders(['Authorization' => 'Bearer ' . str_repeat('a', 64)])
+            ->withBodyFormat('json')
             ->post('api/infracciones/sincronizar', $this->boleta('FOLIO-TOKEN-FALSO', 'AGT-TEST-1'));
 
         $response->assertStatus(401);
@@ -184,6 +227,7 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
         $tokenModel->update($registro->id, ['expira_en' => date('Y-m-d H:i:s', time() - 60)]);
 
         $response = $this->withHeaders(['Authorization' => 'Bearer ' . $token])
+            ->withBodyFormat('json')
             ->post('api/infracciones/sincronizar', $this->boleta('FOLIO-TOKEN-VENCIDO', 'AGT-TEST-1'));
 
         $response->assertStatus(401);
@@ -196,6 +240,7 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
         $agenteModel->update($agenteModel->getPorPlaca('AGT-TEST-1')->id, ['activo' => 0]);
 
         $response = $this->withHeaders(['Authorization' => 'Bearer ' . $token])
+            ->withBodyFormat('json')
             ->post('api/infracciones/sincronizar', $this->boleta('FOLIO-AGENTE-BAJA', 'AGT-TEST-1'));
 
         $response->assertStatus(401);
@@ -207,6 +252,7 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
         $this->crearSegundoAgente();
 
         $response = $this->withHeaders(['Authorization' => 'Bearer ' . $this->loginToken()])
+            ->withBodyFormat('json')
             ->post('api/infracciones/sincronizar', $this->boleta('FOLIO-SUPLANTADO', 'AGT-TEST-2'));
 
         $response->assertStatus(403);
@@ -220,6 +266,7 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
         $tokenAgente2 = $this->loginToken('AGT-TEST-2', 'otro-secreto');
 
         $this->withHeaders(['Authorization' => 'Bearer ' . $tokenAgente2])
+            ->withBodyFormat('json')
             ->post('api/infracciones/sincronizar', $this->boleta('FOLIO-AGENTE-2', 'AGT-TEST-2', 'Lugar original'))
             ->assertStatus(200);
 
@@ -227,6 +274,7 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
         $tokenAgente1 = $this->loginToken();
         foreach (['AGT-TEST-1', ''] as $placa) {
             $this->withHeaders(['Authorization' => 'Bearer ' . $tokenAgente1])
+                ->withBodyFormat('json')
                 ->post('api/infracciones/sincronizar', $this->boleta('FOLIO-AGENTE-2', $placa, 'Lugar alterado'))
                 ->assertStatus(403);
         }
@@ -242,6 +290,7 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
         $payload['agente_nombre'] = 'Nombre inventado';
 
         $response = $this->withHeaders(['Authorization' => 'Bearer ' . $this->loginToken()])
+            ->withBodyFormat('json')
             ->post('api/infracciones/sincronizar', $payload);
 
         $response->assertStatus(200);
@@ -265,6 +314,7 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
     {
         $this->crearSegundoAgente();
         $this->withHeaders(['Authorization' => 'Bearer ' . $this->loginToken('AGT-TEST-2', 'otro-secreto')])
+            ->withBodyFormat('json')
             ->post('api/infracciones/sincronizar', $this->boleta('FOLIO-EVIDENCIA-AJENA', 'AGT-TEST-2'))
             ->assertStatus(200);
 
@@ -338,6 +388,8 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
             'fecha_infraccion' => '2026-10-13',
             'hora_infraccion'  => '10:30:00',
             'lugar'            => $lugar,
+            'conductor_ausente' => false,
+            'sin_placas'       => false,
             'estado'           => 'recibida',
         ];
     }
