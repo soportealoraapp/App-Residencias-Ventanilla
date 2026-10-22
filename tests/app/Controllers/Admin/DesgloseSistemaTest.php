@@ -325,6 +325,26 @@ class DesgloseSistemaTest extends DatabaseTestCase
         $this->assertStringNotContainsString('/admin/desglose', $response->getBody());
     }
 
+    public function testElDashboardRenderizaActividadReciente(): void
+    {
+        $solicitudId = $this->crearSolicitud('INI-ACT-1', 'UR-TT-T-03', 'Recibido', 10.0, date('Y-m-d 09:00:00'));
+        $this->db->table('historial_estatus')->insert([
+            'solicitud_id'     => $solicitudId,
+            'estatus_anterior' => null,
+            'estatus_nuevo'    => 'Recibido',
+            'usuario_id'       => $this->adminId,
+            'fecha'            => date('Y-m-d H:i:s'),
+            'comentario'       => 'Solicitud registrada',
+        ]);
+
+        $response = $this->comoAdmin()->get('/admin/dashboard');
+
+        $response->assertStatus(200);
+        $this->assertStringContainsString('Solicitud registrada', $response->getBody());
+        $this->assertStringContainsString('INI-ACT-1', $response->getBody());
+        $this->assertStringContainsString('admin/auditoria?usuario_id=' . $this->adminId, $response->getBody());
+    }
+
     // ------------------------------------------------------------------
     // Trazabilidad desde el expediente
     // ------------------------------------------------------------------

@@ -77,14 +77,18 @@ class AdminController extends Controller
             ->limit(10)
             ->findAll();
 
+        $comoObjeto = static fn (array|object|null $registro): ?object => is_array($registro)
+            ? (object) $registro
+            : $registro;
+
         $ultimasActividades = [];
         foreach ($ultimasActividadesRaw as $h) {
             $usuario = $userModel->find($h->usuario_id);
             $solicitud = $solicitudModel->find($h->solicitud_id);
             $ultimasActividades[] = [
-                'historial' => $h,
-                'usuario'   => $usuario,
-                'solicitud' => $solicitud,
+                'historial' => $comoObjeto($h),
+                'usuario'   => $comoObjeto($usuario),
+                'solicitud' => $comoObjeto($solicitud),
             ];
         }
 

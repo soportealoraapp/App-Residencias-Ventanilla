@@ -474,8 +474,9 @@ if (! function_exists('badge_color_estatus')) {
                 <?php else: ?>
                     <?php foreach ($ultimasActividades as $act): ?>
                         <?php
-                        $rutaUsuario = ($act['usuario'] ?? null) && $__esAdmin
-                            ? site_url('admin/auditoria?usuario_id=' . (int) $act['usuario']->id)
+                        $usuarioId = (int) ($act['historial']->usuario_id ?? 0);
+                        $rutaUsuario = $usuarioId > 0 && $__esAdmin
+                            ? site_url('admin/auditoria?usuario_id=' . $usuarioId)
                             : null;
                         $rutaEstatus = $__puedeSolicitudes && !empty($act['solicitud']->folio)
                             ? site_url('admin/solicitudes/' . $act['solicitud']->folio)
