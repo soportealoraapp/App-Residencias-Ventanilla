@@ -413,40 +413,58 @@ class AdminController extends Controller
         $solicitudModel = new SolicitudModel();
         $solicitud = $solicitudModel->find($solicitudId);
         if ($solicitud === null || $solicitud->tramite !== 'UR-TT-T-05') {
-            return redirect()->back()->with('error', 'Solicitud no válida para validación UR-05.');
+            return redirect()->to('/admin/solicitudes')->with('error', 'Solicitud no válida para validación UR-05.');
+        }
+        $volver = '/admin/solicitudes/' . $solicitud->folio;
+
+        // Autorizar y rechazar son acciones explícitas y separadas. Antes un solo
+        // botón "Validar y autorizar pago" rechazaba la solicitud en silencio si
+        // faltaba marcar alguna casilla.
+        $accion = (string) $this->request->getPost('accion');
+        if (! in_array($accion, ['autorizar', 'rechazar'], true)) {
+            return redirect()->to($volver)->with('error', 'Elige si autorizas el pago o rechazas la solicitud.');
         }
 
         $datosModel = new SolicitudDatoModel();
         $datos = $datosModel->porSolicitudAgrupado($solicitudId);
-        $criterios = [
-            'afluencia_baja' => 'Criterio: afluencia vehicular baja',
-            'sin_transporte_publico' => 'Criterio: sin transporte público',
-            'horario_no_entorpece' => 'Criterio: horario sin afectación al tráfico',
-        ];
-        $aprobado = true;
-        foreach ($criterios as $campo => $comentario) {
+        $criterios = ['afluencia_baja', 'sin_transporte_publico', 'horario_no_entorpece'];
+        $cumpleTodos = true;
+        foreach ($criterios as $campo) {
             $cumple = $this->request->getPost($campo) === '1';
             $datos[$campo] = $cumple ? '1' : '0';
-            $aprobado = $aprobado && $cumple;
+            $cumpleTodos = $cumpleTodos && $cumple;
         }
-        $datos['observaciones_validacion'] = trim((string) $this->request->getPost('observaciones_validacion'));
-        $datosModel->guardarDatos($solicitudId, $datos);
+        $observaciones = trim((string) $this->request->getPost('observaciones_validacion'));
+        $datos['observaciones_validacion'] = $observaciones;
 
+        if ($accion === 'autorizar' && ! $cumpleTodos) {
+            $datosModel->guardarDatos($solicitudId, $datos);
+            return redirect()->to($volver)->with('error', 'Para autorizar el pago deben cumplirse los 3 criterios de seguridad vial. Si alguno no se cumple, usa "Rechazar" e indica el motivo.');
+        }
+        if ($accion === 'rechazar' && $observaciones === '') {
+            return redirect()->to($volver)->with('error', 'Para rechazar la solicitud escribe el motivo en Observaciones.');
+        }
+
+        $datosModel->guardarDatos($solicitudId, $datos);
         $estadoService = new EstadoSolicitudService();
         $usuarioId = (int) session('user_id');
-        $comentario = $datos['observaciones_validacion'] !== ''
-            ? $datos['observaciones_validacion']
-            : ($aprobado ? 'Criterios de cierre validados.' : 'No se cumplen los criterios de seguridad vial.');
-        if ($aprobado && $solicitud->estatus === 'Recibido' && ! $estadoService->cambiarEstatus($solicitudId, 'En validación', $usuarioId, 'Solicitud recibida para validación inmediata.')) {
-            return redirect()->back()->with('error', 'No se pudo iniciar la validación de UR-05.');
-        }
-        $nuevoEstatus = $aprobado ? 'Pago pendiente' : 'Rechazado';
-        if (! $estadoService->cambiarEstatus($solicitudId, $nuevoEstatus, $usuarioId, $comentario)) {
-            return redirect()->back()->with('error', 'No se pudo aplicar la validación desde el estado actual.');
+
+        if ($accion === 'autorizar') {
+            if ($solicitud->estatus === 'Recibido'
+                && ! $estadoService->cambiarEstatus($solicitudId, 'En validación', $usuarioId, 'Solicitud recibida para validación inmediata.')) {
+                return redirect()->to($volver)->with('error', 'No se pudo iniciar la validación de UR-05.');
+            }
+            $comentario = $observaciones !== '' ? $observaciones : 'Criterios de cierre validados. Pago autorizado.';
+            if (! $estadoService->cambiarEstatus($solicitudId, 'Pago pendiente', $usuarioId, $comentario)) {
+                return redirect()->to($volver)->with('error', 'No se pudo autorizar el pago desde el estatus actual (' . $solicitud->estatus . ').');
+            }
+            return redirect()->to($volver)->with('message', 'Pago autorizado: la solicitud pasó a "Pago pendiente".');
         }
 
-        return redirect()->to('/admin/solicitudes/' . $solicitud->folio)
-            ->with('message', 'Validación de criterios UR-05 registrada.');
+        if (! $estadoService->cambiarEstatus($solicitudId, 'Rechazado', $usuarioId, $observaciones)) {
+            return redirect()->to($volver)->with('error', 'No se pudo rechazar desde el estatus actual (' . $solicitud->estatus . ').');
+        }
+        return redirect()->to($volver)->with('message', 'Solicitud rechazada.');
     }
 
     public function cambiarEstatus(int $solicitudId)

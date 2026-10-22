@@ -297,16 +297,20 @@ $claveEtiquetas = [
 <div class="card mb-3 border-primary shadow-sm">
     <div class="card-header bg-primary bg-opacity-10"><h6 class="mb-0 text-primary fw-bold"><i class="bi bi-shield-check me-2"></i>Validación rápida UR-05</h6></div>
     <div class="card-body">
-        <p class="small text-muted">Marca los criterios provisionales de seguridad vial para autorizar el pago.</p>
-        <form method="post" action="<?= site_url('admin/solicitudes/ur05/validacion/' . $solicitud->id) ?>">
+        <p class="small text-muted">Para autorizar el pago deben cumplirse los 3 criterios de seguridad vial. Si alguno no se cumple, rechaza la solicitud indicando el motivo.</p>
+        <form method="post" action="<?= site_url('admin/solicitudes/ur05/validacion/' . $solicitud->id) ?>" id="formValidacionUr05" data-no-loading="1">
             <?= csrf_field() ?>
             <div class="row g-2 mb-3">
                 <?php foreach (['afluencia_baja' => 'La calle tiene baja afluencia vehicular', 'sin_transporte_publico' => 'No circula transporte público', 'horario_no_entorpece' => 'El horario no entorpece el tráfico'] as $campo => $etiqueta): ?>
                 <div class="col-12"><label class="form-check"><input class="form-check-input" type="checkbox" name="<?= $campo ?>" value="1" <?= ($datosSolicitud[$campo] ?? '') === '1' ? 'checked' : '' ?>><span class="form-check-label"><?= esc($etiqueta) ?></span></label></div>
                 <?php endforeach; ?>
             </div>
-            <textarea name="observaciones_validacion" class="form-control mb-3" rows="2" placeholder="Observaciones de la validación..."><?= esc($datosSolicitud['observaciones_validacion'] ?? '') ?></textarea>
-            <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-check2-circle me-1"></i>Validar y autorizar pago</button>
+            <label for="observaciones_validacion" class="form-label small fw-semibold">Observaciones <span class="text-muted fw-normal">(obligatorias para rechazar)</span></label>
+            <textarea name="observaciones_validacion" id="observaciones_validacion" class="form-control mb-3" rows="2" placeholder="Observaciones de la validación..."><?= esc($datosSolicitud['observaciones_validacion'] ?? '') ?></textarea>
+            <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-success btn-sm" type="submit" name="accion" value="autorizar"><i class="bi bi-check2-circle me-1"></i>Autorizar pago</button>
+                <button class="btn btn-outline-danger btn-sm" type="submit" name="accion" value="rechazar"><i class="bi bi-x-circle me-1"></i>Rechazar solicitud</button>
+            </div>
         </form>
     </div>
 </div>
@@ -531,6 +535,29 @@ document.addEventListener('DOMContentLoaded', function () {
         comentario.required = requiere;
         if (!requiere) comentario.value = '';
     }
+
+    // UR-05: autorizar exige los 3 criterios; rechazar exige motivo y confirmación.
+    const formUr05 = document.getElementById('formValidacionUr05');
+    formUr05?.addEventListener('submit', function (e) {
+        const accion = e.submitter ? e.submitter.value : '';
+        const obs = document.getElementById('observaciones_validacion');
+        if (accion === 'autorizar') {
+            const sinMarcar = [...formUr05.querySelectorAll('input[type=checkbox]')].some(c => !c.checked);
+            if (sinMarcar) {
+                e.preventDefault();
+                alert('Para autorizar el pago marca los 3 criterios. Si alguno no se cumple, usa "Rechazar solicitud".');
+            }
+        } else if (accion === 'rechazar') {
+            if (obs.value.trim() === '') {
+                e.preventDefault();
+                obs.classList.add('is-invalid');
+                obs.focus();
+                alert('Escribe el motivo del rechazo en Observaciones.');
+            } else if (!confirm('¿Rechazar esta solicitud? Esta acción no se puede deshacer.')) {
+                e.preventDefault();
+            }
+        }
+    });
 
     selectEstatus.addEventListener('change', actualizarComentario);
     actualizarComentario();

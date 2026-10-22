@@ -64,4 +64,27 @@ class TramitesValidacionRedirectTest extends DatabaseTestCase
         $result->assertRedirectTo(site_url($formulario));
         $this->assertSame('Juan Prueba', old('nombre_razon_social'));
     }
+
+    public function testPermisoEventualSinDocumentosSeRegistra(): void
+    {
+        $result = $this->withSession(['user_id' => $this->ciudadanoId, 'username' => 'ciudadano1', 'roles' => ['ciudadano']])
+            ->post('portal/tramites/permiso-eventual/guardar', [
+                'nombre_razon_social'   => 'Transportes Prueba',
+                'tipo_persona'          => 'moral',
+                'rfc'                   => 'tpr230101ab1',
+                'domicilio'             => 'Calle Hidalgo 123',
+                'tipo_servicio'         => 'Pasajeros',
+                'tipo_unidad'           => 'Microbús',
+                'cantidad_unidades'     => '2',
+                'lugar_servicio'        => 'Centro a Presa',
+                'zona_servicio'         => 'Zona centro',
+                'motivo_necesidad'      => 'descompostura',
+                'descripcion_necesidad' => 'Unidad titular en mantenimiento mayor por dos semanas.',
+                'vigencia_observacion'  => 'Durante el mantenimiento',
+            ]);
+
+        $solicitud = $this->db->table('solicitudes')->where('tramite', 'UR-TT-T-04')->get()->getRow();
+        $this->assertNotNull($solicitud, (string) json_encode(session('errors')));
+        $result->assertRedirectTo(site_url('portal/tramites/permiso-eventual/resumen/' . $solicitud->folio));
+    }
 }

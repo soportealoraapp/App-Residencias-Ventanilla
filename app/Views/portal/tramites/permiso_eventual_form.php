@@ -143,17 +143,17 @@ $files = [
                 <!-- SECCIÓN 3: Documentación -->
                 <fieldset class="mb-4">
                     <legend class="h6 border-bottom pb-2 mb-3 text-primary d-flex align-items-center">
-                        <i class="bi bi-file-earmark-arrow-up me-2 fs-5"></i>3. Documentación Requerida
-                        <span class="small text-muted fw-normal ms-2">(PDF, JPG o PNG · Máx. 10 MB)</span>
+                        <i class="bi bi-file-earmark-arrow-up me-2 fs-5"></i>3. Documentación
+                        <span class="small text-muted fw-normal ms-2">(opcional · PDF, JPG o PNG · Máx. 10 MB)</span>
                     </legend>
                     <div class="row g-3">
                         <?php foreach ($files as $name => [$label, $icon, $help]): ?>
                             <div class="col-md-6">
                                 <div class="p-3 border rounded-3 h-100 bg-light bg-opacity-25">
                                     <label for="<?= $name ?>" class="form-label fw-semibold">
-                                        <i class="bi <?= $icon ?> text-primary me-1"></i><?= esc($label) ?> <span class="text-danger">*</span>
+                                        <i class="bi <?= $icon ?> text-primary me-1"></i><?= esc($label) ?> <span class="text-muted fw-normal small">(opcional)</span>
                                     </label>
-                                    <input id="<?= $name ?>" type="file" class="form-control" name="<?= $name ?>" accept="application/pdf,image/jpeg,image/png" required>
+                                    <input id="<?= $name ?>" type="file" class="form-control" name="<?= $name ?>" accept="application/pdf,image/jpeg,image/png">
                                     <div class="form-text small"><?= esc($help) ?></div>
                                     <?= validation_show_error($name) ?>
                                 </div>

@@ -125,6 +125,9 @@ class AppTransitoController extends Controller
     {
         $id = $this->request->getPost('id');
         $esNuevo = empty($id);
+        // La placa se guarda en mayúsculas: se normaliza antes de validar que sea
+        // única, para que "agt-305" no pase si ya existe "AGT-305".
+        normalizar_campos_mayusculas($this->request, ['placa']);
 
         $rules = [
             'placa' => [
@@ -155,7 +158,10 @@ class AppTransitoController extends Controller
         }
 
         if (!$this->validate($rules)) {
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+            // Se vuelve a abrir el modal con lo capturado para corregirlo.
+            return redirect()->to(site_url('admin/app-transito'))->withInput()
+                ->with('errors', $this->validator->getErrors())
+                ->with('reabrir_modal_agente', true);
         }
 
         $data = [
@@ -175,15 +181,26 @@ class AppTransitoController extends Controller
             $data['password_hash'] = password_hash($password, PASSWORD_BCRYPT);
         }
 
-        if ($esNuevo) {
-            $this->agenteModel->insert($data);
-            $nuevoId = $this->agenteModel->getInsertID();
-            $this->auditoriaModel->registrar('agentes_transito', $nuevoId, 'crear', session('user_id'), $data);
-            $msg = "Agente {$data['placa']} registrado exitosamente.";
-        } else {
-            $this->agenteModel->update($id, $data);
-            $this->auditoriaModel->registrar('agentes_transito', (int)$id, 'editar', session('user_id'), $data);
-            $msg = "Datos del Agente {$data['placa']} actualizados.";
+        try {
+            if ($esNuevo) {
+                if ($this->agenteModel->insert($data) === false) {
+                    throw new \RuntimeException(implode(' ', $this->agenteModel->errors()));
+                }
+                $nuevoId = $this->agenteModel->getInsertID();
+                unset($data['password_hash']);
+                $this->auditoriaModel->registrar('agentes_transito', $nuevoId, 'crear', session('user_id'), $data);
+                $msg = "Agente {$data['placa']} registrado exitosamente.";
+            } else {
+                $this->agenteModel->update($id, $data);
+                unset($data['password_hash']);
+                $this->auditoriaModel->registrar('agentes_transito', (int)$id, 'editar', session('user_id'), $data);
+                $msg = "Datos del Agente {$data['placa']} actualizados.";
+            }
+        } catch (\Throwable $e) {
+            log_message('error', 'Alta/edición de agente de tránsito: ' . $e->getMessage());
+            return redirect()->to(site_url('admin/app-transito'))->withInput()
+                ->with('errors', ['agente' => 'No fue posible guardar el agente en la base de datos. Si el problema continúa, avisa al equipo técnico (puede requerir resincronizar las secuencias de la base).'])
+                ->with('reabrir_modal_agente', true);
         }
 
         return redirect()->to(site_url('admin/app-transito'))->with('message', $msg);

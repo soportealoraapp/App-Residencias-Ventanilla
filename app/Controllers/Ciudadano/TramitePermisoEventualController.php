@@ -109,10 +109,17 @@ class TramitePermisoEventualController extends Controller
             'poliza_seguro' => 'Fondo de garantía o póliza de seguro',
         ];
 
+        // Documentos opcionales: el ciudadano puede entregarlos después en ventanilla.
+        // Solo se validan tamaño y tipo de los que sí adjuntó.
         foreach ($documentos as $campo => $label) {
+            $archivo = $request->getFile($campo);
+            if ($archivo === null || $archivo->getError() === UPLOAD_ERR_NO_FILE) {
+                unset($documentos[$campo]);
+                continue;
+            }
             $rules[$campo] = [
                 'label' => $label,
-                'rules' => 'uploaded[' . $campo . ']|max_size[' . $campo . ',10240]|mime_in[' . $campo . ',application/pdf,image/jpeg,image/png]',
+                'rules' => 'max_size[' . $campo . ',10240]|mime_in[' . $campo . ',application/pdf,image/jpeg,image/png]',
             ];
         }
 
@@ -163,10 +170,14 @@ class TramitePermisoEventualController extends Controller
             }
 
             try {
-                $this->uploader->subir($file, $campo, (int) $solicitudId, $userId);
+                $subido = $this->uploader->subir($file, $campo, (int) $solicitudId, $userId);
             } catch (\Throwable $e) {
+                $subido = null;
+                log_message('error', 'UR-04 subir ' . $campo . ': ' . $e->getMessage());
+            }
+            if ($subido === null) {
                 $db->transRollback();
-                return redirect()->to('/portal/tramites/permiso-eventual')->withInput()->with('error', "Error al subir {$label}: " . $e->getMessage());
+                return redirect()->to('/portal/tramites/permiso-eventual')->withInput()->with('error', "No fue posible guardar: {$label}. Verifica que sea PDF, JPG o PNG de máximo 10 MB.");
             }
         }
 

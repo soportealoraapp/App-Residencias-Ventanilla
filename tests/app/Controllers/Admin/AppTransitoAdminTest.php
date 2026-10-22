@@ -104,6 +104,40 @@ class AppTransitoAdminTest extends DatabaseTestCase
         $this->assertSame(0, (int) $actualizado->activo);
     }
 
+    public function testCrearAgenteNuevoGuardaPlacaEnMayusculasYPuedeIniciarSesion(): void
+    {
+        $this->comoAdmin()->post('admin/app-transito/agentes/guardar', [
+            'placa' => 'agt-901', 'nombre_completo' => 'Oficial Nuevo', 'sector' => 'Norte',
+            'rol' => 'supervisor', 'password' => 'Transito2026',
+        ])->assertRedirectTo(site_url('admin/app-transito'));
+
+        $agente = $this->db->table('agentes_transito')->where('placa', 'AGT-901')->get()->getRow();
+        $this->assertNotNull($agente);
+        $this->assertSame(1, (int) $agente->activo);
+        $this->assertTrue(password_verify('Transito2026', $agente->password_hash));
+    }
+
+    public function testPlacaDuplicadaEnMinusculasSeRechaza(): void
+    {
+        $this->comoAdmin()->post('admin/app-transito/agentes/guardar', [
+            'placa' => 'agt-204', 'nombre_completo' => 'Duplicado', 'rol' => 'operativo', 'password' => 'Transito2026',
+        ]);
+
+        $this->assertSame(1, $this->db->table('agentes_transito')->where('placa', 'AGT-204')->countAllResults());
+        $this->assertArrayHasKey('placa', (array) session('errors'));
+    }
+
+    public function testErrorAlCrearAgenteReabreElModalConLoCapturado(): void
+    {
+        $this->comoAdmin()->post('admin/app-transito/agentes/guardar', [
+            'placa' => 'AGT-777', 'nombre_completo' => 'Oficial Corto', 'rol' => 'operativo', 'password' => 'abc',
+        ])->assertRedirectTo(site_url('admin/app-transito'));
+
+        $this->assertTrue((bool) session('reabrir_modal_agente'));
+        $this->assertSame('AGT-777', old('placa'));
+        $this->assertNull($this->db->table('agentes_transito')->where('placa', 'AGT-777')->get()->getRow());
+    }
+
     public function testEliminarBoletaLaQuita(): void
     {
         $this->comoAdmin()->post('admin/app-transito/boletas/eliminar/' . $this->boletaId);

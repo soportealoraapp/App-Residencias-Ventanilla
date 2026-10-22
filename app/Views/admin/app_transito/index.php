@@ -542,38 +542,39 @@ $valorUma       = (float) ($__view['valorUma'] ?? 0);
             </div>
             <form action="/admin/app-transito/agentes/guardar" method="POST" id="formAgente">
                 <?= csrf_field() ?>
-                <input type="hidden" name="id" id="agente_id" value="">
+                <input type="hidden" name="id" id="agente_id" value="<?= esc(old('id', '')) ?>">
                 <div class="modal-body">
                     <p class="text-muted small mb-3">El agente usará este número de placa y contraseña para ingresar a la app en su teléfono.</p>
 
                     <div class="mb-3">
                         <label for="placa" class="form-label small fw-semibold">Número de Placa / Credencial <span class="text-danger">*</span></label>
-                        <input autocomplete="off" autocapitalize="characters" spellcheck="false" type="text" class="form-control text-uppercase" id="placa" name="placa" placeholder="Ej. AGT-305" required>
+                        <input autocomplete="off" autocapitalize="characters" spellcheck="false" type="text" class="form-control text-uppercase" id="placa" name="placa" placeholder="Ej. AGT-305" maxlength="20" value="<?= esc(old('placa', '')) ?>" required>
                     </div>
 
                     <div class="mb-3">
                         <label for="nombre_completo" class="form-label small fw-semibold">Nombre Completo <span class="text-danger">*</span></label>
-                        <input autocomplete="off" autocapitalize="words" spellcheck="false" type="text" class="form-control" id="nombre_completo" name="nombre_completo" placeholder="Ej. Oficial Juan Pérez Morales" required>
+                        <input autocomplete="off" autocapitalize="words" spellcheck="false" type="text" class="form-control" id="nombre_completo" name="nombre_completo" placeholder="Ej. Oficial Juan Pérez Morales" minlength="3" maxlength="180" value="<?= esc(old('nombre_completo', '')) ?>" required>
                     </div>
 
                     <div class="row g-2 mb-3">
                         <div class="col-sm-6">
                             <label for="sector" class="form-label small fw-semibold">Sector o Zona</label>
-                            <input autocomplete="off" autocapitalize="words" spellcheck="false" type="text" class="form-control" id="sector" name="sector" value="Sector Centro">
+                            <input autocomplete="off" autocapitalize="words" spellcheck="false" type="text" class="form-control" id="sector" name="sector" maxlength="100" value="<?= esc(old('sector', 'Sector Centro')) ?>">
                         </div>
                         <div class="col-sm-6">
                             <label for="rol" class="form-label small fw-semibold">Rol</label>
                             <select class="form-select" id="rol" name="rol">
-                                <option value="operativo" selected>Operativo</option>
-                                <option value="supervisor">Supervisor</option>
-                                <option value="coordinador">Coordinador</option>
+                                <?php $rolAgente = old('rol', 'operativo'); ?>
+                                <option value="operativo" <?= $rolAgente === 'operativo' ? 'selected' : '' ?>>Operativo</option>
+                                <option value="supervisor" <?= $rolAgente === 'supervisor' ? 'selected' : '' ?>>Supervisor</option>
+                                <option value="coordinador" <?= $rolAgente === 'coordinador' ? 'selected' : '' ?>>Coordinador</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label for="password" class="form-label small fw-semibold" id="agentePasswordLabel">Contraseña Inicial <span class="text-danger">*</span></label>
-                        <input type="password" class="form-control" id="password" name="password" placeholder="Mínimo 4 caracteres" minlength="4" autocomplete="new-password" required>
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Mínimo 8 caracteres" minlength="8" maxlength="50" autocomplete="new-password" required>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0">
@@ -609,10 +610,26 @@ document.getElementById('modalNuevoAgente')?.addEventListener('hidden.bs.modal',
     document.getElementById('modalNuevoAgenteLabel').innerText = 'Registrar Nuevo Agente';
     const password = document.getElementById('password');
     password.required = true;
-    password.placeholder = 'Mínimo 4 caracteres';
+    password.placeholder = 'Mínimo 8 caracteres';
     document.getElementById('agentePasswordLabel').innerHTML = 'Contraseña Inicial <span class="text-danger">*</span>';
     document.getElementById('agenteSubmit').innerText = 'Registrar Agente';
 });
+
+// Si el alta o edición falló en el servidor, reabrir el modal con lo capturado.
+<?php if (session('reabrir_modal_agente')): ?>
+document.addEventListener('DOMContentLoaded', function () {
+    const id = document.getElementById('agente_id').value;
+    if (id) {
+        const password = document.getElementById('password');
+        password.required = false;
+        password.placeholder = 'Vacío = conservar la actual';
+        document.getElementById('modalNuevoAgenteLabel').innerText = 'Editar Agente ' + document.getElementById('placa').value;
+        document.getElementById('agentePasswordLabel').innerText = 'Nueva contraseña (opcional)';
+        document.getElementById('agenteSubmit').innerText = 'Guardar cambios';
+    }
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNuevoAgente')).show();
+});
+<?php endif; ?>
 
 // Cálculo en vivo de ejemplo de UMA
 document.getElementById('valor_uma_vigente')?.addEventListener('input', function(e) {
