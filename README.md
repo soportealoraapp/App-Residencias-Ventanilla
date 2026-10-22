@@ -130,6 +130,33 @@ npx expo start -c
 
 ---
 
+## 🎬 Datos de Demostración ("en funcionamiento")
+
+Para presentaciones y revisiones, `DemoFuncionamientoSeeder` llena el sistema con datos ficticios realistas: 10 ciudadanos, 24 solicitudes de los trámites en distintos estatus (con su historial), una convocatoria abierta y 26 boletas de infracción de las últimas 4 semanas. Las fechas son relativas al día en que se ejecuta.
+
+```bash
+./php82/php.exe spark db:seed DemoFuncionamientoSeeder   # crear (se puede repetir: no duplica)
+./php82/php.exe spark demo:limpiar                       # quitar exactamente lo que creó
+```
+
+* Requiere haber corrido antes `spark migrate` y `spark db:seed DatabaseSeeder` (roles, catálogo, agentes).
+* Los ciudadanos demo entran con su CURP en minúsculas como usuario (p. ej. `ragl880214mgtmrr03`) y la contraseña `Demo2026`.
+* **En Supabase (versión hosteada):** desde PowerShell, en la raíz del repo, define las variables de la conexión **Session pooler** (Supabase → *Connect*) solo para esa terminal y ejecuta el mismo comando. No se guardan en ningún archivo:
+
+  ```powershell
+  $env:DATABASE_DEFAULT_DBDRIVER = "Postgre"
+  $env:POSTGRES_HOST     = "aws-0-<region>.pooler.supabase.com"
+  $env:POSTGRES_PORT     = "5432"
+  $env:POSTGRES_DATABASE = "postgres"
+  $env:POSTGRES_USER     = "postgres.<id-del-proyecto>"
+  $env:POSTGRES_PASSWORD = "<contraseña de la base>"
+  .\php82\php.exe spark db:seed DemoFuncionamientoSeeder
+  ```
+
+  Al terminar cierra esa terminal (o borra las variables) para que tu `spark serve` local siga usando SQLite.
+
+---
+
 ## 🧪 Pruebas Automatizadas (PHPUnit)
 
 Para ejecutar la suite de pruebas unitarias y de integración:
