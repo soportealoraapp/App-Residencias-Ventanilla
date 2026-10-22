@@ -72,6 +72,24 @@ class UsuariosControllerTest extends DatabaseTestCase
         $this->assertTrue(in_array('auth/attempt-register', array_keys(service('routes')->getRoutes('POST')), true));
     }
 
+    public function testRegistroPublicoAceptaUnaCurpValidaDe18Caracteres(): void
+    {
+        // Antes la regex exigía 19 caracteres y exact_length 18: ninguna CURP pasaba.
+        $this->post('auth/attempt-register', ['curp' => 'logm900101mgtprr05']);
+
+        $errores = (array) session('errors');
+        $this->assertArrayNotHasKey('curp', $errores, (string) ($errores['curp'] ?? ''));
+    }
+
+    public function testRegistroPublicoRechazaUnaCurpYaRegistrada(): void
+    {
+        $this->db->table('users')->where('id', $this->operadorId)->update(['curp' => 'LOGM900101MGTPRR05']);
+
+        $this->post('auth/attempt-register', ['curp' => 'LOGM900101MGTPRR05']);
+
+        $this->assertArrayHasKey('curp', (array) session('errors'));
+    }
+
     public function testOperadorCreaCiudadanoConCurpYRfcNormalizados(): void
     {
         $result = $this->como($this->operadorId, 'operador_ventanilla')

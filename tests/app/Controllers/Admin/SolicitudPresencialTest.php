@@ -139,7 +139,7 @@ class SolicitudPresencialTest extends DatabaseTestCase
 
     public function testFormularioMuestraCamposUr02(): void
     {
-        $result = $this->comoAdmin()->get('/admin/solicitudes/nueva/UR-TT-T-02');
+        $result = $this->comoAdmin()->get('/admin/solicitudes/nueva/UR-TT-T-02?ciudadano_id=' . $this->ciudadanoId);
         $result->assertStatus(200);
         $body = $result->response()->getBody();
         $this->assertStringContainsString('numero_titulo_concesion', $body);
@@ -150,7 +150,7 @@ class SolicitudPresencialTest extends DatabaseTestCase
 
     public function testFormularioMuestraCamposUr05(): void
     {
-        $result = $this->comoAdmin()->get('/admin/solicitudes/nueva/UR-TT-T-05');
+        $result = $this->comoAdmin()->get('/admin/solicitudes/nueva/UR-TT-T-05?ciudadano_id=' . $this->ciudadanoId);
         $result->assertStatus(200);
         $body = $result->response()->getBody();
         $this->assertStringContainsString('nombre_solicitante', $body);
@@ -329,6 +329,97 @@ class SolicitudPresencialTest extends DatabaseTestCase
             ->get()->getResult();
         $this->assertCount(1, $historial);
         $this->assertStringContainsString('presencial', $historial[0]->comentario);
+    }
+
+    // ─── IDENTIFICACIÓN POR CURP Y FLUJO GUIADO ─────────────────────
+
+    private const CURP_PRUEBA = 'PEPJ850315HGTRRN04';
+
+    public function testFormularioSinCiudadanoRegresaAlPaso1(): void
+    {
+        $this->comoOperador()->get('/admin/solicitudes/nueva/UR-TT-T-04')
+            ->assertRedirectTo(site_url('admin/solicitudes/nueva'));
+    }
+
+    public function testCurpExistenteSeleccionaAlCiudadano(): void
+    {
+        $this->db->table('users')->where('id', $this->ciudadanoId)->update(['curp' => self::CURP_PRUEBA]);
+
+        $this->comoOperador()->get('/admin/solicitudes/nueva?curp=' . strtolower(self::CURP_PRUEBA))
+            ->assertRedirectTo(site_url('admin/solicitudes/nueva?ciudadano_id=' . $this->ciudadanoId));
+    }
+
+    public function testCurpInexistenteMuestraAltaEnLinea(): void
+    {
+        $result = $this->comoOperador()->get('/admin/solicitudes/nueva?curp=' . self::CURP_PRUEBA);
+        $result->assertStatus(200);
+        $this->assertStringContainsString('registrar-ciudadano', $result->response()->getBody());
+    }
+
+    public function testOperadorCreaCiudadanoPorCurpYQuedaSeleccionado(): void
+    {
+        $result = $this->comoOperador()->post('/admin/solicitudes/nueva/registrar-ciudadano', [
+            'curp'      => strtolower(self::CURP_PRUEBA),
+            'nombre'    => 'José',
+            'apellido'  => 'Pérez Prueba',
+            'telefono'  => '4451234567',
+            'domicilio' => 'Calle Morelos 45',
+        ]);
+
+        $usuario = $this->db->table('users')->where('curp', self::CURP_PRUEBA)->get()->getRow();
+        $this->assertNotNull($usuario);
+        $this->assertSame(strtolower(self::CURP_PRUEBA), $usuario->username);
+        $this->assertTrue(model(\App\Models\UserModel::class)->tieneRol((int) $usuario->id, 'ciudadano'));
+        $result->assertRedirectTo(site_url('admin/solicitudes/nueva?ciudadano_id=' . $usuario->id));
+        $this->assertStringContainsString('Contraseña temporal', (string) session('message'));
+    }
+
+    public function testNoSeDuplicaUnaCurpExistente(): void
+    {
+        $this->db->table('users')->where('id', $this->ciudadanoId)->update(['curp' => self::CURP_PRUEBA]);
+
+        $this->comoOperador()->post('/admin/solicitudes/nueva/registrar-ciudadano', [
+            'curp' => self::CURP_PRUEBA, 'nombre' => 'Otra', 'apellido' => 'Persona', 'telefono' => '4450000000',
+        ]);
+
+        $this->assertSame(1, $this->db->table('users')->where('curp', self::CURP_PRUEBA)->countAllResults());
+    }
+
+    public function testFormularioSePrellenaConDatosDelCiudadano(): void
+    {
+        $this->db->table('users')->where('id', $this->ciudadanoId)->update([
+            'nombre_completo' => 'María López', 'domicilio' => 'Calle Hidalgo 10', 'rfc' => 'LOMM900101AB1',
+        ]);
+
+        $body = $this->comoOperador()->get('/admin/solicitudes/nueva/UR-TT-T-04?ciudadano_id=' . $this->ciudadanoId)
+            ->response()->getBody();
+
+        $this->assertStringContainsString('value="María López"', $body);
+        $this->assertStringContainsString('value="Calle Hidalgo 10"', $body);
+        $this->assertStringContainsString('value="LOMM900101AB1"', $body);
+    }
+
+    public function testErrorDeValidacionRegresaAlMismoFormulario(): void
+    {
+        $result = $this->comoOperador()->post('/admin/solicitudes/nueva/guardar', [
+            'tramite' => 'UR-TT-T-05', 'ciudadano_id' => $this->ciudadanoId, 'nombre_solicitante' => 'María',
+        ]);
+
+        $result->assertRedirectTo(site_url('admin/solicitudes/nueva/UR-TT-T-05?ciudadano_id=' . $this->ciudadanoId));
+        $this->assertSame('María', old('nombre_solicitante'));
+    }
+
+    public function testMigracionSiembraTarifasBaseDeLosTramites(): void
+    {
+        // Las migraciones de la base de pruebas incluyen 2026-10-21-000025 (tarifas base faltantes).
+        $sembradas = $this->db->table('tarifas')
+            ->where('criterio', 'base')
+            ->like('descripcion', 'Tarifa provisional del prototipo', 'after')
+            ->get()->getResult();
+        $this->assertEqualsCanonicalizing(
+            ['UR-TT-T-01', 'UR-TT-T-02', 'UR-TT-T-03', 'UR-TT-T-04', 'UR-TT-T-05'],
+            array_map(static fn ($t) => $t->tramite, $sembradas)
+        );
     }
 
     // ─── BUSQUEDA AJAX ──────────────────────────────────────────────

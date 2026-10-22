@@ -3,6 +3,7 @@
 namespace App\Controllers\Admin;
 
 use CodeIgniter\Controller;
+use App\Libraries\CuentaCiudadanoService;
 use App\Libraries\DocumentoUploader;
 use App\Libraries\EstadoSolicitudService;
 use App\Libraries\FeatureFlags;
@@ -26,6 +27,10 @@ use DateTime;
  * Soporta los 7 trámites (UR-TT-T-01 … UR-TT-T-07). Los documentos son
  * opcionales en el flujo presencial porque el ciudadano puede entregarlos
  * después, o el operador puede escanearlos en el momento.
+ *
+ * Flujo: 1) identificar al ciudadano por CURP (si no tiene cuenta se le crea en
+ * el momento), 2) elegir trámite y 3) capturar el formulario, que se prellena
+ * con los datos de la cuenta. Sin ciudadano identificado no se puede avanzar.
  */
 class SolicitudPresencialController extends Controller
 {
@@ -121,20 +126,44 @@ class SolicitudPresencialController extends Controller
     }
 
     /**
-     * Paso 1: Selección de trámite + búsqueda de ciudadano.
+     * Paso 1: identificar al ciudadano (por CURP o búsqueda) y elegir trámite.
      */
     public function index()
     {
-        $q = trim((string) ($this->request->getGet('q') ?? ''));
+        $q    = trim((string) ($this->request->getGet('q') ?? ''));
+        $curp = CuentaCiudadanoService::normalizarCurp((string) ($this->request->getGet('curp') ?? ''));
+        $ciudadano  = $this->ciudadanoActivo((int) $this->request->getGet('ciudadano_id'));
         $ciudadanos = [];
+        $curpNoEncontrada = false;
+        $curpInactiva = null;
 
-        if ($q !== '') {
-            $userModel = new UserModel();
-            $ciudadanos = $userModel
+        if ($curp !== '' && $ciudadano === null) {
+            if (! CuentaCiudadanoService::curpValida($curp)) {
+                session()->setFlashdata('error', 'La CURP "' . $curp . '" no tiene el formato oficial de 18 caracteres.');
+            } else {
+                $coincidencias = (new CuentaCiudadanoService())->buscarPorCurp($curp);
+                $activas = array_values(array_filter($coincidencias, static fn ($u) => (int) $u->activo === 1));
+                if (count($activas) === 1) {
+                    // Cuenta encontrada: se selecciona y se limpia la URL.
+                    return redirect()->to('/admin/solicitudes/nueva?ciudadano_id=' . (int) $activas[0]->id)
+                        ->with('message', 'Ciudadano encontrado por CURP: ' . ($activas[0]->nombre_completo ?? $activas[0]->username) . '.');
+                }
+                if (count($activas) > 1) {
+                    $ciudadanos = $activas;
+                } elseif ($coincidencias !== []) {
+                    $curpInactiva = $coincidencias[0];
+                } else {
+                    $curpNoEncontrada = true;
+                }
+            }
+        } elseif ($q !== '' && $ciudadano === null) {
+            $ciudadanos = (new UserModel())
                 ->groupStart()
                     ->like('nombre_completo', $q)
                     ->orLike('username', $q)
                     ->orLike('email', $q)
+                    ->orLike('curp', mb_strtoupper($q, 'UTF-8'))
+                    ->orLike('rfc', mb_strtoupper($q, 'UTF-8'))
                 ->groupEnd()
                 ->where('activo', 1)
                 ->orderBy('nombre_completo', 'ASC')
@@ -148,10 +177,58 @@ class SolicitudPresencialController extends Controller
         }
 
         return view('admin/solicitudes_presenciales/index', [
-            'tramites'   => $tramites,
-            'ciudadanos' => $ciudadanos,
-            'q'          => $q,
+            'tramites'         => $tramites,
+            'ciudadano'        => $ciudadano,
+            'ciudadanos'       => $ciudadanos,
+            'q'                => $q,
+            'curp'             => $curp,
+            'curpNoEncontrada' => $curpNoEncontrada,
+            'curpInactiva'     => $curpInactiva,
         ]);
+    }
+
+    /**
+     * Alta rápida en ventanilla de un ciudadano sin cuenta, identificado por CURP.
+     * Al terminar vuelve al paso 1 con el ciudadano ya seleccionado.
+     */
+    public function registrarCiudadano()
+    {
+        normalizar_campos_mayusculas($this->request, ['curp', 'rfc']);
+        $curp = (string) $this->request->getPost('curp');
+        $volver = '/admin/solicitudes/nueva?curp=' . rawurlencode($curp);
+
+        $rules = [
+            'curp'      => ['label' => 'CURP', 'rules' => 'required|exact_length[18]|regex_match[' . CuentaCiudadanoService::REGEX_CURP . ']|is_unique[users.curp]',
+                            'errors' => ['is_unique' => 'Ya existe una cuenta con esta CURP; búscala de nuevo para seleccionarla.']],
+            'nombre'    => ['label' => 'Nombre(s)', 'rules' => 'required|min_length[2]|max_length[90]'],
+            'apellido'  => ['label' => 'Apellido(s)', 'rules' => 'required|min_length[2]|max_length[120]'],
+            'telefono'  => ['label' => 'Teléfono', 'rules' => 'required|min_length[7]|max_length[20]'],
+            'email'     => ['label' => 'Correo electrónico', 'rules' => 'permit_empty|valid_email|max_length[255]|is_unique[users.email]'],
+            'domicilio' => ['label' => 'Domicilio', 'rules' => 'permit_empty|max_length[250]'],
+            'rfc'       => ['label' => 'RFC', 'rules' => 'permit_empty|min_length[12]|max_length[13]|regex_match[/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/]'],
+        ];
+        if (! $this->validate($rules)) {
+            return redirect()->to($volver)->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        try {
+            $cuenta = (new CuentaCiudadanoService())->crear([
+                'curp'      => $curp,
+                'nombre'    => (string) $this->request->getPost('nombre'),
+                'apellido'  => (string) $this->request->getPost('apellido'),
+                'telefono'  => (string) $this->request->getPost('telefono'),
+                'email'     => (string) $this->request->getPost('email'),
+                'domicilio' => (string) $this->request->getPost('domicilio'),
+                'rfc'       => (string) $this->request->getPost('rfc'),
+            ], (int) session('user_id') ?: null);
+        } catch (\Throwable $e) {
+            log_message('error', 'Alta presencial de ciudadano: ' . $e->getMessage());
+            return redirect()->to($volver)->withInput()->with('error', 'No fue posible crear la cuenta del ciudadano. Intenta de nuevo.');
+        }
+
+        return redirect()->to('/admin/solicitudes/nueva?ciudadano_id=' . $cuenta['id'])
+            ->with('message', 'Cuenta creada. Usuario: ' . $cuenta['username'] . ' · Contraseña temporal: ' . $cuenta['password']
+                . ' (entrégala al ciudadano; no se volverá a mostrar).');
     }
 
     /**
@@ -167,7 +244,11 @@ class SolicitudPresencialController extends Controller
         }
 
         $ciudadanoId = (int) $this->request->getGet('ciudadano_id');
-        $ciudadano = $ciudadanoId > 0 ? (new UserModel())->find($ciudadanoId) : null;
+        $ciudadano = $this->ciudadanoActivo($ciudadanoId);
+        if ($ciudadano === null) {
+            return redirect()->to('/admin/solicitudes/nueva')
+                ->with('error', 'Primero identifica al ciudadano por su CURP (paso 1) y después elige el trámite.');
+        }
 
         // Datos extra según trámite (convocatorias para UR-01, tarifas para mostrar monto)
         $extras = [];
@@ -193,8 +274,10 @@ class SolicitudPresencialController extends Controller
             'campos'      => self::CAMPOS_TRAMITE[$tramite],
             'ciudadano'   => $ciudadano,
             'ciudadanoId' => $ciudadanoId,
+            'prellenado'  => $this->prellenado($tramite, $ciudadano),
             'extras'      => $extras,
             'tarifaMonto' => $tarifaMonto,
+            'esAdmin'     => in_array('administrador', (array) (session('roles') ?? []), true),
         ]);
     }
 
@@ -211,11 +294,19 @@ class SolicitudPresencialController extends Controller
         $ciudadanoId = (int) $request->getPost('ciudadano_id');
 
         if (! isset(self::CAMPOS_TRAMITE[$tramite])) {
-            return redirect()->back()->with('error', 'Trámite no válido.');
+            return redirect()->to('/admin/solicitudes/nueva')->with('error', 'Trámite no válido.');
         }
         if ($tramite === 'UR-TT-T-06' && ! FeatureFlags::habilitarUrTtT06()) {
-            return redirect()->back()->with('error', 'UR-TT-T-06 está deshabilitado.');
+            return redirect()->to('/admin/solicitudes/nueva')->with('error', 'UR-TT-T-06 está deshabilitado.');
         }
+
+        // Sin ciudadano no hay formulario al que volver: se regresa al paso 1.
+        if ($this->ciudadanoActivo($ciudadanoId) === null) {
+            return redirect()->to('/admin/solicitudes/nueva')
+                ->with('error', 'Primero identifica al ciudadano por su CURP (paso 1) y después elige el trámite.');
+        }
+        // Al fallar algo se vuelve al mismo formulario con lo capturado.
+        $formulario = '/admin/solicitudes/nueva/' . $tramite . '?ciudadano_id=' . $ciudadanoId;
 
         // Validar campos requeridos del trámite
         $rules = [];
@@ -237,16 +328,7 @@ class SolicitudPresencialController extends Controller
         }
 
         if (! $this->validate($rules)) {
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
-        }
-
-        // Validar ciudadano (se requiere cuenta del portal)
-        if ($ciudadanoId <= 0) {
-            return redirect()->back()->withInput()->with('error', 'Debe seleccionar un ciudadano. Si no tiene cuenta, créela primero en Usuarios y ciudadanos.');
-        }
-        $userModel = new UserModel();
-        if ($userModel->find($ciudadanoId) === null) {
-            return redirect()->back()->withInput()->with('error', 'El ciudadano seleccionado no existe.');
+            return redirect()->to($formulario)->withInput()->with('errors', $this->validator->getErrors());
         }
 
         // Convocatoria para UR-01
@@ -254,18 +336,18 @@ class SolicitudPresencialController extends Controller
         if ($tramite === 'UR-TT-T-01') {
             $convocatoriaId = (int) $request->getPost('convocatoria_id');
             if ($convocatoriaId <= 0) {
-                return redirect()->back()->withInput()->with('error', 'Debe seleccionar una convocatoria vigente.');
+                return redirect()->to($formulario)->withInput()->with('error', 'Debe seleccionar una convocatoria vigente.');
             }
             $convocatoria = (new ConvocatoriaModel())->vigente($convocatoriaId);
             if ($convocatoria === null) {
-                return redirect()->back()->withInput()->with('error', 'La convocatoria seleccionada no está vigente.');
+                return redirect()->to($formulario)->withInput()->with('error', 'La convocatoria seleccionada no está vigente.');
             }
         }
 
         // Monto de la tarifa
         $monto = $this->obtenerMontoTarifa($tramite, $request);
         if ($monto === null) {
-            return redirect()->back()->withInput()->with('error', 'No existe tarifa vigente para este trámite. Configúrala primero en Tarifario.');
+            return redirect()->to($formulario)->withInput()->with('error', 'No existe tarifa vigente para este trámite. Configúrala primero en Tarifario.');
         }
 
         // Concesión para UR-02/03/06
@@ -297,7 +379,7 @@ class SolicitudPresencialController extends Controller
 
         if ($solicitudId === false) {
             $db->transRollback();
-            return redirect()->back()->withInput()->with('error', 'No fue posible crear la solicitud.');
+            return redirect()->to($formulario)->withInput()->with('error', 'No fue posible crear la solicitud.');
         }
 
         // Guardar datos específicos del trámite
@@ -342,7 +424,7 @@ class SolicitudPresencialController extends Controller
 
         $db->transComplete();
         if ($db->transStatus() === false) {
-            return redirect()->back()->withInput()->with('error', 'Error al procesar la solicitud. Intente de nuevo.');
+            return redirect()->to($formulario)->withInput()->with('error', 'Error al procesar la solicitud. Intente de nuevo.');
         }
 
         // Auditoría
@@ -389,6 +471,46 @@ class SolicitudPresencialController extends Controller
         ], $usuarios);
 
         return $this->response->setJSON(['resultados' => $resultados]);
+    }
+
+    /** Cuenta activa del ciudadano, o null si no existe o está desactivada. */
+    private function ciudadanoActivo(int $id): ?object
+    {
+        if ($id <= 0) {
+            return null;
+        }
+        $usuario = (new UserModel())->find($id);
+        return $usuario !== null && (int) $usuario->activo === 1 ? $usuario : null;
+    }
+
+    /**
+     * Valores iniciales del formulario tomados de la cuenta del ciudadano
+     * (nombre, domicilio y RFC), según los campos que pide cada trámite.
+     *
+     * @return array<string, string>
+     */
+    private function prellenado(string $tramite, object $ciudadano): array
+    {
+        $porCampo = [
+            'nombre'    => ['solicitante_nombre', 'nombre_razon_social', 'nombre_solicitante', 'razon_social_o_nombre', 'nombre_titular', 'nombre_concesionario'],
+            'domicilio' => ['domicilio', 'solicitante_domicilio', 'domicilio_negocio'],
+            'rfc'       => ['rfc'],
+        ];
+        $valores = [
+            'nombre'    => (string) ($ciudadano->nombre_completo ?? ''),
+            'domicilio' => (string) ($ciudadano->domicilio ?? ''),
+            'rfc'       => (string) ($ciudadano->rfc ?? ''),
+        ];
+
+        $resultado = [];
+        foreach (self::CAMPOS_TRAMITE[$tramite] as $campo) {
+            foreach ($porCampo as $dato => $nombres) {
+                if (in_array($campo['name'], $nombres, true) && $valores[$dato] !== '') {
+                    $resultado[$campo['name']] = $valores[$dato];
+                }
+            }
+        }
+        return $resultado;
     }
 
     /**

@@ -124,8 +124,12 @@ class AuthController extends Controller
 
     public function attemptRegister()
     {
+        normalizar_campos_mayusculas($this->request, ['curp', 'rfc']);
+
         $rules = [
-            'curp'     => ['rules' => 'required|exact_length[18]|regex_match[/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]{2}\d$/]', 'label' => 'CURP'],
+            // 18 caracteres: 4 letras, 6 dígitos, H/M, 5 letras, homoclave y dígito verificador.
+            // La CURP identifica al ciudadano en ventanilla, por eso no puede repetirse.
+            'curp'     => ['rules' => 'required|exact_length[18]|regex_match[/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]\d$/]|is_unique[users.curp]', 'label' => 'CURP', 'errors' => ['is_unique' => 'Ya existe una cuenta con esta CURP. Inicia sesión o recupera tu contraseña.']],
             'nombre'   => ['rules' => 'required|min_length[2]|max_length[80]', 'label' => 'Nombre(s)'],
             'apellido' => ['rules' => 'required|min_length[2]|max_length[120]', 'label' => 'Apellido(s)'],
             'telefono' => ['rules' => 'required|min_length[7]|max_length[20]', 'label' => 'Teléfono'],
@@ -134,9 +138,9 @@ class AuthController extends Controller
             'domicilio' => ['rules' => 'required|min_length[5]|max_length[200]', 'label' => 'Dirección'],
             'email'    => ['rules' => 'required|valid_email|max_length[180]|is_unique[users.email]', 'label' => 'Correo electrónico'],
             'username' => ['rules' => 'required|alpha_numeric|min_length[5]|max_length[40]|is_unique[users.username]', 'label' => 'Nombre de usuario'],
-            'password' => ['rules' => 'required|min_length[8]|max_length[100]|regex_match[/^(?=.*[A-Za-z])(?=.*\d).+$/', 'label' => 'Contraseña'],
+            'password' => ['rules' => 'required|min_length[8]|max_length[100]|regex_match[/^(?=.*[A-Za-z])(?=.*\d).+$/]', 'label' => 'Contraseña', 'errors' => ['regex_match' => 'La contraseña debe incluir al menos una letra y un número.']],
             'password_confirm' => ['rules' => 'required|matches[password]', 'label' => 'Confirmar contraseña'],
-            'rfc'      => ['rules' => 'permit_empty|exact_length[13]|regex_match[/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/', 'label' => 'RFC'],
+            'rfc'      => ['rules' => 'permit_empty|min_length[12]|max_length[13]|regex_match[/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/]', 'label' => 'RFC'],
             'acepto_terminos' => ['rules' => 'required', 'label' => 'Términos y condiciones'],
             // INE opcional: solo se valida si la persona decide adjuntarla ahora.
             'ine_frente'  => ['rules' => 'permit_empty|mime_in[ine_frente,image/jpeg,image/png]|max_size[ine_frente,5120]', 'label' => 'INE (frente)'],

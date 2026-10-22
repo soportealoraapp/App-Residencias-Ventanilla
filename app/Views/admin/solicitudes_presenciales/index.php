@@ -6,16 +6,25 @@
 $__view = get_defined_vars();
 /** @var array<string, array{nombre:string,icono:string}> $tramites */
 $tramites = $__view['tramites'] ?? [];
-/** @var array<int, object> $ciudadanos */
+/** @var object|null $ciudadano Ciudadano ya identificado */
+$ciudadano = $__view['ciudadano'] ?? null;
+/** @var array<int, object> $ciudadanos Resultados de búsqueda */
 $ciudadanos = $__view['ciudadanos'] ?? [];
 /** @var string $q */
 $q = $__view['q'] ?? '';
+/** @var string $curp */
+$curp = $__view['curp'] ?? '';
+/** @var bool $curpNoEncontrada */
+$curpNoEncontrada = (bool) ($__view['curpNoEncontrada'] ?? false);
+/** @var object|null $curpInactiva */
+$curpInactiva = $__view['curpInactiva'] ?? null;
+$ciudadanoId = $ciudadano ? (int) $ciudadano->id : 0;
 ?>
 
 <?= view('layouts/_ayuda', [
     'tono'   => 'info',
     'titulo' => 'Atención presencial',
-    'texto'  => 'Registra una solicitud de trámite en nombre de un ciudadano que acude físicamente a la ventanilla. Busca al ciudadano (o registra sin cuenta vinculada), selecciona el trámite y captura los datos. Los documentos pueden adjuntarse en el momento o entregarse después.',
+    'texto'  => 'Registra un trámite a nombre de un ciudadano que acude a ventanilla. 1) Escribe su CURP: si ya tiene cuenta se carga sola; si no, la das de alta en el momento. 2) Elige el trámite. 3) Captura los datos; los de su cuenta se llenan automáticamente.',
 ]) ?>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -25,81 +34,130 @@ $q = $__view['q'] ?? '';
     </a>
 </div>
 
-<!-- Paso 1: Buscar ciudadano -->
+<!-- Paso 1: Identificar al ciudadano -->
 <div class="card mb-3 border-0 shadow-sm">
     <div class="card-header bg-white py-2">
-        <h6 class="mb-0 small fw-bold"><i class="bi bi-person-search me-1 text-primary"></i>Paso 1: Buscar ciudadano</h6>
+        <h6 class="mb-0 small fw-bold"><i class="bi bi-1-circle me-1 text-primary"></i>Paso 1: Identificar al ciudadano</h6>
     </div>
     <div class="card-body">
-        <form method="get" action="/admin/solicitudes/nueva" class="row g-2 align-items-end">
-            <div class="col-12 col-md-8">
-                <label for="q" class="form-label small fw-semibold">Buscar por nombre, username, email, RFC o CURP</label>
-                <input autocomplete="off" spellcheck="false" enterkeyhint="search" type="text" name="q" id="q" class="form-control form-control-sm"
-                    placeholder="Escribe al menos 2 caracteres..." value="<?= esc($q) ?>">
+        <?php if ($ciudadano): ?>
+            <div class="d-flex flex-wrap align-items-center gap-3">
+                <i class="bi bi-person-check-fill fs-2 text-success"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-bold"><?= esc($ciudadano->nombre_completo ?? $ciudadano->username) ?></div>
+                    <div class="small text-muted">
+                        CURP: <span class="font-monospace"><?= esc($ciudadano->curp ?? '—') ?></span>
+                        · Tel: <?= esc($ciudadano->telefono ?? '—') ?>
+                        <?php if (!empty($ciudadano->email)): ?> · <?= esc($ciudadano->email) ?><?php endif; ?>
+                    </div>
+                    <?php if (!empty($ciudadano->domicilio)): ?>
+                        <div class="small text-muted"><i class="bi bi-geo-alt me-1"></i><?= esc($ciudadano->domicilio) ?></div>
+                    <?php endif; ?>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="/admin/usuarios/editar/<?= $ciudadanoId ?>" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-pencil me-1"></i>Editar datos
+                    </a>
+                    <a href="/admin/solicitudes/nueva" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-arrow-repeat me-1"></i>Cambiar ciudadano
+                    </a>
+                </div>
             </div>
-            <div class="col-12 col-md-2 d-grid">
-                <button type="submit" class="btn btn-primary btn-sm">
-                    <i class="bi bi-search me-1"></i>Buscar
-                </button>
-            </div>
-        </form>
+        <?php else: ?>
+            <form method="get" action="/admin/solicitudes/nueva" class="row g-2 align-items-end">
+                <div class="col-12 col-md-6">
+                    <label for="curp" class="form-label small fw-semibold">CURP del ciudadano</label>
+                    <input type="text" name="curp" id="curp" class="form-control text-uppercase font-monospace"
+                        maxlength="18" minlength="18" required autocomplete="off" spellcheck="false" autofocus
+                        placeholder="Ej. LOGM900101MGTPRR05" value="<?= esc($curp) ?>">
+                </div>
+                <div class="col-12 col-md-3 d-grid">
+                    <button type="submit" class="btn btn-primary" data-no-loading="1">
+                        <i class="bi bi-search me-1"></i>Buscar por CURP
+                    </button>
+                </div>
+            </form>
 
-        <?php if ($q !== ''): ?>
-            <hr class="my-3">
-            <?php if (empty($ciudadanos)): ?>
-                <div class="alert alert-warning py-2 small mb-2">
-                    <i class="bi bi-exclamation-triangle me-1"></i>No se encontraron ciudadanos con "<strong><?= esc($q) ?></strong>".
-                    Puedes continuar sin vincular una cuenta.
+            <?php if ($curpInactiva): ?>
+                <div class="alert alert-warning py-2 small mt-3 mb-0">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    La cuenta de <strong><?= esc($curpInactiva->nombre_completo ?? $curpInactiva->username) ?></strong> con esta CURP está <strong>desactivada</strong>.
+                    Actívala en <a href="/admin/usuarios/editar/<?= (int) $curpInactiva->id ?>" class="alert-link">Usuarios y ciudadanos</a> para poder registrarle trámites.
                 </div>
-            <?php else: ?>
-                <div class="table-responsive d-none d-md-block">
-                    <table class="table table-sm table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Nombre</th>
-                                <th>Email</th>
-                                <th>RFC</th>
-                                <th class="text-end">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($ciudadanos as $c): ?>
-                            <tr>
-                                <td class="fw-semibold">
-                                    <a class="text-decoration-none fw-semibold btn-seleccionar-ciudadano" href="#"
-                                        data-id="<?= (int)$c->id ?>"
-                                        data-nombre="<?= esc($c->nombre_completo ?? $c->username) ?>"><?= esc($c->nombre_completo ?? $c->username) ?></a>
-                                </td>
-                                <td class="small text-muted"><?= esc($c->email ?? '—') ?></td>
-                                <td class="small font-monospace"><?= esc($c->rfc ?? '—') ?></td>
-                                <td class="text-end">
-                                    <button type="button" class="btn btn-sm btn-outline-primary btn-seleccionar-ciudadano"
-                                        data-id="<?= (int)$c->id ?>"
-                                        data-nombre="<?= esc($c->nombre_completo ?? $c->username) ?>">
-                                        Seleccionar
-                                    </button>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-                <!-- En el teléfono cada ciudadano es una ficha completa: la tabla de 4 columnas aprieta demasiado -->
-                <div class="d-block d-md-none">
-                    <?php foreach ($ciudadanos as $c): ?>
-                        <div class="border rounded-3 p-2 mb-2">
-                            <div class="d-flex justify-content-between align-items-center gap-2">
-                                <div class="overflow-hidden">
-                                    <div class="fw-semibold small"><?= esc($c->nombre_completo ?? $c->username) ?></div>
-                                    <div class="small text-muted text-truncate"><?= esc($c->email ?? '—') ?> · <?= esc($c->rfc ?? '—') ?></div>
-                                </div>
-                                <button type="button" class="btn btn-sm btn-outline-primary flex-shrink-0 btn-seleccionar-ciudadano"
-                                    data-id="<?= (int)$c->id ?>"
-                                    data-nombre="<?= esc($c->nombre_completo ?? $c->username) ?>">
-                                    Usar
-                                </button>
+            <?php endif; ?>
+
+            <?php if ($curpNoEncontrada): ?>
+                <div class="border border-primary-subtle rounded-3 p-3 mt-3 bg-primary-subtle bg-opacity-25">
+                    <div class="fw-semibold mb-1"><i class="bi bi-person-plus me-1 text-primary"></i>No hay ninguna cuenta con la CURP <span class="font-monospace"><?= esc($curp) ?></span></div>
+                    <p class="small text-muted mb-3">Captura sus datos para darlo de alta. Su usuario será la CURP y se generará una contraseña temporal para entregársela.</p>
+                    <?= form_open('/admin/solicitudes/nueva/registrar-ciudadano') ?>
+                        <input type="hidden" name="curp" value="<?= esc($curp) ?>">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label for="nuevo_nombre" class="form-label small fw-semibold">Nombre(s) <span class="text-danger">*</span></label>
+                                <input type="text" id="nuevo_nombre" name="nombre" class="form-control form-control-sm" required maxlength="90" value="<?= esc(old('nombre')) ?>" placeholder="Ej. María Fernanda">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="nuevo_apellido" class="form-label small fw-semibold">Apellido(s) <span class="text-danger">*</span></label>
+                                <input type="text" id="nuevo_apellido" name="apellido" class="form-control form-control-sm" required maxlength="120" value="<?= esc(old('apellido')) ?>" placeholder="Ej. López García">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="nuevo_telefono" class="form-label small fw-semibold">Teléfono <span class="text-danger">*</span></label>
+                                <input type="tel" id="nuevo_telefono" name="telefono" class="form-control form-control-sm" required minlength="7" maxlength="20" value="<?= esc(old('telefono')) ?>" placeholder="Ej. 445 123 4567">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="nuevo_domicilio" class="form-label small fw-semibold">Domicilio</label>
+                                <input type="text" id="nuevo_domicilio" name="domicilio" class="form-control form-control-sm" maxlength="250" value="<?= esc(old('domicilio')) ?>" placeholder="Calle, número, colonia, CP">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="nuevo_email" class="form-label small fw-semibold">Correo (opcional)</label>
+                                <input type="email" id="nuevo_email" name="email" class="form-control form-control-sm" maxlength="255" value="<?= esc(old('email')) ?>" placeholder="Ej. maria@correo.com">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="nuevo_rfc" class="form-label small fw-semibold">RFC (opcional)</label>
+                                <input type="text" id="nuevo_rfc" name="rfc" class="form-control form-control-sm text-uppercase font-monospace" minlength="12" maxlength="13" value="<?= esc(old('rfc')) ?>" placeholder="Ej. LOGM900101AB1">
                             </div>
                         </div>
+                        <div class="d-flex justify-content-end mt-3">
+                            <button type="submit" class="btn btn-success btn-sm" data-loading-text="Creando cuenta...">
+                                <i class="bi bi-person-plus me-1"></i>Crear cuenta y continuar
+                            </button>
+                        </div>
+                    <?= form_close() ?>
+                </div>
+            <?php endif; ?>
+
+            <details class="mt-3" <?= ($q !== '' || $ciudadanos) ? 'open' : '' ?>>
+                <summary class="small text-primary" style="cursor:pointer;">¿No trae su CURP? Buscar por nombre, correo o RFC</summary>
+                <form method="get" action="/admin/solicitudes/nueva" class="row g-2 align-items-end mt-1">
+                    <div class="col-12 col-md-6">
+                        <input type="text" name="q" class="form-control form-control-sm" autocomplete="off" spellcheck="false"
+                            enterkeyhint="search" minlength="2" placeholder="Escribe al menos 2 caracteres..." value="<?= esc($q) ?>">
+                    </div>
+                    <div class="col-12 col-md-3 d-grid">
+                        <button type="submit" class="btn btn-outline-primary btn-sm" data-no-loading="1"><i class="bi bi-search me-1"></i>Buscar</button>
+                    </div>
+                </form>
+
+                <?php if ($q !== '' && empty($ciudadanos)): ?>
+                    <div class="alert alert-warning py-2 small mt-2 mb-0">
+                        <i class="bi bi-exclamation-triangle me-1"></i>No se encontraron ciudadanos con "<strong><?= esc($q) ?></strong>". Pídele su CURP para buscarlo o darlo de alta.
+                    </div>
+                <?php endif; ?>
+            </details>
+
+            <?php if (!empty($ciudadanos)): ?>
+                <div class="list-group mt-3">
+                    <?php foreach ($ciudadanos as $c): ?>
+                        <a href="/admin/solicitudes/nueva?ciudadano_id=<?= (int) $c->id ?>" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center gap-2">
+                            <div class="overflow-hidden">
+                                <div class="fw-semibold small"><?= esc($c->nombre_completo ?? $c->username) ?></div>
+                                <div class="small text-muted text-truncate">
+                                    <span class="font-monospace"><?= esc($c->curp ?? 'sin CURP') ?></span> · <?= esc($c->email ?? '—') ?>
+                                </div>
+                            </div>
+                            <span class="btn btn-sm btn-outline-primary flex-shrink-0">Seleccionar</span>
+                        </a>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
@@ -107,31 +165,20 @@ $q = $__view['q'] ?? '';
     </div>
 </div>
 
-<!-- Ciudadano seleccionado -->
-<div class="card mb-3 border-0 shadow-sm <?= ($q === '') ? 'd-none' : '' ?>" id="cardCiudadano">
-    <div class="card-body d-flex align-items-center gap-3 py-2">
-        <div class="flex-grow-1">
-            <span class="small fw-semibold text-muted">Ciudadano seleccionado:</span>
-            <strong id="nombreCiudadano"><?= $ciudadanos ? esc($ciudadanos[0]->nombre_completo ?? $ciudadanos[0]->username) : 'Ninguno' ?></strong>
-            <input type="hidden" id="ciudadanoId" value="">
-        </div>
-        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnCambiarCiudadano">
-            <i class="bi bi-arrow-repeat me-1"></i>Cambiar
-        </button>
-    </div>
-</div>
-
 <!-- Paso 2: Seleccionar trámite -->
 <div class="card border-0 shadow-sm">
-    <div class="card-header bg-white py-2">
-        <h6 class="mb-0 small fw-bold"><i class="bi bi-1-circle me-1 text-primary"></i>Paso 2: Seleccionar trámite</h6>
+    <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 small fw-bold"><i class="bi bi-2-circle me-1 text-primary"></i>Paso 2: Seleccionar trámite</h6>
+        <?php if (! $ciudadano): ?>
+            <span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-lock me-1"></i>Primero identifica al ciudadano</span>
+        <?php endif; ?>
     </div>
     <div class="card-body">
         <div class="row g-3">
             <?php foreach ($tramites as $clave => $info): ?>
             <div class="col-12 col-sm-6 col-lg-4">
-                <div class="border rounded-3 p-3 h-100 d-flex flex-column gap-2 tramite-option position-relative"
-                    data-tramite="<?= esc($clave) ?>" style="cursor:pointer; transition: all 0.15s;">
+                <div class="border rounded-3 p-3 h-100 d-flex flex-column gap-2 tramite-option position-relative <?= $ciudadano ? '' : 'opacity-50' ?>"
+                    data-tramite="<?= esc($clave) ?>" style="transition: all 0.15s;">
                     <div class="d-flex align-items-center gap-2">
                         <i class="bi <?= esc($info['icono']) ?> fs-4 text-primary"></i>
                         <div>
@@ -140,10 +187,16 @@ $q = $__view['q'] ?? '';
                         </div>
                     </div>
                     <div class="mt-auto">
-                        <a href="/admin/solicitudes/nueva/<?= esc($clave) ?>"
-                            class="btn btn-sm btn-primary w-100 btn-tramite stretched-link">
-                            <i class="bi bi-arrow-right me-1"></i>Continuar
-                        </a>
+                        <?php if ($ciudadano): ?>
+                            <a href="/admin/solicitudes/nueva/<?= esc($clave) ?>?ciudadano_id=<?= $ciudadanoId ?>"
+                                class="btn btn-sm btn-primary w-100 stretched-link">
+                                <i class="bi bi-arrow-right me-1"></i>Continuar
+                            </a>
+                        <?php else: ?>
+                            <button type="button" class="btn btn-sm btn-secondary w-100" disabled aria-disabled="true">
+                                <i class="bi bi-lock me-1"></i>Identifica al ciudadano
+                            </button>
+                        <?php endif; ?>
                         <a href="/admin/solicitudes?tramite=<?= esc($clave) ?>"
                             class="small text-decoration-none mt-2 d-inline-block position-relative" style="z-index: 2;">
                             <i class="bi bi-list-check me-1"></i>Ver solicitudes de este trámite
@@ -161,55 +214,18 @@ $q = $__view['q'] ?? '';
     <div class="card-body py-2">
         <p class="small text-muted mb-0">
             <i class="bi bi-info-circle me-1"></i>
-            El ciudadano debe tener una cuenta en el portal. Si no la tiene, puede autorregistrarse en <a href="/auth/register">/auth/register</a>,
-            o el operador puede crearla desde <a href="/admin/usuarios/nuevo">Usuarios y ciudadanos → Nuevo</a>.
+            La CURP identifica al ciudadano y no puede repetirse entre cuentas. El ciudadano también puede crear su cuenta en línea en
+            <a href="/auth/register">/auth/register</a>; si ya lo hizo, aquí aparecerá al buscar su CURP.
         </p>
     </div>
 </div>
 
 <?= $this->section('scripts') ?>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const selectedCiudadanoId = document.getElementById('ciudadanoId');
-    const selectedNombre = document.getElementById('nombreCiudadano');
-    const cardCiudadano = document.getElementById('cardCiudadano');
-
-    // La ventanilla elige al ciudadano de la búsqueda antes de continuar.
-    document.querySelectorAll('.btn-seleccionar-ciudadano').forEach(btn => {
-        btn.addEventListener('click', function(event) {
-            event.preventDefault();
-            const id = this.dataset.id;
-            const nombre = this.dataset.nombre;
-            selectedCiudadanoId.value = id;
-            selectedNombre.textContent = nombre;
-            cardCiudadano.classList.remove('d-none');
-            cardCiudadano.scrollIntoView({behavior: 'smooth', block: 'center'});
-            // El ciudadano elegido viaja en el enlace de cada trámite.
-            document.querySelectorAll('.btn-tramite').forEach(a => {
-                const url = new URL(a.href);
-                url.searchParams.set('ciudadano_id', id);
-                a.href = url.toString();
-            });
-        });
-    });
-
-    // Volver a buscar a otro ciudadano.
-    document.getElementById('btnCambiarCiudadano')?.addEventListener('click', function() {
-        selectedCiudadanoId.value = '';
-        cardCiudadano.classList.add('d-none');
-        document.querySelectorAll('.btn-tramite').forEach(a => {
-            const url = new URL(a.href);
-            url.searchParams.delete('ciudadano_id');
-            a.href = url.toString();
-        });
-        document.getElementById('q').focus();
-    });
-
-    // Resalte de la ficha de trámite al pasar el cursor (escritorio).
-    document.querySelectorAll('.tramite-option').forEach(card => {
-        card.addEventListener('mouseenter', () => card.style.borderColor = 'var(--primary-color, #2563eb)');
-        card.addEventListener('mouseleave', () => card.style.borderColor = '');
-    });
+// Resalte de la ficha de trámite al pasar el cursor (escritorio), solo si está habilitada.
+document.querySelectorAll('.tramite-option:not(.opacity-50)').forEach(card => {
+    card.addEventListener('mouseenter', () => card.style.borderColor = 'var(--primary-color, #2563eb)');
+    card.addEventListener('mouseleave', () => card.style.borderColor = '');
 });
 </script>
 <?= $this->endSection() ?>

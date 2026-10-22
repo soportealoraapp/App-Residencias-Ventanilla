@@ -52,6 +52,7 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->get('solicitudes', 'Admin\\AdminController::listaSolicitudes', ['as' => 'admin.solicitudes']);
         $routes->get('solicitudes/nueva', 'Admin\\SolicitudPresencialController::index');
         $routes->post('solicitudes/nueva/buscar-ciudadano', 'Admin\\SolicitudPresencialController::buscarCiudadano');
+        $routes->post('solicitudes/nueva/registrar-ciudadano', 'Admin\\SolicitudPresencialController::registrarCiudadano');
         $routes->post('solicitudes/nueva/guardar', 'Admin\\SolicitudPresencialController::guardar');
         $routes->get('solicitudes/nueva/(:segment)', 'Admin\\SolicitudPresencialController::formulario/$1');
         $routes->get('solicitudes/(:segment)', 'Admin\\AdminController::verSolicitud/$1', ['as' => 'admin.solicitud.ver']);

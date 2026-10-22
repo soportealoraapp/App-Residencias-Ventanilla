@@ -18,6 +18,12 @@ $ciudadanoId = $__view['ciudadanoId'] ?? 0;
 $extras = $__view['extras'] ?? [];
 /** @var float|null $tarifaMonto */
 $tarifaMonto = $__view['tarifaMonto'] ?? null;
+/** @var array<string, string> $prellenado Datos tomados de la cuenta del ciudadano */
+$prellenado = $__view['prellenado'] ?? [];
+/** @var bool $esAdmin */
+$esAdmin = (bool) ($__view['esAdmin'] ?? false);
+// Lo capturado (si el envío falló) tiene prioridad sobre los datos de la cuenta.
+$valor = static fn (string $nombre): string => (string) old($nombre, $prellenado[$nombre] ?? '');
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -26,7 +32,7 @@ $tarifaMonto = $__view['tarifaMonto'] ?? null;
         <?= esc($tramiteInfo['nombre']) ?>
         <span class="badge bg-light text-dark border ms-2"><?= esc($tramite) ?></span>
     </h5>
-    <a href="/admin/solicitudes/nueva" class="btn btn-outline-secondary btn-sm">
+    <a href="/admin/solicitudes/nueva?ciudadano_id=<?= (int) $ciudadanoId ?>" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Cambiar trámite
     </a>
 </div>
@@ -34,20 +40,15 @@ $tarifaMonto = $__view['tarifaMonto'] ?? null;
 <!-- Contexto del ciudadano -->
 <div class="card mb-3 border-0 shadow-sm">
     <div class="card-body d-flex align-items-center gap-3 py-2">
-        <?php if ($ciudadano): ?>
-            <div class="flex-grow-1">
-                <span class="small text-muted">Solicitante:</span>
-                <strong><?= esc($ciudadano->nombre_completo ?? $ciudadano->username) ?></strong>
-                <span class="small text-muted ms-2"><?= esc($ciudadano->email ?? '') ?></span>
-            </div>
-            <span class="badge bg-primary">Cuenta vinculada</span>
-        <?php else: ?>
-            <div class="flex-grow-1">
-                <span class="small text-muted">
-                    <i class="bi bi-person me-1"></i>Atención presencial sin cuenta del portal vinculada.
-                </span>
-            </div>
-        <?php endif; ?>
+        <div class="flex-grow-1">
+            <span class="small text-muted">Solicitante:</span>
+            <strong><?= esc($ciudadano->nombre_completo ?? $ciudadano->username) ?></strong>
+            <span class="small text-muted ms-2 font-monospace"><?= esc($ciudadano->curp ?? '') ?></span>
+            <?php if ($prellenado !== []): ?>
+                <div class="small text-muted"><i class="bi bi-magic me-1"></i>Algunos campos se llenaron con los datos de su cuenta; revísalos antes de registrar.</div>
+            <?php endif; ?>
+        </div>
+        <span class="badge bg-primary">Cuenta vinculada</span>
     </div>
 </div>
 
@@ -57,11 +58,22 @@ $tarifaMonto = $__view['tarifaMonto'] ?? null;
         <i class="bi bi-cash-coin text-success fs-5"></i>
         <span class="small">Monto según tarifario vigente:</span>
         <strong><?= $tarifaMonto !== null ? formatear_dinero($tarifaMonto) : 'Sin tarifa configurada' ?></strong>
-        <?php if ($tarifaMonto === null): ?>
-            <span class="badge bg-warning text-dark ms-2">Debes configurar la tarifa antes de registrar</span>
-        <?php endif; ?>
     </div>
 </div>
+<?php if ($tarifaMonto === null): ?>
+    <div class="alert alert-warning small d-flex align-items-start gap-2">
+        <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+        <div>
+            <strong>No hay tarifa vigente para <?= esc($tramite) ?>.</strong>
+            No se puede registrar la solicitud sin un monto a cobrar.
+            <?php if ($esAdmin): ?>
+                Captúrala en <a href="/admin/tarifas" class="alert-link">Tarifario</a> (criterio <code>base</code>) y vuelve a esta página.
+            <?php else: ?>
+                Pide a un administrador que la capture en el Tarifario.
+            <?php endif; ?>
+        </div>
+    </div>
+<?php endif; ?>
 
 <!-- Formulario -->
 <form method="post" action="/admin/solicitudes/nueva/guardar" enctype="multipart/form-data" id="formPresencial">
@@ -87,7 +99,7 @@ $tarifaMonto = $__view['tarifaMonto'] ?? null;
                             class="form-select form-select-sm" <?= $campo['required'] ? 'required' : '' ?>>
                             <option value="">— Seleccionar —</option>
                             <?php foreach (($campo['options'] ?? []) as $val => $lbl): ?>
-                                <option value="<?= esc($val) ?>"><?= esc($lbl) ?></option>
+                                <option value="<?= esc($val) ?>" <?= $valor($campo['name']) === (string) $val ? 'selected' : '' ?>><?= esc($lbl) ?></option>
                             <?php endforeach; ?>
                         </select>
 
@@ -96,7 +108,7 @@ $tarifaMonto = $__view['tarifaMonto'] ?? null;
                             class="form-control form-control-sm" rows="3"
                             <?= $campo['required'] ? 'required' : '' ?>
                             <?= isset($campo['max_length']) ? 'maxlength="' . (int)$campo['max_length'] . '"' : '' ?>
-                            placeholder="<?= esc($campo['label']) ?>..."></textarea>
+                            placeholder="<?= esc($campo['label']) ?>..."><?= esc($valor($campo['name'])) ?></textarea>
 
                     <?php else: ?>
                         <input type="<?= esc($campo['type']) ?>"
@@ -105,6 +117,8 @@ $tarifaMonto = $__view['tarifaMonto'] ?? null;
                             <?= $campo['required'] ? 'required' : '' ?>
                             <?= isset($campo['max_length']) ? 'maxlength="' . (int)$campo['max_length'] . '"' : '' ?>
                             <?= $campo['type'] === 'number' ? 'min="1"' : '' ?>
+                            <?= $campo['name'] === 'rfc' ? 'minlength="12"' : '' ?>
+                            value="<?= esc($valor($campo['name'])) ?>"
                             placeholder="<?= esc($campo['label']) ?>">
                     <?php endif; ?>
                 </div>
@@ -119,7 +133,7 @@ $tarifaMonto = $__view['tarifaMonto'] ?? null;
                     <select name="convocatoria_id" id="convocatoria_id" class="form-select form-select-sm" required>
                         <option value="">— Seleccionar convocatoria —</option>
                         <?php foreach ($extras['convocatorias'] as $conv): ?>
-                            <option value="<?= (int)$conv->id ?>">
+                            <option value="<?= (int)$conv->id ?>" <?= (string) old('convocatoria_id') === (string) $conv->id ? 'selected' : '' ?>>
                                 #<?= (int)$conv->id ?> — <?= esc($conv->titulo ?? 'Convocatoria') ?>
                             </option>
                         <?php endforeach; ?>
@@ -175,7 +189,7 @@ $tarifaMonto = $__view['tarifaMonto'] ?? null;
 
     <!-- Botones -->
     <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
-        <a href="/admin/solicitudes/nueva" class="btn btn-outline-secondary btn-sm">
+        <a href="/admin/solicitudes/nueva?ciudadano_id=<?= (int) $ciudadanoId ?>" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-x-lg me-1"></i>Cancelar
         </a>
         <button type="submit" class="btn btn-primary <?= $tarifaMonto === null ? 'disabled' : '' ?>"

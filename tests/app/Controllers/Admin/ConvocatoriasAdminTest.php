@@ -378,7 +378,7 @@ class ConvocatoriasAdminTest extends DatabaseTestCase
             'created_at'          => date('Y-m-d H:i:s'),
         ]);
 
-        $response = $this->comoAdmin()->get('/admin/solicitudes/nueva/UR-TT-T-01');
+        $response = $this->comoAdmin()->get('/admin/solicitudes/nueva/UR-TT-T-01?ciudadano_id=' . $this->ciudadanoId);
         $response->assertStatus(200);
         $response->assertSee('Convocatoria Visible En Ventanilla');
     }
@@ -391,7 +391,7 @@ class ConvocatoriasAdminTest extends DatabaseTestCase
             'periodo_registro_fin'    => date('Y-m-d', strtotime('+35 days')),
         ]);
 
-        $response = $this->comoAdmin()->get('/admin/solicitudes/nueva/UR-TT-T-01');
+        $response = $this->comoAdmin()->get('/admin/solicitudes/nueva/UR-TT-T-01?ciudadano_id=' . $this->ciudadanoId);
         $response->assertStatus(200);
         $response->assertSee('No hay convocatorias abiertas hoy');
         $response->assertDontSee('Convocatoria Fuera De Ventana');

@@ -317,7 +317,7 @@ class UsuariosController extends Controller
         $reglas = [
             'nombre'    => ['label' => 'Nombre(s)', 'rules' => 'required|min_length[2]|max_length[90]'],
             'apellido'  => ['label' => 'Apellido(s)', 'rules' => 'required|min_length[2]|max_length[120]'],
-            'curp'      => ['label' => 'CURP', 'rules' => 'permit_empty|exact_length[18]|regex_match[/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]\d$/]'],
+            'curp'      => ['label' => 'CURP', 'rules' => 'permit_empty|exact_length[18]|regex_match[/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]\d$/]|' . $unico('curp'), 'errors' => ['is_unique' => 'Ya existe una cuenta con esta CURP; búscala en el listado.']],
             'rfc'       => ['label' => 'RFC', 'rules' => 'permit_empty|min_length[12]|max_length[13]|regex_match[/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/]'],
             'email'     => ['label' => 'Correo electrónico', 'rules' => 'permit_empty|valid_email|max_length[255]|' . $unico('email')],
             'username'  => ['label' => 'Nombre de usuario', 'rules' => 'required|alpha_numeric|min_length[5]|max_length[100]|' . $unico('username')],
