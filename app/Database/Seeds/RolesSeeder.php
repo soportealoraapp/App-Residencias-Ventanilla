@@ -26,11 +26,23 @@ class RolesSeeder extends Seeder
             ],
         ];
 
+        // Conserva sin cambios el comportamiento histórico de los tres roles
+        // iniciales: una coincidencia por id o nombre impide otra inserción.
         foreach ($data as $row) {
             $exists = $this->db->table('roles')->where('id', $row['id'])->orWhere('nombre', $row['nombre'])->countAllResults();
             if ($exists === 0) {
                 $this->db->table('roles')->insert($row);
             }
+        }
+
+        // COB-09 no reserva un id: la secuencia asigna el disponible y el nombre
+        // único hace que ejecutar nuevamente el seeder sea seguro.
+        $juezExiste = $this->db->table('roles')->where('nombre', 'juez_calificador')->countAllResults();
+        if ($juezExiste === 0) {
+            $this->db->table('roles')->insert([
+                'nombre'      => 'juez_calificador',
+                'descripcion' => 'Consulta y calificación de boletas de infracción',
+            ]);
         }
 
         if ($this->db->DBDriver === 'Postgre') {

@@ -23,6 +23,7 @@ class UsuariosController extends Controller
     private const ROLES = [
         'ciudadano'           => 'Ciudadano',
         'operador_ventanilla' => 'Operador de ventanilla',
+        'juez_calificador'    => 'Juez calificador',
         'administrador'       => 'Administrador',
     ];
 
@@ -440,7 +441,8 @@ class UsuariosController extends Controller
 
     private function esAdministrador(): bool
     {
-        return in_array('administrador', (array) (session('roles') ?? []), true);
+        $userId = $this->usuarioSesion();
+        return $userId !== null && $this->userModel->tieneRol($userId, 'administrador');
     }
 
     private function usuarioSesion(): ?int

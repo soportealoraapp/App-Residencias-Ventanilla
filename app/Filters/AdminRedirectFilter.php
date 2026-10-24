@@ -13,10 +13,11 @@ class AdminRedirectFilter implements FilterInterface
         $session = \Config\Services::session();
         $roles = (array) $session->get('roles');
 
-        foreach ($roles as $rol) {
-            if (str_contains($rol, 'admin') || str_contains($rol, 'operador')) {
-                return redirect()->to('/admin/dashboard');
-            }
+        if (in_array('administrador', $roles, true) || in_array('operador_ventanilla', $roles, true)) {
+            return redirect()->to('/admin/dashboard');
+        }
+        if (in_array('juez_calificador', $roles, true)) {
+            return redirect()->to('/juez');
         }
     }
 

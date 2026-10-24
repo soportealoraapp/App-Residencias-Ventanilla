@@ -42,6 +42,14 @@ $routes->post('api/boletas/sincronizar', 'Api\InfraccionesApiController::sincron
 $routes->options('api/infracciones/evidencias', 'Api\InfraccionesApiController::subirEvidencia');
 $routes->post('api/infracciones/evidencias', 'Api\InfraccionesApiController::subirEvidencia', ['filter' => 'agenteToken']);
 
+// Juez calificador: navegación propia y exclusivamente de lectura en COB-09.
+$routes->group('juez', ['filter' => 'auth'], static function ($routes) {
+    $routes->group('', ['filter' => 'role:juez_calificador'], static function ($routes) {
+        $routes->get('', 'Juez\DashboardController::index', ['as' => 'juez.inicio']);
+        $routes->get('boletas', 'Juez\DashboardController::boletas', ['as' => 'juez.boletas']);
+    });
+});
+
 $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->group('', ['filter' => 'role:administrador,operador_ventanilla'], function($routes) {
         $routes->get('dashboard', 'Admin\\AdminController::dashboard', ['as' => 'admin.dashboard']);

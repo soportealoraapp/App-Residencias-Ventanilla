@@ -102,16 +102,14 @@ class AuthController extends Controller
             'roles' => $roles,
         ]);
 
-        $esAdmin = false;
-        foreach ($roles as $rol) {
-            if (str_contains($rol, 'admin') || str_contains($rol, 'operador')) {
-                $esAdmin = true;
-                break;
-            }
+        // Conserva la prioridad histórica del panel administrativo para cuentas
+        // con varios roles. Una cuenta exclusivamente juez entra a su panel.
+        if (in_array('administrador', $roles, true) || in_array('operador_ventanilla', $roles, true)) {
+            return redirect()->to('/admin/dashboard');
         }
 
-        if ($esAdmin) {
-            return redirect()->to('/admin/dashboard');
+        if (in_array('juez_calificador', $roles, true)) {
+            return redirect()->to('/juez');
         }
 
         return redirect()->to('/portal/dashboard');
