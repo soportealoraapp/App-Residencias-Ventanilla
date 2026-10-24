@@ -135,6 +135,18 @@ class ResolverMontoInfraccionService
             return null;
         }
 
+        return ['infraccion_id' => (int) $infraccionId] + $this->aplicarDescuentoRecargo($montoBase, $fechaInfraccion, $fechaPago);
+    }
+
+    /**
+     * Aplica las reglas de pronto pago y recargo por mora a un monto ya fijado
+     * (por ejemplo, el que califica el juez dentro del rango en UMA de la falta).
+     *
+     * @param DateTimeInterface|string|null $fechaInfraccion
+     * @param DateTimeInterface|string|null $fechaPago
+     */
+    public function aplicarDescuentoRecargo(float $montoBase, $fechaInfraccion = null, $fechaPago = null): array
+    {
         // 1. Normalizar fechas: fechaPago SIEMPRE se resuelve contra el servidor si es nula
         $pagoObj = $this->normalizarFecha($fechaPago) ?? new DateTimeImmutable('now');
         $infraccionObj = $this->normalizarFecha($fechaInfraccion) ?? $pagoObj;
@@ -179,7 +191,6 @@ class ResolverMontoInfraccionService
         }
 
         return [
-            'infraccion_id'               => (int) $infraccionId,
             'monto_base'                  => $montoBase,
             'fecha_infraccion'            => $infraccionObj->format('Y-m-d'),
             'fecha_pago'                  => $pagoObj->format('Y-m-d H:i:s'),

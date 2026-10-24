@@ -232,6 +232,10 @@ class EstadoSolicitudService
             $solicitudModel->update($solicitudId, ['fecha_resolucion' => $ahora->format('Y-m-d H:i:s')]);
         }
 
+        // El cobro sigue a la solicitud: se crea en "Pago pendiente", se aprueba
+        // al pagarse y se cancela si la solicitud se rechaza.
+        (new CobroService())->sincronizarConSolicitud($solicitudId, $nuevoEstatus, $usuarioId, $comentario);
+
         $db->transComplete();
 
         return $db->transStatus();

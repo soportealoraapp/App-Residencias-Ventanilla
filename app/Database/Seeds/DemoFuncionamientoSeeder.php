@@ -133,6 +133,11 @@ class DemoFuncionamientoSeeder extends Seeder
 
         $db->transStart();
         if ($ids !== []) {
+            // Los cobros no se borran en cascada con su solicitud; los demo sí se quitan.
+            if ($db->tableExists('cobros')) {
+                $db->table('cobros')->whereIn('solicitud_id', $ids)->delete();
+                $resumen['cobros'] = $db->affectedRows();
+            }
             foreach (['historial_estatus', 'solicitud_datos', 'documentos', 'verificaciones_fisicas'] as $tabla) {
                 $db->table($tabla)->whereIn('solicitud_id', $ids)->delete();
                 $resumen[$tabla] = $db->affectedRows();
@@ -159,6 +164,12 @@ class DemoFuncionamientoSeeder extends Seeder
         foreach (self::agentesDemo() as $placa) {
             for ($n = 1; $n <= self::TOTAL_BOLETAS; $n++) {
                 $foliosBoletas[] = self::folioBoleta($n, $placa);
+            }
+        }
+        if ($db->tableExists('cobros')) {
+            $boletaIds = array_map(static fn ($r) => (int) $r->id, $db->table('boletas_infracciones')->select('id')->whereIn('folio', $foliosBoletas)->get()->getResult());
+            if ($boletaIds !== []) {
+                $db->table('cobros')->whereIn('boleta_id', $boletaIds)->delete();
             }
         }
         $db->table('boletas_infracciones')->whereIn('folio', $foliosBoletas)->delete();
