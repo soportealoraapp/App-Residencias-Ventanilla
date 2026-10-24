@@ -52,11 +52,13 @@ class TramiteConcesionTransporteControllerTest extends DatabaseTestCase
 
     private function seedData(): void
     {
+        // Sin id fijo: las migraciones ya pueden haber creado roles (p. ej. juez_calificador).
         $this->db->table('roles')->insertBatch([
-            ['id' => 1, 'nombre' => 'administrador', 'descripcion' => 'admin'],
-            ['id' => 2, 'nombre' => 'operador_ventanilla', 'descripcion' => 'operador'],
-            ['id' => 3, 'nombre' => 'ciudadano', 'descripcion' => 'ciudadano'],
+            ['nombre' => 'administrador', 'descripcion' => 'admin'],
+            ['nombre' => 'operador_ventanilla', 'descripcion' => 'operador'],
+            ['nombre' => 'ciudadano', 'descripcion' => 'ciudadano'],
         ]);
+        $roles = array_column($this->db->table('roles')->get()->getResultArray(), 'id', 'nombre');
 
         $this->db->table('users')->insert([
             'username'        => 'postulante1_ur01',
@@ -69,7 +71,7 @@ class TramiteConcesionTransporteControllerTest extends DatabaseTestCase
 
         $this->db->table('user_roles')->insert([
             'user_id' => $this->ciudadano1Id,
-            'role_id' => 3,
+            'role_id' => (int) $roles['ciudadano'],
         ]);
 
         $this->db->table('users')->insert([
@@ -83,7 +85,7 @@ class TramiteConcesionTransporteControllerTest extends DatabaseTestCase
 
         $this->db->table('user_roles')->insert([
             'user_id' => $this->ciudadano2Id,
-            'role_id' => 3,
+            'role_id' => (int) $roles['ciudadano'],
         ]);
 
         $this->db->table('users')->insert([
@@ -97,7 +99,7 @@ class TramiteConcesionTransporteControllerTest extends DatabaseTestCase
 
         $this->db->table('user_roles')->insert([
             'user_id' => $this->operadorId,
-            'role_id' => 2,
+            'role_id' => (int) $roles['operador_ventanilla'],
         ]);
 
         $this->db->table('tarifas')->insert([

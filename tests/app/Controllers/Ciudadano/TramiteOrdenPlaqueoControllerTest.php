@@ -48,11 +48,13 @@ class TramiteOrdenPlaqueoControllerTest extends DatabaseTestCase
 
     private function seedData(): void
     {
+        // Sin id fijo: las migraciones ya pueden haber creado roles (p. ej. juez_calificador).
         $this->db->table('roles')->insertBatch([
-            ['id' => 1, 'nombre' => 'administrador', 'descripcion' => 'admin'],
-            ['id' => 2, 'nombre' => 'operador_ventanilla', 'descripcion' => 'operador'],
-            ['id' => 3, 'nombre' => 'ciudadano', 'descripcion' => 'ciudadano'],
+            ['nombre' => 'administrador', 'descripcion' => 'admin'],
+            ['nombre' => 'operador_ventanilla', 'descripcion' => 'operador'],
+            ['nombre' => 'ciudadano', 'descripcion' => 'ciudadano'],
         ]);
+        $roles = array_column($this->db->table('roles')->get()->getResultArray(), 'id', 'nombre');
 
         $this->db->table('users')->insert([
             'username'      => 'ciudadano_ur03',
@@ -65,7 +67,7 @@ class TramiteOrdenPlaqueoControllerTest extends DatabaseTestCase
 
         $this->db->table('user_roles')->insert([
             'user_id' => $this->ciudadanoId,
-            'role_id' => 3,
+            'role_id' => (int) $roles['ciudadano'],
         ]);
 
         $this->db->table('tarifas')->insert([
