@@ -67,5 +67,40 @@ class UsuariosDemoSeeder extends Seeder
             $this->db->query("SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE((SELECT MAX(id) FROM users), 1))");
             $this->db->query("SELECT setval(pg_get_serial_sequence('user_roles', 'id'), COALESCE((SELECT MAX(id) FROM user_roles), 1))");
         }
+
+        $this->juezDemo($passwordHash);
+    }
+
+    /**
+     * Cuenta juez1 para el acceso rápido del login. El rol no tiene id fijo
+     * (COB-09), así que se busca por nombre; sin el rol no se crea la cuenta.
+     */
+    private function juezDemo(string $passwordHash): void
+    {
+        $rol = $this->db->table('roles')->where('nombre', 'juez_calificador')->get()->getRow();
+        if ($rol === null) {
+            return;
+        }
+
+        $usuario = $this->db->table('users')->where('username', 'juez1')->get()->getRow();
+        if ($usuario === null) {
+            if ($this->db->table('users')->where('email', 'juez1@uriangato.gob.mx')->countAllResults() > 0) {
+                return;
+            }
+            $this->db->table('users')->insert([
+                'username'        => 'juez1',
+                'email'           => 'juez1@uriangato.gob.mx',
+                'nombre_completo' => 'Juez Calificador Demo',
+                'password_hash'   => $passwordHash,
+                'activo'          => 1,
+            ]);
+            $userId = (int) $this->db->insertID();
+        } else {
+            $userId = (int) $usuario->id;
+        }
+
+        if ($this->db->table('user_roles')->where('user_id', $userId)->where('role_id', $rol->id)->countAllResults() === 0) {
+            $this->db->table('user_roles')->insert(['user_id' => $userId, 'role_id' => (int) $rol->id]);
+        }
     }
 }

@@ -46,6 +46,9 @@
             <button type="button" class="auth-demo-chip" onclick="fillLogin('ciudadano1', '12345678')">
                 <i class="bi bi-person-fill text-success"></i> Ciudadano
             </button>
+            <button type="button" class="auth-demo-chip" onclick="fillLogin('juez1', '12345678')">
+                <i class="bi bi-bank2 text-danger"></i> Juez calificador
+            </button>
         </div>
     </div>
 
