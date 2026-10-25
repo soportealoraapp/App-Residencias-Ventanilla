@@ -385,6 +385,67 @@ class SolicitudPresencialTest extends DatabaseTestCase
         $this->assertSame(1, $this->db->table('users')->where('curp', self::CURP_PRUEBA)->countAllResults());
     }
 
+    // ─── ALTA SIN CURP Y AVISO DE HOMÓNIMO (COB-08) ─────────────────
+
+    private function altaSinCurp(array $extra = []): \CodeIgniter\Test\TestResponse
+    {
+        return $this->comoOperador()->post('/admin/solicitudes/nueva/registrar-ciudadano', array_merge([
+            'nombre'   => 'Rosa Elena',
+            'apellido' => 'Márquez Soto',
+            'telefono' => '4459876543',
+        ], $extra));
+    }
+
+    public function testAltaSinCurpRegistraAlCiudadanoSinCuentaDeAcceso(): void
+    {
+        $result = $this->altaSinCurp();
+
+        $usuario = $this->db->table('users')->where('nombre_completo', 'Rosa Elena Márquez Soto')->get()->getRow();
+        $this->assertNotNull($usuario);
+        $this->assertNull($usuario->username);
+        $this->assertNull($usuario->password_hash);
+        $this->assertNull($usuario->curp);
+        $this->assertTrue(model(\App\Models\UserModel::class)->tieneRol((int) $usuario->id, 'ciudadano'));
+        $result->assertRedirectTo(site_url('admin/solicitudes/nueva?ciudadano_id=' . $usuario->id));
+        $this->assertStringContainsString('sin cuenta de acceso', (string) session('message'));
+    }
+
+    public function testUnNombreRepetidoPideConfirmacionAntesDeDuplicar(): void
+    {
+        $this->db->table('users')->where('id', $this->ciudadanoId)
+            ->update(['nombre_completo' => 'Rosa Elena Márquez Soto']);
+
+        $result = $this->altaSinCurp(['nombre' => 'ROSA  ELENA', 'apellido' => 'marquez soto']);
+
+        $result->assertRedirect();
+        $this->assertSame(1, $this->db->table('users')->where('nombre_completo', 'Rosa Elena Márquez Soto')->countAllResults());
+        $this->assertStringContainsString('Ya existe una persona registrada', (string) session('warning'));
+    }
+
+    public function testConConfirmacionExpresaSeRegistraElHomonimo(): void
+    {
+        $this->db->table('users')->where('id', $this->ciudadanoId)
+            ->update(['nombre_completo' => 'Rosa Elena Márquez Soto']);
+
+        $result = $this->altaSinCurp(['confirmar_duplicado' => '1']);
+
+        $result->assertRedirect();
+        $this->assertSame(2, $this->db->table('users')->where('nombre_completo', 'Rosa Elena Márquez Soto')->countAllResults());
+    }
+
+    public function testElFormularioAvisaDelHomonimoAlBuscarPorNombre(): void
+    {
+        $this->db->table('users')->where('id', $this->ciudadanoId)
+            ->update(['nombre_completo' => 'Rosa Elena Márquez Soto']);
+
+        $result = $this->comoOperador()->get('/admin/solicitudes/nueva?q=ROSA%20ELENA%20MARQUEZ%20SOTO');
+        $result->assertStatus(200);
+
+        $body = $result->response()->getBody();
+        $this->assertStringContainsString('Ya existe una persona registrada', $body);
+        $this->assertStringContainsString('Registrar de todos modos', $body);
+    }
+
     public function testFormularioSePrellenaConDatosDelCiudadano(): void
     {
         $this->db->table('users')->where('id', $this->ciudadanoId)->update([

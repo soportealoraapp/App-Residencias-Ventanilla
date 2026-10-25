@@ -46,13 +46,13 @@
     <?= form_open_multipart('/auth/attempt-register') ?>
 
         <div class="mb-3">
-            <label for="curp" class="form-label small fw-semibold">CURP <span class="text-danger">*</span></label>
+            <label for="curp" class="form-label small fw-semibold">CURP <span class="text-muted">(opcional)</span></label>
             <div class="input-group">
                 <span class="input-group-text bg-light text-muted"><i class="bi bi-person-vcard"></i></span>
-                <input type="text" class="form-control text-uppercase" id="curp" name="curp" value="<?= old('curp') ?>" placeholder="Ingresa tu CURP" maxlength="18" required
+                <input type="text" class="form-control text-uppercase" id="curp" name="curp" value="<?= old('curp') ?>" placeholder="Ingresa tu CURP" maxlength="18"
                        autocomplete="off" autocapitalize="characters" spellcheck="false">
             </div>
-            <span class="hint">18 caracteres, tal como aparece en tu constancia de CURP.</span>
+            <span class="hint">Si la capturas, ligamos los trámites que ya registraste en ventanilla.</span>
         </div>
 
         <div class="row g-2 mb-3">

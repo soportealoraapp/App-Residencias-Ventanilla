@@ -8,6 +8,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 use App\Models\UserModel;
 use App\Models\RoleModel;
 use App\Models\AuditoriaModel;
+use App\Libraries\CuentaCiudadanoService;
 use Config\Services;
 use Psr\Log\LoggerInterface;
 
@@ -124,17 +125,48 @@ class AuthController extends Controller
     {
         normalizar_campos_mayusculas($this->request, ['curp', 'rfc']);
 
+        // COB-08: la CURP es opcional al registrarse. Si pertenece a una cuenta
+        // que ventanilla dio de alta sin acceso, este registro la reclama en vez
+        // de crear un duplicado: la persona conserva los trámites que ya tenía.
+        // Si la CURP ya tiene contraseña, la cuenta existe y se rechaza.
+        $curp          = CuentaCiudadanoService::normalizarCurp((string) $this->request->getPost('curp'));
+        $cuentaService = new CuentaCiudadanoService();
+        $sinAcceso     = null;
+
+        if ($curp !== '') {
+            foreach ($cuentaService->buscarPorCurp($curp) as $existente) {
+                if (trim((string) ($existente->password_hash ?? '')) !== '') {
+                    return redirect()->back()->withInput()->with('errors', [
+                        'curp' => 'Ya existe una cuenta con esta CURP. Inicia sesión o recupera tu contraseña.',
+                    ]);
+                }
+                if ((int) ($existente->activo ?? 1) !== 1) {
+                    return redirect()->back()->withInput()->with('errors', [
+                        'curp' => 'La cuenta asociada a esta CURP está desactivada. Acude a la ventanilla de Tránsito y Transporte.',
+                    ]);
+                }
+                $sinAcceso ??= $existente;
+            }
+        }
+
+        // Al reclamar una cuenta ya se capturó el correo en ventanilla: la
+        // comprobación de unicidad excluye esa misma fila para no bloquear el alta.
+        // El formato de la regla es is_unique[tabla.campo,campo_a_ignorar,valor].
+        $reglaEmail = $sinAcceso === null
+            ? 'required|valid_email|max_length[180]|is_unique[users.email]'
+            : 'required|valid_email|max_length[180]|is_unique[users.email,id,' . (int) $sinAcceso->id . ']';
+
         $rules = [
             // 18 caracteres: 4 letras, 6 dígitos, H/M, 5 letras, homoclave y dígito verificador.
-            // La CURP identifica al ciudadano en ventanilla, por eso no puede repetirse.
-            'curp'     => ['rules' => 'required|exact_length[18]|regex_match[/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]\d$/]|is_unique[users.curp]', 'label' => 'CURP', 'errors' => ['is_unique' => 'Ya existe una cuenta con esta CURP. Inicia sesión o recupera tu contraseña.']],
+            // Opcional: sin CURP la cuenta funciona igual, solo no se liga al historial de ventanilla.
+            'curp'     => ['rules' => 'permit_empty|exact_length[18]|regex_match[' . CuentaCiudadanoService::REGEX_CURP . ']', 'label' => 'CURP'],
             'nombre'   => ['rules' => 'required|min_length[2]|max_length[80]', 'label' => 'Nombre(s)'],
             'apellido' => ['rules' => 'required|min_length[2]|max_length[120]', 'label' => 'Apellido(s)'],
             'telefono' => ['rules' => 'required|min_length[7]|max_length[20]', 'label' => 'Teléfono'],
             'estado'   => ['rules' => 'required|min_length[2]|max_length[60]', 'label' => 'Estado'],
             'ciudad'   => ['rules' => 'required|min_length[2]|max_length[60]', 'label' => 'Ciudad / Municipio'],
             'domicilio' => ['rules' => 'required|min_length[5]|max_length[200]', 'label' => 'Dirección'],
-            'email'    => ['rules' => 'required|valid_email|max_length[180]|is_unique[users.email]', 'label' => 'Correo electrónico'],
+            'email'    => ['rules' => $reglaEmail, 'label' => 'Correo electrónico'],
             'username' => ['rules' => 'required|alpha_numeric|min_length[5]|max_length[40]|is_unique[users.username]', 'label' => 'Nombre de usuario'],
             'password' => ['rules' => 'required|min_length[8]|max_length[100]|regex_match[/^(?=.*[A-Za-z])(?=.*\d).+$/]', 'label' => 'Contraseña', 'errors' => ['regex_match' => 'La contraseña debe incluir al menos una letra y un número.']],
             'password_confirm' => ['rules' => 'required|matches[password]', 'label' => 'Confirmar contraseña'],
@@ -163,7 +195,7 @@ class AuthController extends Controller
 
         $data = [
             'nombre_completo' => $nombre . ' ' . $apellido,
-            'curp'            => strtoupper((string) $this->request->getPost('curp')),
+            'curp'            => $curp !== '' ? $curp : null,
             'apellido'        => $apellido,
             'email'           => $this->request->getPost('email'),
             'username'        => $this->request->getPost('username'),
@@ -175,6 +207,19 @@ class AuthController extends Controller
             'rfc'             => $this->request->getPost('rfc') !== '' ? strtoupper((string) $this->request->getPost('rfc')) : null,
             'activo'          => 1,
         ];
+
+        if ($sinAcceso !== null) {
+            if (! $cuentaService->habilitarAcceso((int) $sinAcceso->id, $data)) {
+                return redirect()->back()->withInput()->with('errors', [
+                    'registro' => 'No fue posible vincular tu cuenta con los trámites de ventanilla. Intenta de nuevo o acude a la ventanilla.',
+                ]);
+            }
+
+            $this->guardarIneOpcional((int) $sinAcceso->id);
+
+            return redirect()->to('/auth/login')
+                ->with('message', 'Vinculamos los trámites que ya tenías registrados en ventanilla. Ya puedes iniciar sesión.');
+        }
 
         if (! $this->userModel->insert($data)) {
             return redirect()->back()->withInput()->with('errors', ['registro' => 'No fue posible crear tu cuenta. Intenta de nuevo.']);

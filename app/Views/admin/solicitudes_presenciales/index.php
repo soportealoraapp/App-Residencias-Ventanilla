@@ -18,13 +18,17 @@ $curp = $__view['curp'] ?? '';
 $curpNoEncontrada = (bool) ($__view['curpNoEncontrada'] ?? false);
 /** @var object|null $curpInactiva */
 $curpInactiva = $__view['curpInactiva'] ?? null;
+/** @var string $avisoDuplicado Mensaje del alta detenida por homónimo */
+$avisoDuplicado = (string) ($__view['avisoDuplicado'] ?? '');
+/** @var object|null $duplicadoNombre Persona con el mismo nombre */
+$duplicadoNombre = $__view['duplicadoNombre'] ?? null;
 $ciudadanoId = $ciudadano ? (int) $ciudadano->id : 0;
 ?>
 
 <?= view('layouts/_ayuda', [
     'tono'   => 'info',
     'titulo' => 'Atención presencial',
-    'texto'  => 'Registra un trámite a nombre de un ciudadano que acude a ventanilla. 1) Escribe su CURP: si ya tiene cuenta se carga sola; si no, la das de alta en el momento. 2) Elige el trámite. 3) Captura los datos; los de su cuenta se llenan automáticamente.',
+    'texto'  => 'Registra un trámite a nombre de un ciudadano que acude a ventanilla. 1) Búscalo por CURP o por nombre; si no aparece, dalo de alta con su nombre (la CURP es opcional). 2) Elige el trámite. 3) Captura los datos; los de su cuenta se llenan automáticamente.',
 ]) ?>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -90,40 +94,26 @@ $ciudadanoId = $ciudadano ? (int) $ciudadano->id : 0;
                 <div class="border border-primary-subtle rounded-3 p-3 mt-3 bg-primary-subtle bg-opacity-25">
                     <div class="fw-semibold mb-1"><i class="bi bi-person-plus me-1 text-primary"></i>No hay ninguna cuenta con la CURP <span class="font-monospace"><?= esc($curp) ?></span></div>
                     <p class="small text-muted mb-3">Captura sus datos para darlo de alta. Su usuario será la CURP y se generará una contraseña temporal para entregársela.</p>
-                    <?= form_open('/admin/solicitudes/nueva/registrar-ciudadano') ?>
-                        <input type="hidden" name="curp" value="<?= esc($curp) ?>">
-                        <div class="row g-2">
-                            <div class="col-md-4">
-                                <label for="nuevo_nombre" class="form-label small fw-semibold">Nombre(s) <span class="text-danger">*</span></label>
-                                <input type="text" id="nuevo_nombre" name="nombre" class="form-control form-control-sm" required maxlength="90" value="<?= esc(old('nombre')) ?>" placeholder="Ej. María Fernanda">
-                            </div>
-                            <div class="col-md-4">
-                                <label for="nuevo_apellido" class="form-label small fw-semibold">Apellido(s) <span class="text-danger">*</span></label>
-                                <input type="text" id="nuevo_apellido" name="apellido" class="form-control form-control-sm" required maxlength="120" value="<?= esc(old('apellido')) ?>" placeholder="Ej. López García">
-                            </div>
-                            <div class="col-md-4">
-                                <label for="nuevo_telefono" class="form-label small fw-semibold">Teléfono <span class="text-danger">*</span></label>
-                                <input type="tel" id="nuevo_telefono" name="telefono" class="form-control form-control-sm" required minlength="7" maxlength="20" value="<?= esc(old('telefono')) ?>" placeholder="Ej. 445 123 4567">
-                            </div>
-                            <div class="col-md-6">
-                                <label for="nuevo_domicilio" class="form-label small fw-semibold">Domicilio</label>
-                                <input type="text" id="nuevo_domicilio" name="domicilio" class="form-control form-control-sm" maxlength="250" value="<?= esc(old('domicilio')) ?>" placeholder="Calle, número, colonia, CP">
-                            </div>
-                            <div class="col-md-3">
-                                <label for="nuevo_email" class="form-label small fw-semibold">Correo (opcional)</label>
-                                <input type="email" id="nuevo_email" name="email" class="form-control form-control-sm" maxlength="255" value="<?= esc(old('email')) ?>" placeholder="Ej. maria@correo.com">
-                            </div>
-                            <div class="col-md-3">
-                                <label for="nuevo_rfc" class="form-label small fw-semibold">RFC (opcional)</label>
-                                <input type="text" id="nuevo_rfc" name="rfc" class="form-control form-control-sm text-uppercase font-monospace" minlength="12" maxlength="13" value="<?= esc(old('rfc')) ?>" placeholder="Ej. LOGM900101AB1">
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-end mt-3">
-                            <button type="submit" class="btn btn-success btn-sm" data-loading-text="Creando cuenta...">
-                                <i class="bi bi-person-plus me-1"></i>Crear cuenta y continuar
-                            </button>
-                        </div>
-                    <?= form_close() ?>
+                    <?= view('admin/solicitudes_presenciales/_alta_ciudadano', [
+                        'curp'   => $curp,
+                        'sufijo' => 'curp',
+                        'boton'  => 'Crear cuenta y continuar',
+                    ]) ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($avisoDuplicado !== ''): ?>
+                <div class="alert alert-warning mt-3">
+                    <div class="fw-semibold mb-1"><i class="bi bi-exclamation-triangle me-1"></i><?= esc($avisoDuplicado) ?></div>
+                    <p class="small mb-2">Revisa las coincidencias de abajo: si es la misma persona, selecciónala para conservar su historial y sus trámites. Si es alguien distinto, confirma el alta.</p>
+                    <?php if ($duplicadoNombre !== null): ?>
+                        <?= view('admin/solicitudes_presenciales/_alta_ciudadano', [
+                            'curp'      => '',
+                            'sufijo'    => 'duplicado',
+                            'confirmar' => true,
+                            'boton'     => 'Registrar de todos modos',
+                        ]) ?>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
 
@@ -139,9 +129,15 @@ $ciudadanoId = $ciudadano ? (int) $ciudadano->id : 0;
                     </div>
                 </form>
 
-                <?php if ($q !== '' && empty($ciudadanos)): ?>
-                    <div class="alert alert-warning py-2 small mt-2 mb-0">
-                        <i class="bi bi-exclamation-triangle me-1"></i>No se encontraron ciudadanos con "<strong><?= esc($q) ?></strong>". Pídele su CURP para buscarlo o darlo de alta.
+                <?php if ($q !== '' && empty($ciudadanos) && $duplicadoNombre === null): ?>
+                    <div class="border border-primary-subtle rounded-3 p-3 mt-2 bg-primary-subtle bg-opacity-25">
+                        <div class="fw-semibold small mb-1"><i class="bi bi-person-plus me-1 text-primary"></i>Nadie coincide con «<?= esc($q) ?>»</div>
+                        <p class="small text-muted mb-3">Dalo de alta con su nombre. La CURP es opcional: con ella se genera una cuenta con contraseña temporal; sin ella, el trámite queda a su nombre y podrá reclamar la cuenta después.</p>
+                        <?= view('admin/solicitudes_presenciales/_alta_ciudadano', [
+                            'curp'   => '',
+                            'sufijo' => 'nombre',
+                            'boton'  => 'Registrar y continuar',
+                        ]) ?>
                     </div>
                 <?php endif; ?>
             </details>
@@ -214,8 +210,9 @@ $ciudadanoId = $ciudadano ? (int) $ciudadano->id : 0;
     <div class="card-body py-2">
         <p class="small text-muted mb-0">
             <i class="bi bi-info-circle me-1"></i>
-            La CURP identifica al ciudadano y no puede repetirse entre cuentas. El ciudadano también puede crear su cuenta en línea en
-            <a href="/auth/register">/auth/register</a>; si ya lo hizo, aquí aparecerá al buscar su CURP.
+            La CURP identifica al ciudadano y no puede repetirse entre cuentas, pero es opcional: sin ella el trámite queda
+            a nombre de la persona y podrá reclamar su cuenta al registrarse en <a href="/auth/register">/auth/register</a>.
+            Si ya se registró en línea, aquí aparecerá al buscar su CURP o su nombre.
         </p>
     </div>
 </div>

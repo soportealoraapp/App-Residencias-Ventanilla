@@ -88,6 +88,10 @@ class AuthFormsRenderTest extends CIUnitTestCase
             'autocomplete' => 'current-password',
             'enterkeyhint' => 'go',
         ], 'password');
+
+        // Acceso rápido a la app de campo de los agentes de tránsito.
+        self::assertStringContainsString('href="/agentes"', $cuerpo);
+        self::assertStringContainsString('App de agentes', $cuerpo);
     }
 
     public function testElRegistroSigueIntegroYConSusCampos(): void

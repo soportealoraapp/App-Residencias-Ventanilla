@@ -176,6 +176,16 @@ class SolicitudPresencialController extends Controller
             unset($tramites['UR-TT-T-06']);
         }
 
+        // COB-08: aviso de homónimo que dejó el alta fallida y homónimo que se
+        // detecta al buscar por nombre, para ofrecer "usar este ciudadano".
+        $avisoDuplicado  = session()->getFlashdata('warning');
+        $duplicadoNombre = $q !== '' && $ciudadano === null
+            ? (new CuentaCiudadanoService())->nombreSimilar($q)
+            : null;
+        if ($duplicadoNombre !== null && ! is_string($avisoDuplicado)) {
+            $avisoDuplicado = 'Ya existe una persona registrada como «' . (string) ($duplicadoNombre->nombre_completo ?? '') . '».';
+        }
+
         return view('admin/solicitudes_presenciales/index', [
             'tramites'         => $tramites,
             'ciudadano'        => $ciudadano,
@@ -184,25 +194,47 @@ class SolicitudPresencialController extends Controller
             'curp'             => $curp,
             'curpNoEncontrada' => $curpNoEncontrada,
             'curpInactiva'     => $curpInactiva,
+            'avisoDuplicado'   => is_string($avisoDuplicado) ? $avisoDuplicado : '',
+            'duplicadoNombre'  => $duplicadoNombre,
         ]);
     }
 
     /**
-     * Alta rápida en ventanilla de un ciudadano sin cuenta, identificado por CURP.
+     * Alta rápida en ventanilla del ciudadano (COB-08).
+     *
+     * Solo el nombre y el apellido son obligatorios: la CURP es opcional. Con
+     * CURP se crea una cuenta con contraseña temporal, como antes; sin CURP la
+     * persona queda registrada sin acceso, como dueña de sus trámites, y podrá
+     * reclamar la cuenta registrándose en el portal con esa misma CURP.
+     *
+     * Antes de crear nada se avisa si ya existe un homónimo, para no partir en
+     * dos el historial de una misma persona; el alta procede si ventanilla
+     * confirma que se trata de alguien distinto (confirmar_duplicado=1).
+     *
      * Al terminar vuelve al paso 1 con el ciudadano ya seleccionado.
      */
     public function registrarCiudadano()
     {
         normalizar_campos_mayusculas($this->request, ['curp', 'rfc']);
-        $curp = (string) $this->request->getPost('curp');
-        $volver = '/admin/solicitudes/nueva?curp=' . rawurlencode($curp);
+
+        $curp      = CuentaCiudadanoService::normalizarCurp((string) $this->request->getPost('curp'));
+        $nombre    = trim((string) $this->request->getPost('nombre'));
+        $apellido  = trim((string) $this->request->getPost('apellido'));
+        $confirmar = (string) $this->request->getPost('confirmar_duplicado') === '1';
+        $completo  = trim($nombre . ' ' . $apellido);
+
+        // Si la validación falla se vuelve a la búsqueda que originó el alta: la
+        // CURP si se capturó, o el nombre para que ventanilla lo vea de nuevo.
+        $volver = $curp !== ''
+            ? '/admin/solicitudes/nueva?curp=' . rawurlencode($curp)
+            : '/admin/solicitudes/nueva?q=' . rawurlencode(mb_strtoupper($completo, 'UTF-8'));
 
         $rules = [
-            'curp'      => ['label' => 'CURP', 'rules' => 'required|exact_length[18]|regex_match[' . CuentaCiudadanoService::REGEX_CURP . ']|is_unique[users.curp]',
+            'curp'      => ['label' => 'CURP', 'rules' => 'permit_empty|exact_length[18]|regex_match[' . CuentaCiudadanoService::REGEX_CURP . ']|is_unique[users.curp]',
                             'errors' => ['is_unique' => 'Ya existe una cuenta con esta CURP; búscala de nuevo para seleccionarla.']],
             'nombre'    => ['label' => 'Nombre(s)', 'rules' => 'required|min_length[2]|max_length[90]'],
             'apellido'  => ['label' => 'Apellido(s)', 'rules' => 'required|min_length[2]|max_length[120]'],
-            'telefono'  => ['label' => 'Teléfono', 'rules' => 'required|min_length[7]|max_length[20]'],
+            'telefono'  => ['label' => 'Teléfono', 'rules' => 'permit_empty|min_length[7]|max_length[20]'],
             'email'     => ['label' => 'Correo electrónico', 'rules' => 'permit_empty|valid_email|max_length[255]|is_unique[users.email]'],
             'domicilio' => ['label' => 'Domicilio', 'rules' => 'permit_empty|max_length[250]'],
             'rfc'       => ['label' => 'RFC', 'rules' => 'permit_empty|min_length[12]|max_length[13]|regex_match[/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/]'],
@@ -211,24 +243,41 @@ class SolicitudPresencialController extends Controller
             return redirect()->to($volver)->withInput()->with('errors', $this->validator->getErrors());
         }
 
-        try {
-            $cuenta = (new CuentaCiudadanoService())->crear([
-                'curp'      => $curp,
-                'nombre'    => (string) $this->request->getPost('nombre'),
-                'apellido'  => (string) $this->request->getPost('apellido'),
-                'telefono'  => (string) $this->request->getPost('telefono'),
-                'email'     => (string) $this->request->getPost('email'),
-                'domicilio' => (string) $this->request->getPost('domicilio'),
-                'rfc'       => (string) $this->request->getPost('rfc'),
-            ], (int) session('user_id') ?: null);
-        } catch (\Throwable $e) {
-            log_message('error', 'Alta presencial de ciudadano: ' . $e->getMessage());
-            return redirect()->to($volver)->withInput()->with('error', 'No fue posible crear la cuenta del ciudadano. Intenta de nuevo.');
+        $servicio = new CuentaCiudadanoService();
+        $similar  = $servicio->nombreSimilar($completo);
+        if ($similar !== null && ! $confirmar) {
+            return redirect()->to('/admin/solicitudes/nueva?q=' . rawurlencode(mb_strtoupper($completo, 'UTF-8')))
+                ->withInput()
+                ->with('warning', 'Ya existe una persona registrada como «' . (string) ($similar->nombre_completo ?? '') . '». Si es la misma, selecciónala para conservar su historial; si es otra persona, confirma el alta.');
         }
 
-        return redirect()->to('/admin/solicitudes/nueva?ciudadano_id=' . $cuenta['id'])
-            ->with('message', 'Cuenta creada. Usuario: ' . $cuenta['username'] . ' · Contraseña temporal: ' . $cuenta['password']
-                . ' (entrégala al ciudadano; no se volverá a mostrar).');
+        $datos = [
+            'nombre'    => $nombre,
+            'apellido'  => $apellido,
+            'telefono'  => (string) $this->request->getPost('telefono'),
+            'email'     => (string) $this->request->getPost('email'),
+            'domicilio' => (string) $this->request->getPost('domicilio'),
+            'rfc'       => (string) $this->request->getPost('rfc'),
+        ];
+        $creadoPor = (int) session('user_id') ?: null;
+
+        try {
+            if ($curp !== '') {
+                $cuenta = $servicio->crear(['curp' => $curp] + $datos, $creadoPor);
+
+                return redirect()->to('/admin/solicitudes/nueva?ciudadano_id=' . $cuenta['id'])
+                    ->with('message', 'Cuenta creada. Usuario: ' . $cuenta['username'] . ' · Contraseña temporal: ' . $cuenta['password']
+                        . ' (entrégala al ciudadano; no se volverá a mostrar).');
+            }
+
+            $id = $servicio->crearSinAcceso($datos, $creadoPor);
+        } catch (\Throwable $e) {
+            log_message('error', 'Alta presencial de ciudadano: ' . $e->getMessage());
+            return redirect()->to($volver)->withInput()->with('error', 'No fue posible registrar al ciudadano. Intenta de nuevo.');
+        }
+
+        return redirect()->to('/admin/solicitudes/nueva?ciudadano_id=' . $id)
+            ->with('message', 'Ciudadano registrado sin cuenta de acceso. Su trámite queda a su nombre; puede reclamar la cuenta registrándose en el portal con su CURP.');
     }
 
     /**
