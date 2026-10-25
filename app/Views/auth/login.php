@@ -49,6 +49,9 @@
             <button type="button" class="auth-demo-chip" onclick="fillLogin('juez1', '12345678')">
                 <i class="bi bi-bank2 text-danger"></i> Juez calificador
             </button>
+            <a class="auth-demo-chip text-decoration-none" href="/agentes" target="_blank" rel="noopener" title="App de campo para agentes de tránsito">
+                <i class="bi bi-phone text-dark"></i> App de agentes
+            </a>
         </div>
     </div>
 

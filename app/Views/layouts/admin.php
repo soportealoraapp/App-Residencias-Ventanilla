@@ -182,6 +182,10 @@ $__tituloPagina = trim($this->renderSection('pageTitle', true));
 
         <?php if ($hayAppTransito): ?>
         <div class="sidebar-section-title mt-3">App Tránsito</div>
+        <a href="/agentes" target="_blank" rel="noopener" class="sidebar-link">
+            <i class="bi bi-phone me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Abrir app de campo</span>
+        </a>
         <?php if ($permitido('app_transito_config')): ?>
         <a href="/admin/app-transito" class="sidebar-link <?= uri_string() === 'admin/app-transito' ? 'active' : '' ?>">
             <i class="bi bi-sliders me-2 sidebar-link-icon"></i>

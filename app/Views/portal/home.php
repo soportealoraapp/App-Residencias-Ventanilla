@@ -17,7 +17,7 @@
         </div>
 
         <div class="row g-3 g-md-4 justify-content-center">
-            <div class="col-12 col-md-6 col-lg-5">
+            <div class="col-12 col-md-6 col-lg-4">
                 <div class="card tramite-card h-100 border-0 shadow-sm">
                     <div class="card-body p-4 p-md-5 d-flex flex-column justify-content-between">
                         <div>
@@ -34,7 +34,7 @@
                 </div>
             </div>
 
-            <div class="col-12 col-md-6 col-lg-5">
+            <div class="col-12 col-md-6 col-lg-4">
                 <div class="card tramite-card h-100 border-0 shadow-sm">
                     <div class="card-body p-4 p-md-5 d-flex flex-column justify-content-between">
                         <div>
@@ -46,6 +46,23 @@
                         </div>
                         <a href="/auth/register" class="btn btn-primary btn-lg w-100 shadow-sm">
                             <i class="bi bi-person-plus me-2"></i>Crear mi cuenta
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card tramite-card h-100 border-0 shadow-sm">
+                    <div class="card-body p-4 p-md-5 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="bg-dark bg-opacity-10 d-inline-flex p-3 rounded-3 mb-3 text-dark">
+                                <i class="bi bi-phone fs-2"></i>
+                            </div>
+                            <h3 class="card-title h4 mb-2">Agentes de tránsito</h3>
+                            <p class="text-muted small mb-4">Acceso para el personal operativo: levanta boletas de infracción desde el teléfono y sincronízalas con la ventanilla.</p>
+                        </div>
+                        <a href="/agentes" target="_blank" rel="noopener" class="btn btn-dark btn-lg w-100 shadow-sm">
+                            <i class="bi bi-phone me-2"></i>Abrir app de agentes
                         </a>
                     </div>
                 </div>
