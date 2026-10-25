@@ -175,6 +175,14 @@ $puedePagar = $solicitud->estatus === 'Pago pendiente';
                     <div class="fw-bold text-primary fs-2"><?= formatear_dinero((float)$solicitud->monto) ?></div>
                 </div>
 
+                <?php if ((float) $solicitud->monto > 0): ?>
+                <div class="d-grid mb-3">
+                    <a href="<?= site_url('documentos/hoja-pago/solicitud/' . $solicitud->folio) ?>" target="_blank" rel="noopener" class="btn btn-outline-primary">
+                        <i class="bi bi-printer me-1"></i>Hoja de pago imprimible
+                    </a>
+                </div>
+                <?php endif; ?>
+
                 <div class="d-flex align-items-center p-3 border rounded mb-3 bg-warning-subtle">
                     <i class="bi bi-shield-lock fs-3 text-warning me-3"></i>
                     <div class="small">

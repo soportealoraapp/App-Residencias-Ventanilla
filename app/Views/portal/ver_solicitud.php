@@ -70,7 +70,12 @@ $tipoLabels = ['particular' => 'Particular', 'empresa' => 'Empresa', 'fisica' =>
             </ol>
         </nav>
     </div>
-    <div class="col-12 col-md-4 text-md-end mb-2 mb-md-0 d-flex gap-2 justify-content-md-end">
+    <div class="col-12 col-md-4 text-md-end mb-2 mb-md-0 d-flex flex-wrap gap-2 justify-content-md-end">
+        <?php if ((float) $solicitud->monto > 0): ?>
+            <a href="<?= site_url('documentos/hoja-pago/solicitud/' . $solicitud->folio) ?>" target="_blank" rel="noopener" class="btn btn-sm btn-success">
+                <i class="bi bi-receipt me-1"></i>Hoja de pago
+            </a>
+        <?php endif ?>
         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
             <i class="bi bi-printer me-1"></i>Imprimir
         </button>

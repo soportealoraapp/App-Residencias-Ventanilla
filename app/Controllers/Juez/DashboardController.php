@@ -6,14 +6,27 @@ use CodeIgniter\Controller;
 use App\Libraries\CalificacionBoletaException;
 use App\Libraries\CalificarBoletaService;
 use App\Models\BoletaInfraccionModel;
+use App\Models\CobroModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 class DashboardController extends Controller
 {
     public function index()
     {
+        // COB-05: cobros de multa pendientes de pago, con el folio de su boleta,
+        // para imprimir la hoja de ayuda sin salir del panel del juez.
+        $cobrosPendientes = (new CobroModel())
+            ->select('cobros.id, cobros.folio, cobros.boleta_id, cobros.nombre_pagador, cobros.total, cobros.created_at, boletas_infracciones.folio AS boleta_folio', false)
+            ->join('boletas_infracciones', 'boletas_infracciones.id = cobros.boleta_id', 'left')
+            ->where('cobros.origen', 'boleta')
+            ->where('cobros.estatus', 'pendiente')
+            ->orderBy('cobros.id', 'DESC')
+            ->limit(10)
+            ->findAll();
+
         return view('juez/dashboard', [
-            'pendientes' => (new BoletaInfraccionModel())->where('estado', 'recibida')->countAllResults(),
+            'pendientes'       => (new BoletaInfraccionModel())->where('estado', 'recibida')->countAllResults(),
+            'cobrosPendientes' => $cobrosPendientes,
         ]);
     }
 

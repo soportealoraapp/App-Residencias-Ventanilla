@@ -131,7 +131,16 @@ $claveEtiquetas = [
                     <dt class="col-sm-4">Fecha resolución</dt>
                     <dd class="col-sm-8"><?= formatear_fecha($solicitud->fecha_resolucion ?? null) ?></dd>
                     <dt class="col-sm-4">Monto</dt>
-                    <dd class="col-sm-8 fw-bold fs-5"><?= formatear_dinero((float)$solicitud->monto) ?></dd>
+                    <dd class="col-sm-8 fw-bold fs-5">
+                        <?= formatear_dinero((float)$solicitud->monto) ?>
+                        <?php if ((float) $solicitud->monto > 0): ?>
+                            <a href="<?= site_url('documentos/hoja-pago/solicitud/' . $solicitud->folio) ?>" target="_blank" rel="noopener"
+                               class="btn btn-sm btn-outline-primary fw-normal align-middle ms-2"
+                               title="Hoja imprimible con el desglose y dónde pagar">
+                                <i class="bi bi-printer me-1" aria-hidden="true"></i>Hoja de pago
+                            </a>
+                        <?php endif ?>
+                    </dd>
                     <dt class="col-sm-4">Estatus</dt>
                     <dd class="col-sm-8">
                         <a href="<?= $urlSolicitudes(['estatus' => (string) $solicitud->estatus]) ?>" class="text-decoration-none" title="Ver todas las solicitudes en este estatus">

@@ -53,6 +53,14 @@ $routes->group('juez', ['filter' => 'auth'], static function ($routes) {
     });
 });
 
+// Documentos de apoyo al pago (COB-05). La hoja se imprime desde el panel, el
+// portal y el panel del juez; la ruta solo exige sesión y el permiso fino lo
+// resuelve el controlador (cada ciudadano ve únicamente sus trámites).
+$routes->group('documentos', ['filter' => 'auth'], static function ($routes) {
+    $routes->get('hoja-pago/solicitud/(:segment)', 'DocumentosPagoController::hojaPagoSolicitud/$1', ['as' => 'documentos.hoja_pago_solicitud']);
+    $routes->get('hoja-pago/boleta/(:num)', 'DocumentosPagoController::hojaPagoBoleta/$1', ['as' => 'documentos.hoja_pago_boleta']);
+});
+
 $routes->group('admin', ['filter' => 'auth'], function($routes) {
     $routes->group('', ['filter' => 'role:administrador,operador_ventanilla'], function($routes) {
         $routes->get('dashboard', 'Admin\\AdminController::dashboard', ['as' => 'admin.dashboard']);
