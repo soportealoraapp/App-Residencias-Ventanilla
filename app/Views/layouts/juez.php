@@ -32,7 +32,7 @@
             <i class="bi bi-speedometer2 me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Inicio</span>
         </a>
-        <a href="/juez/boletas" class="sidebar-link <?= uri_string() === 'juez/boletas' ? 'active' : '' ?>">
+        <a href="/juez/boletas" class="sidebar-link <?= str_starts_with(uri_string(), 'juez/boletas') ? 'active' : '' ?>">
             <i class="bi bi-receipt-cutoff me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Boletas por calificar</span>
         </a>
@@ -75,7 +75,7 @@
     <a href="/juez" class="admin-bottom-item <?= uri_string() === 'juez' ? 'active' : '' ?>">
         <i class="bi bi-speedometer2" aria-hidden="true"></i><span>Inicio</span>
     </a>
-    <a href="/juez/boletas" class="admin-bottom-item <?= uri_string() === 'juez/boletas' ? 'active' : '' ?>">
+    <a href="/juez/boletas" class="admin-bottom-item <?= str_starts_with(uri_string(), 'juez/boletas') ? 'active' : '' ?>">
         <i class="bi bi-receipt-cutoff" aria-hidden="true"></i><span>Boletas</span>
     </a>
     <button type="button" class="admin-bottom-item" id="btnBottomMenu" aria-controls="sidebarAdmin" aria-expanded="false">

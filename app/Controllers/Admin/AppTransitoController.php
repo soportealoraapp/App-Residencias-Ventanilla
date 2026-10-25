@@ -14,6 +14,7 @@ class AppTransitoController extends Controller
     private const ESTADOS_BOLETA = [
         'recibida'  => 'Recibida',
         'procesada' => 'Procesada',
+        'calificada' => 'Calificada',
         'pagada'    => 'Pagada',
         'cancelada' => 'Cancelada',
         'archivada' => 'Archivada',
@@ -330,6 +331,12 @@ class AppTransitoController extends Controller
             return redirect()->to(site_url('admin/app-transito/boletas'))->with('errors', ['Boleta no encontrada.']);
         }
 
+        // COB-10 no contempla edición ni recalificación. La información ya
+        // confirmada solo cambia por los servicios de cobro definidos para ello.
+        if ((string) $boleta->estado === 'calificada') {
+            return redirect()->to(site_url('admin/app-transito/boletas'))
+                ->with('errors', ['Una boleta calificada no puede editarse ni recalificarse.']);
+        }
         $rules = [
             'estado'              => ['label' => 'Estado', 'rules' => 'required|in_list[' . implode(',', array_keys(self::ESTADOS_BOLETA)) . ']'],
             'fecha_infraccion'    => ['label' => 'Fecha', 'rules' => 'required|valid_date[Y-m-d]'],

@@ -89,6 +89,77 @@ class ResolverMontoInfraccionService
     }
 
     /**
+     * Calcula una selección judicial usando los rangos históricos de la boleta.
+     * Cada subtotal se redondea a centavos antes de sumarse al monto base.
+     *
+     * @param list<array<string,mixed>> $faltas
+     * @param array<int,int|float|string> $seleccionesUma
+     */
+    public function calcularCalificacion(array $faltas, array $seleccionesUma): array
+    {
+        if ($faltas === []) {
+            throw new RuntimeException('La boleta no contiene faltas válidas para calificar.');
+        }
+        $indicesEsperados = range(0, count($faltas) - 1);
+        $indicesRecibidos = array_map('intval', array_keys($seleccionesUma));
+        sort($indicesRecibidos);
+        if ($indicesRecibidos !== $indicesEsperados || count($seleccionesUma) !== count($faltas)) {
+            throw new RuntimeException('Debe asignar exactamente un valor UMA a cada falta.');
+        }
+
+        $valorUmaStr = $this->parametroModel->getValor('valor_uma_vigente');
+        if ($valorUmaStr === null || ! is_numeric($valorUmaStr) || (float) $valorUmaStr <= 0) {
+            throw new RuntimeException("El parámetro de sistema 'valor_uma_vigente' no está configurado o no es numérico.");
+        }
+        $valorUma = round((float) $valorUmaStr, 2);
+        $detalles = [];
+        $totalUma = 0.0;
+        $montoBase = 0.0;
+
+        foreach ($faltas as $indice => $falta) {
+            if (! is_array($falta)) {
+                throw new RuntimeException('La información histórica de una falta está dañada.');
+            }
+            $fundamento = trim((string) ($falta['fundamentoLegal'] ?? $falta['fundamento_legal'] ?? ''));
+            $descripcion = trim((string) ($falta['descripcion'] ?? $falta['descripcion_oficial'] ?? ''));
+            $categoria = trim((string) ($falta['categoria'] ?? $falta['categoria_actor'] ?? ''));
+            $minimo = $falta['montoMinUma'] ?? $falta['monto_min_uma'] ?? null;
+            $maximo = $falta['montoMaxUma'] ?? $falta['monto_max_uma'] ?? null;
+            if ($fundamento === '' || ! is_numeric($minimo) || ! is_numeric($maximo)) {
+                throw new RuntimeException('La información histórica de una falta está incompleta.');
+            }
+            $minimo = round((float) $minimo, 2);
+            $maximo = round((float) $maximo, 2);
+            if ($minimo < 0 || $maximo < $minimo) {
+                throw new RuntimeException('La información histórica contiene un rango UMA inválido.');
+            }
+            $seleccion = $seleccionesUma[$indice] ?? null;
+            $seleccionTexto = is_scalar($seleccion) ? trim((string) $seleccion) : '';
+            if (! preg_match('/^\d+(?:\.\d{1,2})?$/', $seleccionTexto)) {
+                throw new RuntimeException('Cada falta requiere un valor UMA con máximo dos decimales.');
+            }
+            $uma = (float) $seleccionTexto;
+            if ($uma < $minimo || $uma > $maximo) {
+                throw new RuntimeException(sprintf('La UMA asignada a %s debe estar entre %.2f y %.2f.', $fundamento, $minimo, $maximo));
+            }
+            $subtotal = round($uma * $valorUma, 2);
+            $totalUma = round($totalUma + $uma, 2);
+            $montoBase = round($montoBase + $subtotal, 2);
+            $detalles[] = [
+                'orden' => $indice + 1,
+                'falta_id_origen' => isset($falta['id']) ? (string) $falta['id'] : null,
+                'fundamento_legal' => $fundamento,
+                'descripcion' => $descripcion,
+                'categoria' => $categoria,
+                'monto_min_uma' => $minimo,
+                'monto_max_uma' => $maximo,
+                'uma_asignada' => $uma,
+                'subtotal_pesos' => $subtotal,
+            ];
+        }
+        return ['valor_uma' => $valorUma, 'total_uma' => $totalUma, 'monto_base' => $montoBase, 'detalles' => $detalles];
+    }
+    /**
      * Calcula el monto final a pagar aplicando descuento por pronto pago o recargo por mora.
      *
      * REGLAS DE NEGOCIO:

@@ -146,11 +146,11 @@ class JuezCalificadorAccessTest extends DatabaseTestCase
         $inicio = $this->como('juez_calificador')->get('/juez');
         $inicio->assertOK();
         $inicio->assertSee('Inicio del juez calificador');
-        $inicio->assertSee('Criterio de calificación pendiente');
+        $inicio->assertSee('Boletas por calificar');
 
         $boletas = $this->como('juez_calificador')->get('/juez/boletas');
         $boletas->assertOK();
-        $boletas->assertSee('No hay un criterio verificable');
+        $boletas->assertSee('No hay boletas recibidas pendientes de calificación.');
         $boletas->assertDontSee('Editar');
         $boletas->assertDontSee('Eliminar');
     }
@@ -173,7 +173,7 @@ class JuezCalificadorAccessTest extends DatabaseTestCase
         $this->como('operador_ventanilla')->get('/admin/dashboard')->assertOK();
     }
 
-    public function testRutasDelJuezNoOfrecenMetodosDeEscrituraNiCambianBoletas(): void
+    public function testConsultasDelJuezNoCambianBoletasYLaEscrituraEstaProtegida(): void
     {
         $this->db->table('boletas_infracciones')->insert([
             'folio'             => 'COB09-LECTURA-001',
@@ -187,12 +187,52 @@ class JuezCalificadorAccessTest extends DatabaseTestCase
 
         $this->como('juez_calificador')->get('/juez');
         $this->como('juez_calificador')->get('/juez/boletas');
-        $this->assertArrayNotHasKey('juez/boletas', service('routes')->getRoutes('POST'));
+        $rutasPost = array_keys(service('routes')->getRoutes('POST'));
+        $this->assertNotEmpty(array_filter($rutasPost, static fn (string $ruta): bool => str_contains($ruta, 'juez/boletas') && str_contains($ruta, 'calificar')));
+        $this->como('ciudadano')->post('/juez/boletas/' . $antes['id'] . '/calificar', [])->assertRedirectTo('/');
 
         $despues = $this->db->table('boletas_infracciones')->where('folio', 'COB09-LECTURA-001')->get()->getRowArray();
         $this->assertSame($antes, $despues);
     }
 
+    public function testJuezPuedeVerDetalleYCalificarBoletaRecibida(): void
+    {
+        $faltas = [[
+            'id' => 'f1', 'fundamentoLegal' => 'Art. 10', 'descripcion' => 'Falta de prueba',
+            'categoria' => 'GENERAL', 'montoMinUma' => 2, 'montoMaxUma' => 4,
+        ]];
+        $this->db->table('parametros_sistema')->where('clave', 'valor_uma_vigente')->delete();
+        $this->db->table('parametros_sistema')->insert(['clave' => 'valor_uma_vigente', 'valor' => '117.31']);
+        $this->db->table('boletas_infracciones')->insert([
+            'folio' => 'COB10-WEB-001', 'agente_placa' => 'TEST-01', 'fecha_infraccion' => '2026-10-23',
+            'hora_infraccion' => '10:00:00', 'lugar' => 'Lugar de prueba',
+            'faltas_json' => json_encode($faltas), 'estado' => 'recibida',
+        ]);
+        $id = (int) $this->db->insertID();
+
+        $detalle = $this->como('juez_calificador')->get('/juez/boletas/' . $id);
+        $detalle->assertOK();
+        $detalle->assertSee('Falta de prueba');
+        $detalle->assertSee('Confirmar calificación');
+        $this->como('ciudadano')->post('/juez/boletas/' . $id . '/calificar', [
+            'nombre_infractor' => 'Intento denegado', 'uma' => ['2'],
+        ])->assertRedirectTo('/');
+        $this->assertSame(0, $this->db->table('boleta_calificaciones')->where('boleta_id', $id)->countAllResults());
+
+        $previa = $this->como('juez_calificador')->post('/juez/boletas/' . $id . '/vista-previa', [
+            'nombre_infractor' => 'Persona Calificada', 'uma' => ['3'],
+        ]);
+        $previa->assertOK();
+        $previa->assertSee('Vista previa');
+        $previa->assertSee('$351.93');
+        $this->como('juez_calificador')->post('/juez/boletas/' . $id . '/calificar', [
+            'nombre_infractor' => 'Persona Calificada', 'uma' => ['3'],
+        ])->assertRedirectTo('/juez/boletas');
+        $this->assertSame('calificada', $this->db->table('boletas_infracciones')->where('id', $id)->get()->getRow()->estado);
+        $this->assertSame(1, $this->db->table('cobros')->where('boleta_id', $id)->countAllResults());
+        $this->como('administrador')->post('/admin/app-transito/boletas/actualizar/' . $id, [])->assertRedirectTo('/admin/app-transito/boletas');
+        $this->assertSame('calificada', $this->db->table('boletas_infracciones')->where('id', $id)->get()->getRow()->estado);
+    }
     public function testAdministradorPuedeCrearCuentaDeJuezYOperadorNoPuede(): void
     {
         $datos = [

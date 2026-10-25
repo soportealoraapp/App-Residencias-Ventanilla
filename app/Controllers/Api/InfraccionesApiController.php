@@ -299,13 +299,25 @@ class InfraccionesApiController extends Controller
                 'foto_placa_url'        => $b['foto_placa_url'] ?? null,
                 'foto_contexto_url'     => $b['foto_contexto_url'] ?? null,
                 'foto_documento_url'    => $b['foto_documento_url'] ?? null,
-                'estado'                => $b['estado'] ?? 'recibida',
+                // El estado administrativo lo controla el servidor, no la app.
+                'estado'                => 'recibida',
                 'sincronizado_en'       => date('Y-m-d H:i:s'),
                 'creado_en_dispositivo' => $b['creado_en_dispositivo'] ?? date('Y-m-d H:i:s'),
             ];
 
             $existente = $boletaModel->where('folio', $folio)->first();
             if ($existente !== null) {
+                // Una resincronización puede completar datos operativos o fotografías,
+                // pero no revierte ni recalcula información ya confirmada por el juez.
+                if ((string) $existente->estado !== 'recibida') {
+                    foreach ([
+                        'estado', 'fecha_infraccion', 'infractor_nombre',
+                        'falta_fundamento_legal', 'falta_descripcion', 'falta_categoria',
+                        'falta_monto_min_uma', 'falta_monto_max_uma', 'faltas_json',
+                    ] as $campoProtegido) {
+                        unset($data[$campoProtegido]);
+                    }
+                }
                 $boletaModel->update($existente->id, $data);
             } else {
                 $boletaModel->insert($data);

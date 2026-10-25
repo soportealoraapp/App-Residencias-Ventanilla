@@ -47,6 +47,9 @@ $routes->group('juez', ['filter' => 'auth'], static function ($routes) {
     $routes->group('', ['filter' => 'role:juez_calificador'], static function ($routes) {
         $routes->get('', 'Juez\DashboardController::index', ['as' => 'juez.inicio']);
         $routes->get('boletas', 'Juez\DashboardController::boletas', ['as' => 'juez.boletas']);
+        $routes->get('boletas/(:num)', 'Juez\DashboardController::detalle/$1', ['as' => 'juez.boleta']);
+        $routes->post('boletas/(:num)/vista-previa', 'Juez\DashboardController::vistaPrevia/$1', ['as' => 'juez.boleta.previa']);
+        $routes->post('boletas/(:num)/calificar', 'Juez\DashboardController::calificar/$1', ['as' => 'juez.boleta.calificar']);
     });
 });
 

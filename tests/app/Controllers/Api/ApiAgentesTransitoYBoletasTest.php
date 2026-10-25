@@ -299,6 +299,53 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
         $this->assertSame('Oficial de Prueba', $guardada->agente_nombre);
     }
 
+    public function testSincronizar_NoRevierteEstadoNiDatosConfirmadosPorJuez(): void
+    {
+        $folio = 'FOLIO-CALIFICADA-' . bin2hex(random_bytes(4));
+        $original = $this->boleta($folio, 'AGT-TEST-1', 'Lugar original');
+        $original['faltas_json'] = [[
+            'id' => 'f1', 'fundamentoLegal' => 'Art. original', 'descripcion' => 'Original',
+            'categoria' => 'GENERAL', 'montoMinUma' => '2', 'montoMaxUma' => '4',
+        ]];
+        $token = $this->loginToken();
+        $this->withHeaders(['Authorization' => 'Bearer ' . $token])->withBodyFormat('json')
+            ->post('api/infracciones/sincronizar', $original)->assertStatus(200);
+
+        $model = new BoletaInfraccionModel();
+        $guardada = $model->where('folio', $folio)->first();
+        $model->update($guardada->id, [
+            'estado' => 'calificada', 'infractor_nombre' => 'Nombre confirmado',
+            'fecha_infraccion' => '2026-10-10', 'falta_fundamento_legal' => 'Art. confirmado',
+            'faltas_json' => json_encode($original['faltas_json']),
+        ]);
+
+        $reenvio = $original;
+        $reenvio['estado'] = 'recibida';
+        $reenvio['infractor_nombre'] = 'Nombre móvil';
+        $reenvio['fecha_infraccion'] = '2026-10-24';
+        $reenvio['falta_fundamento_legal'] = 'Art. móvil';
+        $reenvio['faltas_json'][0]['montoMaxUma'] = '99';
+        $reenvio['lugar'] = 'Lugar completado por resincronización';
+        $this->withHeaders(['Authorization' => 'Bearer ' . $token])->withBodyFormat('json')
+            ->post('api/infracciones/sincronizar', $reenvio)->assertStatus(200);
+
+        $actual = $model->where('folio', $folio)->first();
+        $this->assertSame('calificada', $actual->estado);
+        $this->assertSame('Nombre confirmado', $actual->infractor_nombre);
+        $this->assertSame('2026-10-10', $actual->fecha_infraccion);
+        $this->assertSame('Art. confirmado', $actual->falta_fundamento_legal);
+        $this->assertStringNotContainsString('99', (string) $actual->faltas_json);
+        $this->assertSame('Lugar completado por resincronización', $actual->lugar);
+    }
+
+    public function testSincronizar_IgnoraEstadoAdministrativoEnBoletaNueva(): void
+    {
+        $payload = $this->boleta('FOLIO-ESTADO-SERVIDOR', 'AGT-TEST-1');
+        $payload['estado'] = 'pagada';
+        $this->withHeaders(['Authorization' => 'Bearer ' . $this->loginToken()])->withBodyFormat('json')
+            ->post('api/infracciones/sincronizar', $payload)->assertStatus(200);
+        $this->assertSame('recibida', (new BoletaInfraccionModel())->where('folio', 'FOLIO-ESTADO-SERVIDOR')->first()->estado);
+    }
     public function testEvidencias_SinToken_Retorna401(): void
     {
         $response = $this->withBodyFormat('json')->post('api/infracciones/evidencias', [
