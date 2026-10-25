@@ -27,7 +27,11 @@ El ecosistema digital integra tres ramas de desarrollo comunicadas a través de 
 2. **Portal Ciudadano y Panel Administrativo Web:**
    * **Portal Ciudadano (`/portal/`):** Plataforma web responsiva donde los ciudadanos y concesionarios gestionan los 7 trámites oficiales (UR-TT-T-01 al UR-TT-T-07), consultan expedientes y realizan pagos en línea simulados. El ciudadano **se autorregistra** sin intermediarios.
    * **Panel Administrativo (`/admin/`):** Consola para funcionarios municipales con control de acceso por roles (`administrador`, `operador_ventanilla`) y **permisos configurables por sección**, tableros analíticos en tiempo real, validación de expedientes con comentarios obligatorios, **radicación presencial de solicitudes para el ciudadano que acude a ventanilla**, padrón inmutable de auditoría y gestión de catálogos (tarifas, concesiones, **convocatorias con CRUD completo y publicación de bases**, formatos y cuentas de usuario). Ninguna concesión ni convocatoria con expedientes vinculados puede borrarse: se da de baja cambiando su estatus, para que el historial del ciudadano sobreviva.
+   * **Panel del Juez Calificador (`/juez/`):** Vista de solo lectura para el rol `juez_calificador` con la bandeja de boletas de infracción, su calificación y la **mesa de cobros pendientes** (folio de recibo, monto, descuento o recargo aplicado y lugar de pago).
+   * **Módulo de cobros:** cada solicitud o boleta en firme genera un **cobro** con folio propio (`COB-AAAA-NNNNNN`), su historial de movimientos (`REC-AAAA-NNNNNN`) y marca de pago efectivo; el sistema conserva ambos folios en lugar de sobrescribir el registro. Desde la solicitud, la boleta y el portal se imprime la **hoja de ayuda para el pago** (COB-05).
 3. **App Móvil para Agentes de Tránsito (`/agentes/`):** Aplicación desarrollada con Expo SDK 57 / React Native / TypeScript, utilizable en dispositivos móviles o vía Web SPA. Diseñada para operación *Offline-First*, cálculo automático de multas en UMA, captura fotográfica geolocalizada y sincronización directa con Supabase.
+
+> **Acceso rápido a la app de campo:** además de la URL directa, el enlace `/agentes` está disponible en la pantalla de acceso (`/auth/login`), en la portada pública y en el primer renglón de la sección *App Tránsito* de la barra lateral del panel. Abre en pestaña nueva porque la SPA conserva su propia sesión de agente.
 
 ---
 
@@ -42,7 +46,7 @@ El ecosistema digital integra tres ramas de desarrollo comunicadas a través de 
 | **Frontend Web** | Bootstrap 5.3.2, Bootstrap Icons 1.11.1, Plus Jakarta Sans, CSS *mobile-first* con design tokens |
 | **App Móvil & SPA** | React Native 0.86, Expo SDK 57, TypeScript, AsyncStorage, `@supabase/supabase-js` |
 | **Despliegue & Cloud** | Vercel Serverless (`vercel-php@0.7.4`), CI/CD automatizado vía Git |
-| **Pruebas** | PHPUnit 10.5 (247 casos / 931 aserciones en 27 clases) sobre harness SQLite aislado; verificador propio de la app (`node tests/auth-flow.test.cjs`, 18 casos) |
+| **Pruebas** | PHPUnit 10.5 (347 casos / 1358 aserciones en 37 clases) sobre harness SQLite aislado; verificador propio de la app (`node tests/auth-flow.test.cjs`, 18 casos) |
 
 ---
 
@@ -123,6 +127,9 @@ npx expo start -c
 | `admin@uriangato.gob.mx` | `administrador` | Panel Administrativo (`/admin/`) |
 | `operador1@uriangato.gob.mx` | `operador_ventanilla` | Panel Administrativo (`/admin/`) |
 | `ciudadano@example.com` | `ciudadano` | Portal Ciudadano (`/portal/`) |
+| `juez1@uriangato.gob.mx` | `juez_calificador` | Panel del Juez (`/juez/`) |
+
+> La cuenta `juez1` (usuario `juez1`) la siembra `UsuariosDemoSeeder` y solo consulta: **calificar y cobrar son actos distintos**. El juez califica boletas; el cobro lo registra ventanilla o el módulo de cobros.
 
 > **El ciudadano se autorregistra** en el portal ([`/auth/register`](http://localhost:8080/auth/register) — también funciona el atajo corto [`/register`](http://localhost:8080/register)); el sistema solo produce cuentas con rol `ciudadano`.
 >
@@ -165,7 +172,9 @@ Para ejecutar la suite de pruebas unitarias y de integración:
 ```
 En Windows, si `php` no está en el PATH: `./php82/php.exe vendor/bin/phpunit`.
 
-Las pruebas (**247 casos / 931 aserciones / 27 clases**) cubren: control de acceso por rol, permisos configurables del operador, validaciones de los 7 trámites, cálculo dinámico de tarifas (incluido el monto por camiones de UR-07), reglas de transición de la máquina de estados, radicación presencial, trazas de auditoría e historial, endpoints REST de agentes, el blindaje del almacenamiento local (firma HMAC, caducidad y rechazo de travesía de ruta), el **desglose navegable del tablero**, el **CRUD de convocatorias**, el **candado que impide borrar concesiones o convocatorias con expedientes vinculados**, el **cotejo de los 133 enlaces literales de las vistas contra el mapa de rutas real** y el **barrido de renderizado de vistas** (que el HTML producido lleve título, cabecera y el número correcto de filas).
+Las pruebas (**347 casos / 1358 aserciones / 37 clases**) cubren: control de acceso por rol, permisos configurables del operador, validaciones de los 7 trámites, cálculo dinámico de tarifas (incluido el monto por camiones de UR-07), reglas de transición de la máquina de estados, radicación presencial, trazas de auditoría e historial, endpoints REST de agentes, el blindaje del almacenamiento local (firma HMAC, caducidad y rechazo de travesía de ruta), el **desglose navegable del tablero**, el **CRUD de convocatorias**, el **candado que impide borrar concesiones o convocatorias con expedientes vinculados**, el **cotejo de los 133 enlaces literales de las vistas contra el mapa de rutas real** y el **barrido de renderizado de vistas** (que el HTML producido lleve título, cabecera y el número correcto de filas).
+
+Del corte de cobros se suman: **alta de ciudadano sin acceso** (solo nombre, CURP opcional, aviso de homónimos y reclamo posterior de la cuenta desde el autorregistro), la **hoja de pago** (cálculo con descuento por pronto pago o recargo, condonaciones y permiso fino: el ciudadano solo imprime lo suyo y nunca multas) y la **presencia del acceso a `/agentes`** en login, portada y panel.
 
 La suite corre contra **SQLite en memoria** con prefijo `db_`, nunca contra la base institucional. Requiere que las migraciones estén aplicadas (`php spark migrate`).
 

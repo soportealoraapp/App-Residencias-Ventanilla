@@ -100,12 +100,16 @@ graph TD
 │   │   ├── PortalController.php             # Dashboard, mis solicitudes, expediente, perfil
 │   │   ├── TramitesController.php           # Catálogo de trámites y API de radicación
 │   │   └── Tramite*Controller.php           # Un controlador por trámite (UR-TT-T-01 a 07)
+│   ├── Juez/                  # Panel del juez calificador (solo lectura)
+│   │   └── DashboardController.php          # Bandeja de boletas, calificación y cobros pendientes
+│   ├── DocumentosPagoController.php         # Hoja de pago imprimible de trámites y multas (COB-05)
 │   ├── ArchivosLocalesController.php        # Sirve el almacenamiento local con URL firmada
 │   ├── AuthController.php      # Autenticación, registro, recuperación y cierre de sesión
 │   └── Home.php                 # Portada de ventanilla única (redirige según sesión)
 ├── Database/
-│   ├── Migrations/             # 24 migraciones Spark (la 000024 cambia la FK a RESTRICT)
-│   └── Seeds/                  # 9 semillas: roles, usuarios demo, tarifas, concesiones,
+│   ├── Migrations/             # 30 migraciones Spark (la 000024 cambia la FK a RESTRICT;
+│   │                           # 000027 a 000030: cobros, rol del juez, calificación y acceso opcional)
+│   └── Seeds/                  # 11 semillas: roles, usuarios demo, tarifas, concesiones,
 │                               # convocatorias, catálogo de infracciones, boletas y agentes
 ├── Entities/
 │   └── Solicitud.php            # Entidad del expediente maestro
@@ -121,33 +125,41 @@ graph TD
 │   └── PaymentGatewayInterface.php # Contrato de pasarela de pago (implementa el mock)
 ├── Language/es/
 │   └── Validation.php            # Mensajes de validación en español
-├── Libraries/                    # 11 servicios de negocio
+├── Libraries/                    # 17 archivos: 15 servicios y 2 excepciones de dominio
 │   ├── AgenteTokenService.php     # Emisión y caducidad de tokens de la app móvil
 │   ├── BanbajioMockGateway.php    # Pasarela de pago simulada para el flujo de pruebas
+│   ├── CalificacionBoletaException.php # Rechazo de una calificación inválida
+│   ├── CalificarBoletaService.php # Calificación de boletas con desglose en UMA (COB-10)
+│   ├── CobroException.php         # Rechazo de un movimiento de cobro inválido
+│   ├── CobroService.php           # Alta, cobro, condonación y cancelación de cobros (COB-01)
+│   ├── CuentaCiudadanoService.php # Alta de ciudadanos, cuenta sin acceso y reclamo (COB-08)
 │   ├── DesgloseSistema.php        # Agregación de métricas del desglose del tablero
 │   ├── DocumentoUploader.php      # Validación de subida (tamaño, MIME, errores de PHP)
 │   ├── EstadoSolicitudService.php # Máquina de estados y reglas de transición
 │   ├── FeatureFlags.php           # Flags de activación de trámites (ej. UR-TT-T-06)
 │   ├── FolioGenerator.php         # Folio institucional único
+│   ├── HojaPagoService.php         # Datos de la hoja de ayuda para el pago (COB-05)
 │   ├── PermisosOperador.php       # Catálogo de secciones y resolución por prefijo
 │   ├── ResolverMontoInfraccionService.php # Cálculo del monto de infracción en UMA
 │   ├── SupabaseStorage.php         # Fachada nube/local con firma HMAC-SHA256
 │   └── TarifarioService.php        # Cálculo dinámico de costos y conversión en UMA
-├── Models/                         # 20 modelos relacionales
+├── Models/                         # 24 modelos relacionales
 │   ├── SolicitudModel.php          # Maestro de solicitudes y generación de folios
 │   ├── SolicitudDatoModel.php      # Datos específicos de trámite (almacenamiento EAV)
 │   ├── DocumentoModel.php          # Metadatos de expedientes y hash SHA-256
 │   ├── HistorialEstatusModel.php   # Historial inmutable de estados de trámite
 │   ├── ConvocatoriaModel.php       # T-01: ventanas de registro, estatus y postulaciones
 │   ├── ConcesionModel.php          # Padrón de títulos de concesión
-│   ├── UserModel.php / RoleModel.php # Cuentas y los tres roles del sistema
+│   ├── UserModel.php / RoleModel.php # Cuentas y los cuatro roles del sistema
 │   ├── AgenteTransitoModel.php / AgenteTokenModel.php # Oficiales y sus tokens
 │   ├── BoletaInfraccionModel.php / BoletaChecklistItemModel.php # Boletas y checklist
 │   ├── CatalogoInfraccionModel.php / CatalogoInfraccionAppModel.php # Tipificación del reglamento
+│   ├── CobroModel.php / CobroMovimientoModel.php # Cobros vigentes (COB/REC) y su bitácora
+│   ├── BoletaCalificacionModel.php / BoletaCalificacionDetalleModel.php # Calificación del juez y desglose
 │   ├── TarifaModel.php / ParametroAppModel.php / ParametroSistemaModel.php # Tarifario y parámetros
 │   ├── FormatoTramiteModel.php / VerificacionFisicaModel.php # Formatos e inspecciones
 │   └── AuditoriaModel.php          # Bitácora de operaciones del sistema
-└── Views/                          # 62 vistas PHP con la convención /** @var */
+└── Views/                          # 68 vistas PHP con la convención /** @var */
     ├── admin/                      # Pantallas del panel (incluye convocatorias/, catálogos/,
     │                               # usuarios/ y solicitudes_presenciales/)
     ├── auth/                       # Login, registro, recuperación, términos y privacidad
@@ -156,7 +168,7 @@ graph TD
     └── portal/                     # Portal ciudadano y los formularios de los 7 trámites
 ```
 
-> La otra mitad del esquema vive en `supabase/migrations/` (10 archivos SQL que se aplican a mano en el **SQL Editor**). Ese doble camino es la causa del *drift* documentado en `DOC_METODOLOGIA_PORTAL_PANEL.md` §11.3.4: `php spark migrate` no los ve, así que hay que cotejarlos con `scripts/verificar_esquema_bd.php`.
+> La otra mitad del esquema vive en `supabase/migrations/` (16 archivos SQL que se aplican a mano en el **SQL Editor**). Ese doble camino es la causa del *drift* documentado en `DOC_METODOLOGIA_PORTAL_PANEL.md` §11.3.4: `php spark migrate` no los ve, así que hay que cotejarlos con `scripts/verificar_esquema_bd.php`.
 
 ---
 
@@ -222,6 +234,22 @@ graph TD
 * **Lógica Operativa:**
   * Respuestas normalizadas con encabezados `Content-Type: application/json` y códigos HTTP RFC estándar (`200 OK`, `201 Created`, `400 Bad Request`, `409 Conflict`, `500 Internal Server Error`).
 
+### 3.6. `Juez\DashboardController.php`
+* **Filtros:** `auth` y `role:juez_calificador` en todo el grupo `/juez`.
+* **Rutas Gestionadas:**
+  * `GET /juez` y `GET /juez/boletas`: bandeja de boletas recibidas desde la app de campo, con folio, fecha, placas e infractor.
+  * `GET /juez/boletas/{id}`: detalle con evidencia fotográfica y faltas tipificadas.
+  * `POST /juez/boletas/{id}/vista-previa`: calcula el desglose en UMA sin persistir, para que el juez revise antes de firmar.
+  * `POST /juez/boletas/{id}/calificar`: delega en `CalificarBoletaService::calificar()` y genera el cobro correspondiente.
+* **Mesa de cobros:** `index()` arma también `$cobrosPendientes` (`CobroModel`, `origen = 'boleta'` y `estatus = 'pendiente'`, los 10 más recientes con el folio de su boleta) y enlaza cada renglón a la hoja de pago. El juez **consulta** el cobro; no puede marcarlo como pagado.
+
+### 3.7. `DocumentosPagoController.php`
+* **Filtros:** solo `auth` en el grupo `/documentos`; el permiso fino se resuelve dentro del controlador porque depende del documento y del dueño, no del rol.
+* **Rutas Gestionadas:**
+  * `GET /documentos/hoja-pago/solicitud/{folio o id}`: acepta el folio institucional o el identificador numérico; resuelve con `SolicitudModel::findByFolio()` o por llave primaria.
+  * `GET /documentos/hoja-pago/boleta/{id}`: hoja de una multa calificada.
+* **Regla de autorización:** el personal (`administrador`, `operador_ventanilla`, `juez_calificador`) imprime cualquier documento; el `ciudadano` solo los de sus propios trámites y **nunca** las multas. Cuando la solicitud no es suya responde con redirección y aviso `error`; cuando el folio no existe lanza `PageNotFoundException` (404 propio, no 500).
+
 ---
 
 ## 4. Capa de Modelos (Models) y Persistencia de Datos
@@ -260,6 +288,12 @@ graph TD
   * Garantías retenidas y número de inventario de grúa/corralón.
   * URLs firmadas de las fotografías de evidencia en Supabase Storage.
 
+### 4.6. `CobroModel.php`, `CobroMovimientoModel.php` y los modelos de calificación
+* **Tablas Relacionadas:** `cobros`, `cobro_movimientos`, `boleta_calificaciones`, `boleta_calificacion_detalles`.
+* **`CobroModel`:** conserva la obligación de pago con folio `COB-AAAA-NNNNNN`, concepto, origen (`solicitud` o `boleta`), monto base, descuento o recargo aplicado, total, estatus (`pendiente`, `aprobado`, `cancelado`), lugar de pago y, cuando procede, `referencia_pago`. Métodos `vigenteDeSolicitud(int)` y `vigenteDeBoleta(int)` devuelven el cobro activo o `null`, y son la guarda contra cobros duplicados.
+* **`CobroMovimientoModel`:** bitácora del cobro (`porCobro()`); cada pago genera un folio de recibo `REC-AAAA-NNNNNN` con importe, usuario y notas. El cobro no se reescribe: se le agregan movimientos.
+* **`BoletaCalificacionModel` / `BoletaCalificacionDetalleModel`:** guardan la calificación firmada por el juez y su desglose por falta (fundamento legal, UMA mínima y máxima, valor asignado y orden de impresión).
+
 ---
 
 ## 5. Servicios y Librerías de Soporte (`app/Libraries`)
@@ -284,6 +318,29 @@ Define la máquina de estados del sistema para blindar la legalidad de los trám
 
 ### 5.4. `AuditService.php`
 * Registra eventos de seguridad en la tabla `auditoria` con usuario, acción, módulo, IP de procedencia (`request()->getIPAddress()`) y fecha/hora exacta.
+
+### 5.5. `CobroService.php`
+Es la única puerta de entrada a la tabla `cobros` y lo consumen tanto el panel como la app de campo:
+* **Alta:** `crearDesdeSolicitud(int $solicitudId, ?int $usuarioId)` y `crearDesdeBoleta(int $boletaId, float $montoBase, ?int $usuarioId, ?string $nombrePagador)`. Asignan folio `COB-AAAA-NNNNNN`, calculan descuento o recargo con `ResolverMontoInfraccionService` y dejan el cobro en `pendiente`.
+* **Cierre:** `marcarCobrado(int $cobroId, string $lugarPago, ?string $referencia, ?int $usuarioId)` valida el lugar contra `LUGARES_PAGO` (`juez_calificador`, `banbajio`, `ventanilla`, `en_linea`) y escribe el movimiento con folio de recibo.
+* **Ajustes:** `mandarACompletar()`, `cancelar()`, `sincronizarConSolicitud()` e `historial()`.
+* **Errores:** toda regla incumplida lanza `CobroException`; el controlador la traduce a aviso de sesión, nunca a error 500.
+
+### 5.6. `CalificarBoletaService.php`
+* `faltasDeBoleta(object $boleta)` extrae las faltas capturadas en campo; `vistaPrevia(object $boleta, array $seleccionesUma)` calcula el desglose sin guardar; `calificar(int $boletaId, string $nombreInfractor, array $seleccionesUma, int $juezId)` persiste la calificación, su detalle y dispara el cobro. Los rechazos usan `CalificacionBoletaException`.
+
+### 5.7. `CuentaCiudadanoService.php`
+Centraliza el alta de ciudadanos y el acceso opcional (COB-08):
+* `crearSinAcceso(array $datos, ?int $creadoPor)`: registra a la persona **sin contraseña ni usuario** y le asigna el rol `ciudadano`, para que el trámite de ventanilla tenga dueño.
+* `habilitarAcceso(int $userId, array $datos)`: convierte esa cuenta en una cuenta con acceso cuando el ciudadano la reclama; devuelve `false` si ya tenía contraseña.
+* `buscarPorCurp()`, `buscarPorNombre()`, `nombreSimilar()` y `generarPassword()`: búsqueda, aviso de homónimos y contraseña temporal. La CURP se valida con `REGEX_CURP` y se normaliza antes de comparar.
+
+### 5.8. `HojaPagoService.php`
+Arma los datos de la hoja imprimible **sin escribir nada**:
+* `paraSolicitud(int $solicitudId)` y `paraBoleta(int $boletaId)` devuelven concepto, folio, desglose (base, descuento, recargo, condonado, total), datos del pagador y lugares de pago; `null` si el registro no existe.
+* `fechaLimiteDescuento(string $fechaInfraccion)`: suma los días hábiles configurados para el pronto pago.
+* `lugaresDePago()`: traduce `CobroService::LUGARES_PAGO` a textos para imprimir.
+* **No modifica** `CobroService` ni `ResolverMontoInfraccionService`: solo los consume, que es lo que permitió trabajar en paralelo con los demás carriles.
 
 ---
 
@@ -335,6 +392,10 @@ En arquitecturas serverless como Vercel, el sistema de archivos del servidor es 
 | **GET** | `/admin/convocatorias/(:num)/bases` | `ConvocatoriasController::bases` | igual que el listado | Descarga del PDF de bases (URL firmada). |
 | **GET / POST** | `/admin/convocatorias/(:num)/evaluacion`, `/admin/convocatorias/(:num)/seleccionar` | `evaluacion` / `seleccionar` | igual que el listado | Cuadro comparativo de postulantes y designación de ganador. |
 | **POST** | `/admin/convocatorias/eliminar/(:num)` | `ConvocatoriasController::eliminar` | **`role:administrador`** (grupo exclusivo, línea 111) | Baja definitiva; se niega si hay postulaciones ligadas. |
+| **GET** | `/juez`, `/juez/boletas`, `/juez/boletas/(:num)` | `Juez\DashboardController::index` / `boletas` / `detalle` | `auth`, `role:juez_calificador` | Bandeja, listado y detalle de boletas para el juez. |
+| **POST** | `/juez/boletas/(:num)/vista-previa`, `/juez/boletas/(:num)/calificar` | `Juez\DashboardController::vistaPrevia` / `calificar` | `auth`, `role:juez_calificador`, CSRF global | Desglose previo y calificación formal de la boleta. |
+| **GET** | `/documentos/hoja-pago/solicitud/{folio o id}` | `DocumentosPagoController::hojaPagoSolicitud` | solo `auth`; permiso fino en el controlador | Hoja de ayuda para el pago de un trámite (COB-05). |
+| **GET** | `/documentos/hoja-pago/boleta/(:num)` | `DocumentosPagoController::hojaPagoBoleta` | solo `auth`; permiso fino en el controlador | Hoja de ayuda para el pago de una multa (COB-05). |
 | **GET** | `/login`, `/register`, `/logout` | `AuthController::login` / `register` / `logout` | Ninguno | Atajos públicos; ver §7.1. |
 
 **Notas sobre esta tabla:**
@@ -378,7 +439,7 @@ Eso mantuvo muertos `/login`, `/register` y `/logout` **desde el commit inicial*
    ```
 5. **Ejecución de Pruebas Unitarias Automatizadas (PHPUnit):**
    ```bash
-   # Suite completa (247 casos / 931 aserciones en 27 clases)
+   # Suite completa (347 casos / 1358 aserciones en 37 clases)
    vendor/bin/phpunit
    
    # Pruebas exclusivas de la API de Tránsito y Sincronización de Boletas

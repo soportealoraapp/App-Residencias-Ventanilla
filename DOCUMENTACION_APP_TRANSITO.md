@@ -206,6 +206,8 @@ mobile/agentes-transito/
   * Tarjetas de resumen con folio, placas del vehículo, fecha/hora y monto estimado.
   * Modal detallado al pulsar una boleta: desglose de motivos sancionados, coordenadas del hecho, garantías y galería de fotografías tomadas.
 
+> **Cómo llega el agente a la app (acceso rápido, corte de cobros):** además de la URL directa `/agentes`, el enlace está en la pantalla de acceso del sistema, en la portada pública y en el primer renglón de la sección *App Tránsito* de la barra lateral del panel. Los tres abren en pestaña nueva, porque la SPA conserva su propia sesión de agente y no debe compartir la sesión del funcionario que en ese momento esté en el panel.
+
 ---
 
 ## 5. Arquitectura Offline-First y Manejo de Conectividad
@@ -248,6 +250,19 @@ Las fotos capturadas con `CameraView` se suben prioritariamente al endpoint `POS
 * Servidor CI4: `public/uploads/evidencias_infracciones/{FOLIO}_{TIPO_FOTO}_{TIMESTAMP}.jpg`
 * En caso de respaldo Supabase: bucket `evidencias/{AÑO}/{MES}/{FOLIO}_{TIPO_FOTO}_{TIMESTAMP}.jpg`
 * Las rutas de acceso o URLs generadas se asocian en el arreglo `fotos_urls` de la boleta.
+
+### 6.3. Del folio de campo al cobro: qué pasa con una boleta sincronizada
+
+La app termina su trabajo cuando la boleta queda sincronizada; a partir de ahí el ciclo es del sistema web y conviene que el agente lo conozca, porque es lo que el ciudadano le va a preguntar en la calle:
+
+| Etapa | Dónde ocurre | Qué cambia |
+|---|---|---|
+| 1. **Recibida** | `POST /api/infracciones/sincronizar` | La boleta entra a `boletas_infracciones` con `estado = 'recibida'`. No hay monto exigible todavía: en campo solo se estimó un rango en UMA. |
+| 2. **Calificada** | Panel del juez (`/juez`) | El juez confirma faltas y valores en UMA; se guarda `boleta_calificaciones` con su detalle y el monto base queda firme. |
+| 3. **Cobro pendiente** | Módulo de cobros | Se emite un cobro con folio `COB-AAAA-NNNNNN` y se aplica el descuento por pronto pago o el recargo por mora que corresponda. |
+| 4. **Pagada** | Ventanilla o módulo de cobros | Se registra el pago con folio de recibo `REC-AAAA-NNNNNN` y lugar de pago; el cobro queda cerrado. |
+
+El agente **no** interviene después de la etapa 1 y la app no necesita cambios para ello: el estado que ella muestra es el de la sincronización, no el del cobro. Para consultar el monto exigible se usa la hoja de pago del sistema web (`/documentos/hoja-pago/boleta/{id}`), que imprime el desglose y los lugares de pago habilitados.
 
 ---
 
@@ -304,6 +319,8 @@ npx tsc --noEmit                  # tipos del cliente; debe salir limpio
 Los 18 casos cubren, entre otros: inicio de turno con placa y PIN, emisión y **caducidad del token de portador**, persistencia de la cola local, y —el caso más importante operacionalmente— que **un `401` al sincronizar no destruya trabajo**: las boletas aceptadas antes del error quedan sincronizadas, el resto permanece pendiente y la app pide volver a iniciar sesión en lugar de descartar el turno. También se verifica que otros errores (500, sin red) **no** fuercen un cierre de sesión espurio.
 
 > `package.json` no declara un script `test` ni `typecheck`; hay que invocar los dos comandos anteriores directamente. Si se prefiere integrarlos en CI, agregar `"test": "node tests/auth-flow.test.cjs"` y `"typecheck": "tsc --noEmit"` es el cambio mínimo.
+
+> **Estado del haz en el corte de cobros (COB-05/COB-08):** el cliente móvil **no se modificó**. Las dos verificaciones anteriores se ejecutaron de nuevo —`node tests/auth-flow.test.cjs` (18/18) y `npx tsc --noEmit` (salida limpia)— y `public/agentes` quedó **intacto**, sin reexportar. Los cambios de ese corte viven en el backend y en las vistas PHP: hoja de pago, alta de ciudadano sin CURP y el acceso rápido a `/agentes`. Reexportar sin cambios en `mobile/` solo produciría ruido en el historial de git.
 
 ### 8.2. Verificación de Sincronía con el Backend
 

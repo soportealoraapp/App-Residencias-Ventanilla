@@ -42,6 +42,7 @@
    * 6.3. Arquitectura del Mock de Pasarela de Pagos
    * 6.4. Consulta de Expedientes y Gestión del Perfil Ciudadano
    * 6.5. Autorregistro de Ciudadanos y Recuperación de Cuenta
+   * 6.5.5. Ciudadano Registrado sin Acceso: Alta en Ventanilla y Reclamo en Línea (COB-08)
 7. [Lógica de Negocio del Panel Administrativo](#7-lógica-de-negocio-del-panel-administrativo)
    * 7.1. Dashboard de Métricas y Analítica Operativa
    * 7.2. Máquina de Estados Finitos y Transiciones Reguladas
@@ -51,6 +52,7 @@
    * 7.6. Radicación Presencial de Solicitudes desde Ventanilla (Canal Híbrido)
    * 7.7. Gestión del Padrón de Cuentas desde el Panel
    * 7.8. Mapa Maestro de Rutas y Módulos del Panel
+   * 7.9. Hoja de Pago Imprimible para Trámites y Multas (COB-05)
 8. [Integración HTTP y Consumo de Servicios Centralizados](#8-integración-http-y-consumo-de-servicios-centralizados)
    * 8.1. Integración con la API REST de Supabase Storage mediante cURL
    * 8.2. Exposición y Gobernanza de Endpoints REST para Clientes Externos
@@ -80,6 +82,7 @@
    * 11.5. Fase de Frontend y Despliegue en Entorno de Producción
    * 11.6. Correspondencia con las Figuras del Documento Final
    * 11.7. Referencias Tecnológicas Utilizadas
+   * 11.8. Fase de Cobros (COB-01 a COB-12): Del Folio de Campo al Recibo de Pago
 12. [Conclusiones Técnicas de la Metodología](#12-conclusiones-técnicas-de-la-metodología)
 
 ---
@@ -254,7 +257,8 @@ Almacena las cuentas de acceso al sistema tanto para ciudadanos como para servid
 * `id` (BIGSERIAL, PK): Identificador único secuencial.
 * `nombre_completo` (VARCHAR(150), NOT NULL): Nombre o razón social del usuario.
 * `email` (VARCHAR(100), NOT NULL, UNIQUE): Correo electrónico institucional o personal, utilizado como identificador de inicio de sesión.
-* `password_hash` (VARCHAR(255), NOT NULL): Huella criptográfica de la contraseña calculada con BCRYPT.
+* `password_hash` (VARCHAR(255), NULL): Huella criptográfica de la contraseña calculada con BCRYPT.
+  * **Es nullable a propósito (COB-08, migración `000029`).** Un ciudadano registrado en ventanilla puede existir **como dueño de sus trámites sin ser usuario de acceso**: se guarda su nombre, su CURP y su teléfono, pero `password_hash`, `username` y `email` quedan en `NULL`. La cuenta no puede iniciar sesión (el formulario de acceso exige credenciales que no existen) y el propietario la reclama después al autorregistrarse con la misma CURP (§6.5.5). Antes de esta migración la columna era `NOT NULL`, y esa restricción obligaba a inventar una contraseña temporal para cada alta presencial.
 * `curp` (VARCHAR(18), NULL): Clave Única de Registro de Población del ciudadano.
 * `rfc` (VARCHAR(13), NULL): Registro Federal de Contribuyentes.
 * `telefono` (VARCHAR(20), NULL): Número de contacto telefónico.
@@ -326,6 +330,39 @@ Representa la entidad central del proceso administrativo municipal.
 * `ip_address` (VARCHAR(45), NOT NULL): Dirección IP asociada.
 * `timestamp` (BIGINT, NOT NULL): Marca de tiempo UNIX de la última actividad.
 * `data` (BYTEA / TEXT, NOT NULL): Contenido serializado de la sesión de usuario.
+
+#### I. Tabla `cobros` (Cuenta por Cobrar de Trámites y Multas)
+Unifica en una sola entidad lo que el ciudadano debe pagar, sea un derecho municipal (trámite) o una sanción (multa). Nace en la fase de cobros (COB-01, migración `000027`; espejo `supabase/migrations/0012_cobros.sql`).
+* `id` (BIGSERIAL, PK).
+* `folio` (VARCHAR(30), UNIQUE, NULL): Folio del cobro, formato `COB-{AÑO}-{CONSECUTIVO}`. Nulo mientras el registro no se confirma.
+* `origen` (VARCHAR(20), NOT NULL): `solicitud` o `boleta`; indica cuál de las dos llaves foráneas está poblada.
+* `solicitud_id` (BIGINT, NULL, FK -> `solicitudes.id` ON DELETE RESTRICT) y `boleta_id` (BIGINT, NULL, FK -> `boletas_infracciones.id` ON DELETE RESTRICT): **RESTRICT a propósito** — un cobro es un registro contable y no desaparece si se borra el expediente que lo originó.
+* `ciudadano_id` (BIGINT, NULL, FK -> `users.id` ON DELETE SET NULL), `nombre_pagador` (VARCHAR(180), NOT NULL): a quién se le cobra; el nombre se copia para que el recibo siga siendo legible aunque la cuenta se desactive.
+* `concepto` (VARCHAR(255), NOT NULL) y `detalle_calculo` (TEXT, NULL): descripción legible y memoria del cálculo (unidades UMA, tarifa aplicada, descuentos).
+* `monto_base`, `descuento`, `recargo`, `condonado`, `total` (DECIMAL(12,2), DEFAULT 0): desglose monetario explícito; el total nunca se guarda sin sus componentes.
+* `estatus` (VARCHAR(20), DEFAULT `pendiente`): `pendiente`, `aprobado`, `cancelado`.
+* `pendiente_documentos` (SMALLINT, DEFAULT 0): bandera para mandar el cobro «a completar» sin cancelarlo.
+* `motivo` (TEXT, NULL): razón de la cancelación o de la condonación.
+* `lugar_pago` (VARCHAR(30), NULL): `juez_calificador`, `banbajio`, `ventanilla` o `en_linea`.
+* `referencia_pago` (VARCHAR(100), NULL) y `folio_recibo` (VARCHAR(30), UNIQUE, NULL): datos de la transacción; el recibo usa el formato `REC-{AÑO}-{CONSECUTIVO}`.
+* `cobrado_por` (BIGINT, NULL, FK -> `users.id`), `fecha_cobro` (TIMESTAMP, NULL), `created_by` (BIGINT, NULL).
+* `created_at`, `updated_at` (TIMESTAMP).
+
+#### J. Tabla `cobro_movimientos` (Historial del Cobro)
+* `id` (BIGSERIAL, PK).
+* `cobro_id` (BIGINT, NOT NULL, FK -> `cobros.id` ON DELETE CASCADE).
+* `accion` (VARCHAR(40), NOT NULL): `crear`, `cobrar`, `cancelar`, `a_completar`, `sincronizar`.
+* `estatus_anterior` (VARCHAR(20), NULL) y `estatus_nuevo` (VARCHAR(20), NOT NULL).
+* `motivo` (TEXT, NULL) y `detalle` (TEXT, NULL): explicación y desglose del movimiento.
+* `usuario_id` (BIGINT, NULL, FK -> `users.id`) y `fecha` (TIMESTAMP, NOT NULL).
+
+A diferencia de la auditoría (§7.4), este historial es **de negocio**: se muestra al ciudadano y al funcionario para explicar por qué un cobro cambió de importe o de estado.
+
+#### K. Tablas `boleta_calificaciones` y `boleta_calificacion_detalles` (Acto Judicial)
+* `boleta_calificaciones`: `id`, `boleta_id` (UNIQUE, FK -> `boletas_infracciones.id` RESTRICT), `juez_id` (FK -> `users.id`), `cobro_id` (UNIQUE, FK -> `cobros.id`), `nombre_infractor`, `valor_uma`, `total_uma`, `monto_base`, `calificada_en` (TIMESTAMP).
+* `boleta_calificacion_detalles`: una fila por falta calificada, con `orden`, `fundamento_legal`, `descripcion`, `categoria`, `monto_min_uma`, `monto_max_uma`, `uma_asignada` y `subtotal_pesos`.
+
+La unicidad de `boleta_id` y de `cobro_id` impide que una boleta se califique dos veces o que genere dos cobros vigentes, y en PostgreSQL se refuerza con dos restricciones `CHECK` sobre los importes (rangos no negativos y UMA asignada dentro del mínimo y el máximo) y un índice único parcial `uq_cobros_boleta_vigente` que admite históricos cancelados.
 
 ---
 
@@ -452,21 +489,36 @@ Decisiones de seguridad incorporadas:
 
 ### 4.1. Matriz de Control de Acceso por Rol
 
-El sistema implementa un esquema formal de **Control de Acceso Basado en Roles (RBAC)** administrado mediante las tablas `roles` y `user_roles`. Los tres roles operacionales y sus privilegios son:
+El sistema implementa un esquema formal de **Control de Acceso Basado en Roles (RBAC)** administrado mediante las tablas `roles` y `user_roles`. Los cuatro roles operacionales (sembrados por `RolesSeeder`) y sus privilegios son:
 
-| Módulo / Funcionalidad | `ciudadano` | `operador_ventanilla` | `administrador` | Justificación Operativa |
-|---|:---:|:---:|:---:|---|
-| Registro y Acceso al Portal Ciudadano | **Permitido** | Denegado | Denegado | Los administradores son redirigidos automáticamente al panel. |
-| Iniciar y Pagar los 7 Trámites | **Permitido** | Denegado | Denegado | Operación reservada al solicitante legítimo. |
-| Consultar "Mis Solicitudes" | **Permitido (Propias)**| Denegado | Denegado | Acceso restringido exclusivamente a su `user_id`. |
-| Dashboard con Métricas de Recaudación | Denegado | **Permitido** | **Permitido** | Monitoreo del flujo de atención municipal. |
-| Bandeja General de Solicitudes | Denegado | **Permitido** | **Permitido** | Revisión y dictaminación de expedientes. |
-| Dictaminar y Cambiar Estatus | Denegado | **Permitido** | **Permitido** | Emisión de prevenciones, aprobaciones y rechazos. |
-| Catálogo de Tarifas y Factores UMA | Denegado | Solo Lectura | **Control Total** | La modificación de tarifas es facultad administrativa. |
-| Catálogo Oficial de Concesiones | Denegado | Solo Lectura | **Control Total** | Padrón oficial de títulos de concesión. |
-| Gestión de Convocatorias Públicas | Solo Lectura | Evaluación | **Control Total** | Asignación y fallo de concesiones de transporte. |
-| Repositorio de Formatos Descargables | Solo Lectura | Solo Lectura | **Control Total** | Publicación de formatos oficiales. |
-| Padrón Inmutable de Auditoría | Denegado | Denegado | **Permitido** | Inspección forense de movimientos en el sistema. |
+| Módulo / Funcionalidad | `ciudadano` | `operador_ventanilla` | `juez_calificador` | `administrador` | Justificación Operativa |
+|---|:---:|:---:|:---:|:---:|---|
+| Registro y Acceso al Portal Ciudadano | **Permitido** | Denegado | Denegado | Denegado | Los roles operativos se redirigen automáticamente a su panel. |
+| Iniciar y Pagar los 7 Trámites | **Permitido** | Denegado | Denegado | Denegado | Operación reservada al solicitante legítimo. |
+| Consultar "Mis Solicitudes" | **Permitido (Propias)**| Denegado | Denegado | Denegado | Acceso restringido exclusivamente a su `user_id`. |
+| Imprimir Hoja de Pago de sus Trámites | **Permitido (Propias)** | **Permitido** | Denegado | **Permitido** | El personal imprime cualquier expediente; el ciudadano solo los suyos (§7.9). |
+| Imprimir Hoja de Pago de una Multa | Denegado | **Permitido** | **Permitido** | **Permitido** | La multa no pertenece a ninguna cuenta hasta que se paga: se entrega a quien la presenta. |
+| Panel del Juez Calificador (`/juez`) | Denegado | Denegado | **Permitido** | Denegado | Ruta con `role:juez_calificador`; el administrador **no** entra al panel judicial. |
+| Calificar Boletas de Infracción | Denegado | Denegado | **Permitido** | Denegado | Acto de autoridad que fija el monto en UMA; no es una tarea administrativa. |
+| Dashboard con Métricas de Recaudación | Denegado | **Permitido** | Denegado | **Permitido** | Monitoreo del flujo de atención municipal. |
+| Bandeja General de Solicitudes | Denegado | **Permitido** | Denegado | **Permitido** | Revisión y dictaminación de expedientes. |
+| Dictaminar y Cambiar Estatus | Denegado | **Permitido** | Denegado | **Permitido** | Emisión de prevenciones, aprobaciones y rechazos. |
+| Cobrar un Trámite o una Multa | Denegado | **Permitido** | **Permitido** | **Permitido** | Cobrar es registrar el ingreso; **no** es administrar (§4.1.1). |
+| Catálogo de Tarifas y Factores UMA | Denegado | Solo Lectura | Denegado | **Control Total** | La modificación de tarifas es facultad administrativa. |
+| Catálogo Oficial de Concesiones | Denegado | Solo Lectura | Denegado | **Control Total** | Padrón oficial de títulos de concesión. |
+| Gestión de Convocatorias Públicas | Solo Lectura | Evaluación | Denegado | **Control Total** | Asignación y fallo de concesiones de transporte. |
+| Repositorio de Formatos Descargables | Solo Lectura | Solo Lectura | Denegado | **Control Total** | Publicación de formatos oficiales. |
+| Padrón Inmutable de Auditoría | Denegado | Denegado | Denegado | **Permitido** | Inspección forense de movimientos en el sistema. |
+
+#### 4.1.1. El Principio «Cobrar no es Administrar»
+
+Al añadirse el rol `juez_calificador` (COB-09) la tentación evidente era reutilizar `operador_ventanilla`: ambos atienden público y ambos reciben dinero. Se resolvió **no hacerlo**, y la separación se sostiene en tres decisiones verificables en el código:
+
+1. **Navegación propia y excluyente.** `/juez` está bajo `filter: 'role:juez_calificador'` y el administrador **no** aparece en la lista de roles admitidos. Un funcionario administrativo no puede calificar una boleta ni ver el expediente judicial.
+2. **El juez no toca catálogos.** No entra a tarifas, concesiones ni convocatorias; su superficie son las boletas que la app de campo sincronizó (`estado = 'recibida'`) y su calificación (`boleta_calificaciones`).
+3. **Cobrar es un acto compartido, administrar no.** Registrar el pago de un cobro existente lo pueden hacer ventanilla, juez y administrador, porque el dinero se recibe en una sola ventanilla física; en cambio, **crear, condonar o cancelar** un cobro fuera del acto judicial queda del lado administrativo y se asienta en `cobro_movimientos` con motivo obligatorio.
+
+> **Argumento para la defensa:** separar los roles no fue un exceso de prolijidad. Un mismo usuario con permiso para fijar el importe de una multa **y** para condonarla concentra la facultad de decisión y la de recaudación, que es exactamente lo que una contraloría busca que esté dividido.
 
 ### 4.2. Arquitectura de Filtros y Middlewares
 
@@ -745,13 +797,26 @@ El rol **no se recibe por `POST`**: se asigna hardcodeado en el servidor. Un ata
 El formulario no se limita a campos obligatorios; verifica la **sintaxis oficial** de los identificadores gubernamentales mexicanos:
 
 ```php
-'curp'  => 'required|exact_length[18]|regex_match[/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]{2}\d$/]',
-'rfc'   => 'permit_empty|exact_length[13]|regex_match[/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/]',
-'email' => 'required|valid_email|max_length[180]|is_unique[users.email]',
-'password' => 'required|min_length[8]|max_length[100]|regex_match[/^(?=.*[A-Za-z])(?=.*\d).+$/',
+// AuthController::attemptRegister()
+$rules = [
+    // Opcional: sin CURP la cuenta funciona igual, solo no se liga al historial de ventanilla.
+    'curp'      => 'permit_empty|exact_length[18]|regex_match[' . CuentaCiudadanoService::REGEX_CURP . ']',
+    'nombre'    => 'required|min_length[2]|max_length[80]',
+    'apellido'  => 'required|min_length[2]|max_length[120]',
+    'telefono'  => 'required|min_length[7]|max_length[20]',
+    'estado'    => 'required|min_length[2]|max_length[60]',
+    'ciudad'    => 'required|min_length[2]|max_length[60]',
+    'domicilio' => 'required|min_length[5]|max_length[200]',
+    'email'     => $reglaEmail,   // ver §6.5.5: admite reclamar una cuenta existente
+    'username'  => 'required|alpha_numeric|min_length[5]|max_length[40]|is_unique[users.username]',
+    'password'  => 'required|min_length[8]|max_length[100]|regex_match[/^(?=.*[A-Za-z])(?=.*\d).+$/]',
+    'rfc'       => 'permit_empty|min_length[12]|max_length[13]|regex_match[/^[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}$/]',
+];
 ```
 
-* La CURP se normaliza a mayúsculas (`strtoupper`) antes de persistir, y su expresión regular respeta el patrón oficial de la RENAPO (bloque de letras, fecha de nacimiento, estado, sexo y dígito único).
+* **La CURP es opcional desde COB-08** (`permit_empty`), no porque el dato haya perdido valor sino porque el ciudadano puede no traerla a mano y eso no debe impedirle crear su cuenta. Cuando se captura, se normaliza a mayúsculas (`CuentaCiudadanoService::normalizarCurp()`) y se valida contra el patrón oficial de la RENAPO (bloque de letras, fecha de nacimiento, estado, sexo y dígito verificador). Su función real es **ligar la cuenta con un historial previo de ventanilla** (§6.5.5).
+* El nombre y el apellido se piden **por separado** y ambos son obligatorios: la ventanilla busca personas por nombre y apellidos, y una cadena única no permite ni buscarla ni avisar de homónimos.
+* El teléfono, el estado, la ciudad y el domicilio dejaron de ser opcionales: son los datos con los que se localiza a una persona que no tiene correo ni acceso al portal.
 * La contraseña exige **al menos una letra y un dígito** y se almacena con `password_hash(..., PASSWORD_DEFAULT)` (bcrypt con salt automático), nunca reversible.
 * El RFC y las fotografías del INE son `permit_empty`: opcionales, pero validados en tipo y tamaño (`image/jpeg|image/png`, 5 MB) si el ciudadano decide adjuntarlos durante el alta.
 * `is_unique[users.email]` y `is_unique[users.username]` impiden cuentas duplicadas, lo que a su vez protege la unicidad del expediente administrativo.
@@ -779,6 +844,49 @@ Tres criterios de diseño justificables:
 #### 6.5.4. Recuperación de Acceso
 
 El flujo `auth/forgot` → `auth/reset/(:any)` permite restablecer la contraseña sin exponer la existente. El token de restablecimiento viaja ligado a la cuenta y se consume en la propia ruta, y el mensaje al usuario no distingue entre "el correo existe" y "no existe", para no convertir el formulario en un oráculo de enumeración de cuentas.
+
+#### 6.5.5. Ciudadano Registrado sin Acceso: Alta en Ventanilla y Reclamo en Línea (COB-08)
+
+El caso real que originó este apartado: llega una persona a la ventanilla de Tránsito a iniciar un trámite, no recuerda su CURP (o no la trae), no tiene correo electrónico y no sabe usar el portal. Antes, el sistema exigía una cuenta para radicar (§7.6.6, caso 1) y la única salida era capturar datos inventados o negar el servicio. Hoy se registra a la persona **por su nombre** y el trámite queda radicado con dueño.
+
+**Cómo queda la cuenta.** Se inserta una fila en `users` con `nombre_completo`, `apellido`, `telefono`, `estado`, `ciudad` y `domicilio`, y con `username`, `email` y `password_hash` en `NULL` (`CuentaCiudadanoService::crearSinAcceso()`, migración `000029` que relaja la columna, §3.2.A). La CURP, si se capturó, se guarda normalizada; si no, queda `NULL` y **nunca cadena vacía**, porque el autorregistro compara ese campo para detectar duplicados.
+
+| Aspecto | Decisión implementada |
+|---|---|
+| ¿Puede iniciar sesión? | **No.** No hay usuario ni contraseña que autenticar, así que la cuenta no es un vector de acceso. |
+| ¿Es dueña de sus trámites? | **Sí.** `solicitudes.ciudadano_id` apunta a ella, así que el expediente conserva trazabilidad y una eventual reclamación recupera el historial completo. |
+| ¿Cómo se reclama después? | El ciudadano se registra en `auth/register` **con la misma CURP**; el sistema detecta la cuenta sin contraseña y la habilita en lugar de crear un duplicado. |
+| ¿Y si no tiene CURP? | La cuenta se crea igual, pero queda **sin llave de reclamación**: solo el personal puede vincularla. Es el precio explícito de no exigir el dato. |
+| ¿Y si alguien se registra con la CURP de otro? | El alta pública exige correo, usuario y contraseña propios, pero **no** puede probar identidad. Se mitiga con el aviso de homónimos y con la revisión documental del trámite, no con una validación algorítmica. |
+
+**Cómo funciona el reclamo.** `AuthController::attemptRegister()` busca por CURP **antes** de validar el formulario:
+
+```php
+foreach ($cuentaService->buscarPorCurp($curp) as $existente) {
+    if (trim((string) ($existente->password_hash ?? '')) !== '') {
+        // Ya es una cuenta real: se rechaza como duplicado.
+        return redirect()->back()->withInput()->with('errors', [
+            'curp' => 'Ya existe una cuenta con esta CURP. Inicia sesión o recupera tu contraseña.',
+        ]);
+    }
+    if ((int) ($existente->activo ?? 1) !== 1) {
+        // Cuenta desactivada: no se reclama por internet.
+        return redirect()->back()->withInput()->with('errors', [
+            'curp' => 'La cuenta asociada a esta CURP está desactivada. Acude a la ventanilla.',
+        ]);
+    }
+    $sinAcceso ??= $existente;
+}
+```
+
+Si existe una cuenta sin acceso, el alta **no inserta** una fila nueva: exige usuario y contraseña y llama `CuentaCiudadanoService::habilitarAcceso()`, que actualiza únicamente una lista blanca de columnas (`username`, `password_hash`, `email`, `telefono`, `domicilio`, `estado`, `ciudad`, `rfc`, `nombre_completo`, `apellido`, `curp`) y se niega a actuar si la cuenta ya tenía contraseña. La operación se audita como `reclamar_cuenta`.
+
+**Tres detalles que evitan defectos sutiles:**
+1. **La unicidad del correo excluye la propia fila.** Al reclamar, el correo suele ser el que se capturó en ventanilla; la regla se construye como `is_unique[users.email,id,{id}]` solo en ese caso, de modo que un alta normal sigue siendo estricta.
+2. **El aviso de homónimos es informativo, no un candado.** `nombreSimilar()` compara el nombre completo normalizado (minúsculas, sin acentos, espacios colapsados) y advierte que ya existe alguien con ese nombre. No bloquea: dos personas pueden llamarse igual y negar el alta sería un error administrativo.
+3. **La ventanilla no crea cuentas con contraseña inventada.** `crearSinAcceso()` no genera credenciales, así que no hay contraseñas temporales circulando en papel ni cuentas que alguien pueda adivinar.
+
+> **Límite honesto:** una cuenta sin acceso **no puede autogestionarse**. Mientras su dueño no la reclame, cualquier corrección de datos pasa por ventanilla. Es el costo de haber elegido el nombre como llave de registro, y se documenta para que no se lea como una omisión.
 
 ---
 
@@ -984,6 +1092,45 @@ La superficie completa del panel, declarada en `app/Config/Routes.php` dentro de
 **Detalle técnico que evitó un defecto de enrutamiento:** la ruta literal `solicitudes/nueva` se declaró **antes** del patrón comodín `solicitudes/(:segment)`. CodeIgniter 4 evalúa patrones en orden de declaración, así que sin ese orden `nueva` habría sido interpretado como un folio inexistente. Como salvaguarda adicional está activo `setPrioritize(true)`.
 
 **Segundo defecto de enrutamiento, de detección más difícil: colisión entre nombre y ruta.** Los atajos públicos `/login`, `/register` y `/logout` estuvieron escritos en `app/Config/Routes.php` **desde el commit inicial**, pero no respondían: CI4 registra las rutas con una clave derivada del nombre (`['as' => ...]`) y, cuando el *from* de una definición nueva coincide con el nombre ya asignado a otra ruta, **descarta la definición en silencio** — sin error, sin aviso en el arranque y sin una sola línea en los logs; el único síntoma honesto es que la ruta no aparece en `php spark routes`. Como `auth/login`, `auth/register` y `auth/logout` ya usaban `['as' => 'login'|'register'|'logout']`, las tres rutas cortas nunca existieron. El costo visible: la página 404 propia enlaza "Iniciar sesión" a `/login`, así que el único botón de salida de ese mensaje llevaba a otro 404. Corrección: los atajos reciben nombre propio (`acceso`, `registro`, `salida`), el conflicto queda comentado junto a la definición y `spark routes` sirve para confirmarlo (antes: 0 apariciones de `login`; después: 1). La lección general es que **una ruta declarada no es una ruta registrada**, y por eso el cotejo de enlaces estáticos de §10.7 verifica el mapa real y no el archivo fuente.
+
+### 7.9. Hoja de Pago Imprimible para Trámites y Multas (COB-05)
+
+El sistema cobra en ventanilla física, pero hasta hace poco el ciudadano salía con una cifra dictada de viva voz: sin desglose, sin fecha límite de descuento y sin referencia de pago. La **hoja de ayuda para el pago** resuelve eso con un documento imprimible que no cobra nada ni cambia estatus: es un impreso de apoyo.
+
+| Origen | Ruta | Quién la imprime |
+|---|---|---|
+| Trámite (por folio o por id) | `GET /documentos/hoja-pago/solicitud/{folio o id}` | Personal con rol operativo (cualquier expediente) y el ciudadano **solo el suyo** |
+| Multa (por id de boleta) | `GET /documentos/hoja-pago/boleta/(:num)` | `operador_ventanilla`, `juez_calificador` y `administrador`; el ciudadano **no** |
+
+**Dónde aparece el botón.** En la bandeja y el detalle de solicitudes del panel, en el alta presencial (para entregarla en el mismo acto), en el detalle del trámite del portal, en el visor de boletas del panel y en el panel del juez. Tres superficies, una sola vista (`app/Views/documentos/hoja_pago.php`).
+
+**Arquitectura: consumir, no reimplementar.** `HojaPagoService` es un servicio de **solo lectura** que arma el desglose a partir de las fuentes que ya existen:
+
+```php
+public function paraSolicitud(int $solicitudId): ?array   // trámites
+public function paraBoleta(int $boletaId): ?array         // multas
+public function fechaLimiteDescuento(string $fechaInfraccion): ?string
+public function lugaresDePago(): array
+```
+
+* El monto sale de `CobroModel::vigenteDeSolicitud()` / `vigenteDeBoleta()` y, si aún no hay cobro, del monto de la solicitud. **No hay una segunda fórmula de dinero.**
+* El descuento y el recargo de las multas se recalculan **a la fecha de consulta** con `ResolverMontoInfraccionService::aplicarDescuentoRecargo()`: si la hoja imprimiera el importe del día en que se generó el cobro, el ciudadano pagaría otra cosa en ventanilla.
+* Los lugares de pago se derivan de `CobroService::LUGARES_PAGO`, no de una lista paralela. Si mañana se habilita otro convenio bancario, la hoja lo refleja sin tocarse.
+
+**Decisiones de contenido, cada una con su razón:**
+
+| Elemento de la hoja | Por qué está |
+|---|---|
+| Desglose (base, descuento, recargo, condonado, total) | Un recibo de una sola línea no permite reclamar. El ciudadano ve de dónde sale su total. |
+| Fecha límite de descuento por pronto pago | Se cuentan **días hábiles** desde el día siguiente a la infracción, con el tope configurable en `parametros_sistema` (`dias_habiles_descuento`, por omisión 10). |
+| Aviso de recargo mensual por mora | Se imprime con su fundamento (Art. 180 del Reglamento de Tránsito) para que la advertencia no parezca arbitraria. |
+| Folio del cobro y folio del recibo **si existen** | Cuando la hoja se imprime al radicar todavía no hay cobro: la hoja lo dice explícitamente en lugar de imprimir un hueco. |
+| Sin enlace a la consulta pública por folio | Esa consulta es COB-07 y aún no existe; se imprime la instrucción sin `href` para no dejar un enlace muerto (§10.7). |
+| `@media print` en la vista | Oculta barra, menú y pie: el funcionario imprime el documento, no la interfaz (§9.7). |
+
+**Permisos: la ruta exige sesión, el controlador decide.** `/documentos/*` está bajo `filter: 'auth'` y no bajo `role:*`, porque la misma vista la usan cuatro roles. El permiso fino vive en `DocumentosPagoController`: para trámites, el personal pasa siempre y el ciudadano solo si `solicitud.ciudadano_id === session('user_id')`; para multas, el ciudadano se rechaza sin excepción, porque **una multa no pertenece a ninguna cuenta hasta que se paga**.
+
+> **Por qué la hoja no pertenece al módulo de cobros:** el carril de cobros (COB-01/COB-02/COB-03/COB-04) es dueño de las reglas de dinero. La hoja solo las lee. Esa frontera es la que permitió escribirla sin tocar `CobroService` ni `ResolverMontoInfraccionService`, y la que evita que dos módulos calculen el mismo importe de forma distinta.
 
 ---
 
@@ -1302,10 +1449,10 @@ Este apartado existe en la documentación porque convierte una queja subjetiva (
 
 El subsistema web está cubierto por una suite de **PHPUnit** (`vendor/bin/phpunit`, configuración en `phpunit.xml.dist`) que combina dos naturalezas de prueba:
 
-* **Pruebas unitarias de lógica de negocio** (`tests/app/Libraries/`): validan servicios puros sin HTTP — transiciones de estado, cálculo de tarifas, resolución de montos de infracción y almacenamiento de archivos.
+* **Pruebas unitarias de lógica de negocio** (`tests/app/Libraries/`): validan servicios puros sin HTTP — transiciones de estado, cálculo de tarifas, resolución de montos de infracción, cobros, calificación de boletas, cuentas de ciudadano, hoja de pago y almacenamiento de archivos (8 clases).
 * **Pruebas de funcionalidad de extremo a extremo** (`tests/app/Controllers/`): usan `FeatureTestTrait` para despachar peticiones reales por el enrutador, con filtros, sesiones y validaciones incluidas, y asertar sobre la respuesta y las filas escritas en base de datos.
 
-**Estado verificable de la suite: 27 clases de prueba, 247 casos, 931 aserciones, todas en verde** (PHPUnit 10.5.64 sobre PHP 8.2.25; tiempo de corrida ~62 s, 28 MB). La cifra es reproducible con `vendor/bin/phpunit --no-coverage` y debe volver a tomarse antes de citar en un documento final.
+**Estado verificable de la suite: 37 clases de prueba, 347 casos, 1358 aserciones, todas en verde** (PHPUnit 10.5.64 sobre PHP 8.2.25; tiempo de corrida ~2 min 20 s, 30 MB). La cifra es reproducible con `vendor/bin/phpunit --no-coverage` y debe volver a tomarse antes de citar en un documento final.
 
 ### 10.2. Matriz de Cobertura Funcional
 
@@ -1330,6 +1477,13 @@ El subsistema web está cubierto por una suite de **PHPUnit** (`vendor/bin/phpun
 | `AuthFormsRenderTest` | formularios de acceso y registro se pintan completos, con token CSRF y sin texto huérfano; además los atajos `/login` y `/register` responden 200 y `/logout` redirige (§7.8) |
 | `DocumentosAdminTest`, `VerificacionesAdminTest`, `SesionesAppAdminTest` | Descarga segura de expedientes, agenda de inspección física y gestión de sesiones de la app |
 | `TramiteCargaDescargaFormTest` | Reglas propias de UR-07 (tons, periodo y horarios) |
+| `RegistroCurpOpcionalTest` | COB-08: alta pública con y sin CURP, rechazo de CURP con formato inválido, reclamo de una cuenta sin acceso con la misma CURP, rechazo de duplicado cuando la cuenta ya tiene contraseña y aviso de homónimos |
+| `CuentaCiudadanoServiceTest` | COB-08: `crearSinAcceso()` deja `password_hash`, `username` y `email` en `NULL`; `habilitarAcceso()` solo actúa sobre cuentas sin contraseña; `nombreSimilar()` ignora acentos, mayúsculas y espacios repetidos |
+| `CobroServiceTest` | COB-01/COB-02: creación de cobro desde trámite y desde boleta, unicidad del cobro vigente, transición a cobrado con folio de recibo y movimientos registrados |
+| `CalificarBoletaServiceTest` | COB-10: calificación judicial, suma de faltas en UMA, rechazo de doble calificación y generación del cobro asociado |
+| `HojaPagoServiceTest` | COB-05: desglose de trámite y de multa, hoja sin cobro todavía, descuento recalculado a la fecha de consulta, fecha límite en días hábiles y lugares de pago derivados de `CobroService` |
+| `DocumentosPagoTest` | COB-05: el personal imprime cualquier trámite; el ciudadano solo el propio; la multa se niega al ciudadano; folio inexistente devuelve 404 y la ruta sin sesión redirige al acceso |
+| `JuezCalificadorAccessTest` | COB-09/COB-10: `/juez` exige `juez_calificador`; administrador y ventanilla quedan fuera del panel judicial |
 
 ### 10.3. Harness de Pruebas Aislado en SQLite
 
@@ -1433,7 +1587,7 @@ Como las tres ramas del proyecto comparten un repositorio y se coordinan por men
 * **El servicio `routes` no carga solo las rutas de la aplicación** en un `CIUnitTestCase` pelado: las carga el ciclo de la petición. Sin `loadRoutes()` el mapa venía vacío.
 * **Las claves del mapa están en mayúsculas** (`GET`, `POST`); `getRoutes('get')` devuelve `[]` sin avisar.
 
-**Estado actual:** 133 `href` literales en 38 destinos distintos, todos con ruta registrada o archivo real. La prueba se ejecuta en cada corrida de la suite, así que un enlace nuevo escrito a mano hacia una ruta inexistente se detecta antes de desplegar.
+**Estado actual:** 163 `href` literales en 55 destinos distintos, todos con ruta registrada o archivo real. La prueba se ejecuta en cada corrida de la suite, así que un enlace nuevo escrito a mano hacia una ruta inexistente se detecta antes de desplegar. En este corte entraron al cotejo los enlaces nuevos a `/agentes` (acceso rápido a la app de campo), `/auth/register` (aviso de reclamación de cuenta, §6.5.5) y la hoja de pago.
 
 > **Límite honesto del mecanismo:** solo cubre enlaces literales de las vistas web. Los construidos con `site_url()` o con variables dependen de datos de base, y esos se verifican en las pruebas funcionales de cada módulo; los enlaces del documento Markdown y de la app móvil no entran en este cotejo.
 
@@ -1448,10 +1602,10 @@ Los capítulos anteriores de este documento están organizados **por tema técni
 | Fase | Qué se hizo | Evidencia verificable en el repositorio | Detalle temático |
 |---|---|---|---|
 | **1. Análisis y levantamiento en campo** | Reuniones en Presidencia (área de TI) y entrevista en Tránsito y Seguridad | Directiva de framework (§11.1.1), catálogos y módulos derivados del proceso de ventanilla (§11.1.2) | §§1, 6, 7 |
-| **2. Diseño y validación de interfaces** | Portal ciudadano y panel; iteración sobre los 7 trámites; *mobile-first* | `app/Views/` (62 vistas), 3 *layouts*, `public/css/custom.css` (1 892 líneas), auditoría de desbordes (§9.8) | §9 |
-| **3. Diseño e implementación de la base de datos** | Modelado relacional, su construcción automatizada y la corrección de la deriva con la base instalada | 24 migraciones PHP en `app/Database/Migrations/`, 10 migraciones SQL en `supabase/migrations/`, 22 tablas + `ci_sessions`, verificador `scripts/verificar_esquema_bd.php` | §3, §11.3.4 |
-| **4. Programación del backend y reglas de negocio** | MVC, gestión documental, seguridad por roles, tarifario, máquina de estados | 26 controladores, 20 modelos, 11 bibliotecas de servicio, 5 filtros propios | §§2, 4, 6, 7, 8 |
-| **5. Frontend y despliegue en producción** | Vistas conectadas al controlador, pruebas end-to-end, publicación serverless | `vercel.json`, `scripts/vercel-install.sh`, tabla `ci_sessions`, suite de 247 casos | §§5, 10 |
+| **2. Diseño y validación de interfaces** | Portal ciudadano y panel; iteración sobre los 7 trámites; *mobile-first* | `app/Views/` (68 vistas), 3 *layouts*, `public/css/custom.css` (1 892 líneas), auditoría de desbordes (§9.8) | §9 |
+| **3. Diseño e implementación de la base de datos** | Modelado relacional, su construcción automatizada y la corrección de la deriva con la base instalada | 30 migraciones PHP en `app/Database/Migrations/`, 16 migraciones SQL en `supabase/migrations/`, 25 tablas + `ci_sessions`, verificador `scripts/verificar_esquema_bd.php` | §3, §11.3.4 |
+| **4. Programación del backend y reglas de negocio** | MVC, gestión documental, seguridad por roles, tarifario, máquina de estados, cobros y calificación judicial | 29 controladores, 24 modelos, 17 archivos en `app/Libraries/` (15 servicios + 2 excepciones de dominio), 5 filtros propios | §§2, 4, 6, 7, 8 |
+| **5. Frontend y despliegue en producción** | Vistas conectadas al controlador, pruebas end-to-end, publicación serverless | `vercel.json`, `scripts/vercel-install.sh`, tabla `ci_sessions`, suite de 347 casos | §§5, 10 |
 
 ---
 
@@ -1468,9 +1622,9 @@ Se acudió en múltiples ocasiones a las instalaciones de la Presidencia para en
 
 | Pieza construida desde cero | Dónde vive | Nota |
 |---|---|---|
-| Esquema de base de datos | 22 migraciones + 8 SQL | §3, §11.3 |
+| Esquema de base de datos | 30 migraciones + 16 SQL | §3, §11.3 |
 | Autenticación (login, registro, cierre, recuperación) | `AuthController`, `app/Views/auth/`, `AuthFilter` | §4 |
-| Gestión de roles (ciudadano, operador, administrador) | `roles`, `user_roles`, `RoleModel`, `RoleFilter` | §4.1 |
+| Gestión de roles (ciudadano, operador de ventanilla, juez calificador, administrador) | `roles`, `user_roles`, `RoleModel`, `RoleFilter` | §4.1 |
 | Autorización de grano fino por sección | `PermisoOperadorFilter`, `PermisosOperador`, `parametros_app` | §4.4 |
 | Lógica de los 7 trámites | 7 controladores `Tramite*` + `TramitesController` | §6.1 |
 | Máquina de estados del expediente | `EstadoSolicitudService`, `historial_estatus` | §7.2 |
@@ -1478,6 +1632,9 @@ Se acudió en múltiples ocasiones a las instalaciones de la Presidencia para en
 | Gestión documental y almacenamiento | `DocumentoUploader`, `SupabaseStorage`, `ArchivosLocalesController` | §3.3 |
 | API REST para clientes externos | `Api\AgentesTransitoApiController`, `Api\InfraccionesApiController` | §8.2 |
 | Sesiones persistentes en base de datos | `ci_sessions`, `Config/Session.php` | §5.2 |
+| Módulo de cobros (trámites y multas) | `CobroService`, `cobros`, `cobro_movimientos` | §11.8 |
+| Calificación judicial de boletas | `CalificarBoletaService`, `boleta_calificaciones`, `boleta_calificacion_detalles` | §11.8 |
+| Hoja de ayuda para el pago | `HojaPagoService`, `DocumentosPagoController` | §7.9 |
 
 > **Cómo redactar esto en la tesis:** la directriz de TI es un **requerimiento de diseño impuesto por el cliente**, no una elección del residente. Conviene enunciarla así, porque explica decisiones que de otro modo parecerían arbitrarias (ausencia de un SPA en el portal, uso de vistas PHP, Bootstrap en lugar de una librería de componentes moderna).
 
@@ -1612,7 +1769,7 @@ Eso fue exactamente lo que pasó: `/admin/verificaciones` y el alta presencial d
 
 1. **Medir antes de tocar.** Se escribió un verificador de deriva **de solo lectura**, `scripts/verificar_esquema_bd.php`: compara los nombres de tabla y de columna que el repositorio declara en sus migraciones contra los que existen realmente en la base del `.env`, y con `--formato=sql` imprime el `CREATE`/`ALTER` faltante. Compara nombres, no tipos, porque `DECIMAL` y `NUMERIC` son el mismo tipo en PostgreSQL y marcarlos como diferencia genera ruido.
 2. **Entregar el DDL, no ejecutarlo.** Regla de trabajo acordada con la institución: **el desarrollo no lanza sentencias de alteración contra la base institucional**; entrega el SQL para que la persona responsable lo aplique en el SQL Editor de Supabase. Por eso `0008_completar_esquema_pendiente.sql` y `0009_concesion_id_sin_cascade.sql` son archivos del repositorio, pensados para pegarse completos: **idempotentes** (`CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`, `DROP CONSTRAINT IF EXISTS`), **dentro de transacción** y **con su consulta de verificación al final** para que la aplicación quede comprobada en el mismo acto.
-3. **Comprobar después de aplicar.** Volver a correr el verificador: 22 tablas definidas por el repositorio presentes, historial de migraciones en 24 registros y la llave de `concesion_id` reportando `RESTRICT`.
+3. **Comprobar después de aplicar.** Volver a correr el verificador: 25 tablas definidas por el repositorio presentes, historial de migraciones en 30 registros y la llave de `concesion_id` reportando `RESTRICT`.
 
 **Lección metodológica:** una base construida a mano no puede verificarse "abriendo pantallas". El verificador de deriva quedó en el repositorio y forma parte del procedimiento de despliegue: se corre contra la base real, y cualquier divergencia se resuelve **regresando migraciones al repositorio**, nunca editando la base en silencio.
 
@@ -1628,10 +1785,10 @@ Se programaron los *Models* para interactuar de forma segura con la base de dato
 
 | Capa | Cantidad | Detalle |
 |---|---|---|
-| Controladores | 26 | 3 de acceso e inicio (`AuthController`, `Home`, `ArchivosLocalesController`), 12 del panel, 9 del portal, 2 API REST |
-| Modelos | 20 | uno por entidad persistible, todos sobre `BaseModel` con *prepared statements* de PDO |
-| Bibliotecas de servicio | 11 | lógica que no pertenece ni al controlador ni al modelo (§11.4.5) |
-| Vistas PHP | 62 | organizadas por destino: `admin/`, `portal/`, `auth/`, `layouts/`, `errors/` |
+| Controladores | 29 | 5 de acceso, inicio y documentos (`AuthController`, `Home`, `ArchivosLocalesController`, `AgentesWebController`, `DocumentosPagoController`), 12 del panel, 9 del portal, 1 del panel judicial, 2 API REST |
+| Modelos | 24 | uno por entidad persistible, todos sobre `BaseModel` con *prepared statements* de PDO |
+| Bibliotecas de servicio | 17 | 15 servicios + 2 excepciones de dominio; lógica que no pertenece ni al controlador ni al modelo (§11.4.5) |
+| Vistas PHP | 68 | organizadas por destino: `admin/`, `portal/`, `auth/`, `juez/`, `documentos/`, `layouts/`, `errors/` |
 | Filtros propios | 5 | `AuthFilter`, `RoleFilter`, `PermisoOperadorFilter`, `AdminRedirectFilter`, `AgenteTokenFilter` |
 
 **Controladores independientes por trámite.** Se desarrolló un controlador dedicado para cada uno de los 7 trámites operativos de movilidad, asegurando que el sistema validara correctamente los campos antes de guardarlos:
@@ -1687,7 +1844,7 @@ Complemento importante para el documento final: la permisología de grano fino s
 
 #### 11.4.5. Desplazamiento de lógica a servicios (por qué no todo va en el controlador)
 
-Once bibliotecas asumen la lógica que un MVC ingenuo dejaría en los controladores: `EstadoSolicitudService`, `TarifarioService`, `ResolverMontoInfraccionService`, `DocumentoUploader`, `SupabaseStorage`, `FolioGenerator`, `BanbajioMockGateway`, `FeatureFlags`, `AgenteTokenService`, `PermisosOperador` y `DesgloseSistema`. La razón no es estética: **una regla que vive en una biblioteca puede probarse sin HTTP** (las cuatro clases de `tests/app/Libraries/`) y puede reutilizarse desde el portal, desde el panel y desde la API sin copiar código. El caso más claro es el tarifario: el mismo cálculo lo consumen el ciudadano que inicia el trámite, el operador que lo radica en ventanilla y el tablero que suma lo recaudado.
+Diecisiete archivos de `app/Libraries/` (quince servicios y dos excepciones de dominio) asumen la lógica que un MVC ingenuo dejaría en los controladores: `EstadoSolicitudService`, `TarifarioService`, `ResolverMontoInfraccionService`, `CobroService`, `CalificarBoletaService`, `HojaPagoService`, `CuentaCiudadanoService`, `DocumentoUploader`, `SupabaseStorage`, `FolioGenerator`, `BanbajioMockGateway`, `FeatureFlags`, `AgenteTokenService`, `PermisosOperador`, `DesgloseSistema`, más `CobroException` y `CalificacionBoletaException`. La razón no es estética: **una regla que vive en una biblioteca puede probarse sin HTTP** (las ocho clases de `tests/app/Libraries/`) y puede reutilizarse desde el portal, desde el panel y desde la API sin copiar código. El caso más claro es el tarifario: el mismo cálculo lo consumen el ciudadano que inicia el trámite, el operador que lo radica en ventanilla y el tablero que suma lo recaudado. El segundo es `HojaPagoService`: imprime el desglose sin ser dueño de ninguna fórmula de dinero (§7.9).
 
 ---
 
@@ -1700,7 +1857,7 @@ La última etapa de desarrollo consistió en programar las **vistas** (*Views*) 
 * **El Portal Ciudadano:** permite iniciar trámites, subir documentos y cuenta con un **simulador de pago en línea** para cambiar el estatus del expediente. El simulador no es un adorno del frontend: está aislado tras la interfaz `PaymentGatewayInterface` y su implementación `BanbajioMockGateway`, con tres endpoints `pagar` reales (`carga-descarga`, `permiso-eventual`, `cierre-calle`) que invocan la pasarela, registran `fecha_pago` y hacen avanzar la máquina de estados. Cambiar el proveedor real exige **sustituir la implementación, no reescribir el portal** (§2.4, §6.3).
 * **El Panel Administrativo Web:** desarrollado desde cero con un *dashboard* de control para funcionarios, con desglose navegable (cada tarjeta de métrica lleva a su detalle), bandeja maestra de expedientes, visor documental, agenda de inspecciones, radicación presencial y administración de catálogos. Se incluyó una **regla de negocio estricta**: si un operador rechaza un trámite ciudadano, el sistema lo obliga a escribir el motivo del rechazo para que el ciudadano pueda subsanarlo (§7.3).
 
-**Convención de capa de vista adoptada en la fase final.** Las 62 vistas se unificaron tras la convención `/** @var */` + lectura de `$this->data` (§10.5), y las páginas de error por defecto del marco se sustituyeron por cuatro páginas propias en español (`app/Views/errors/html/`: `error_400.php`, `error_404.php`, `error_exception.php` y `production.php`), de modo que un 404 o un 400 no muestre ni trazas técnicas ni texto en inglés a la ciudadanía. Los enlaces escritos a mano en esas páginas son los que destaparon el defecto de enrutamiento de §7.8 y motivaron el cotejo automático de §10.7.
+**Convención de capa de vista adoptada en la fase final.** Las 68 vistas se unificaron tras la convención `/** @var */` + lectura de `$this->data` (§10.5), y las páginas de error por defecto del marco se sustituyeron por cuatro páginas propias en español (`app/Views/errors/html/`: `error_400.php`, `error_404.php`, `error_exception.php` y `production.php`), de modo que un 404 o un 400 no muestre ni trazas técnicas ni texto en inglés a la ciudadanía. Los enlaces escritos a mano en esas páginas son los que destaparon el defecto de enrutamiento de §7.8 y motivaron el cotejo automático de §10.7.
 
 #### 11.5.2. Pruebas y despliegue
 
@@ -1755,8 +1912,8 @@ La tabla siguiente indica, para cada figura ya prevista en el capítulo de metod
 | Figura 6 | Panel administrativo (`Dashboard`) | `/admin/dashboard` en producción |
 | Figura 7 | Portal Ciudadano publicado en línea | `/portal/dashboard` en el dominio de producción |
 | **Figura sugerida 8** | Before/after del desbordamiento móvil | el título "Registrar Solicitud Presencial" recortado vs. acotado a dos líneas (§9.8.4) |
-| **Figura sugerida 9** | Terminal con `php spark migrate` y las 22 migraciones aplicadas | evidencia directa de §11.3.3 |
-| **Figura sugerida 10** | Corrida de PHPUnit en verde: `OK (210 tests, 845 assertions)` | evidencia de §10.1 y del criterio de cierre por iteración (§1.3) |
+| **Figura sugerida 9** | Terminal con `php spark migrate` y las 30 migraciones aplicadas | evidencia directa de §11.3.3 |
+| **Figura sugerida 10** | Corrida de PHPUnit en verde: `OK (347 tests, 1358 assertions)` | evidencia de §10.1 y del criterio de cierre por iteración (§1.3) |
 | **Figura sugerida 11** | Flujo de la máquina de estados | diagrama de la sección 3 de `DOCUMENTACION_GENERAL.md` o §7.2 |
 
 ### 11.7. Referencias Tecnológicas Utilizadas (para la bibliografía)
@@ -1775,6 +1932,77 @@ Formato tentativo en APA 7, pendiente de que el autor verifique fechas de consul
 
 ---
 
+### 11.8. Fase de Cobros (COB-01 a COB-12): Del Folio de Campo al Recibo de Pago
+
+#### 11.8.1. El problema que abrió la fase
+
+Hasta este corte el sistema sabía **dictaminar** y sabía **cobrar en línea con un mock**, pero no sabía **cobrar en ventanilla de forma trazable**. Convivían tres huecos verificables en el código previo:
+
+1. Una solicitud aprobada tenía `monto` y `estado_pago`, pero ningún registro contable que dijera **quién cobró, cuándo, dónde y con qué desglose**.
+2. Una boleta levantada por un agente llegaba a la base con `estado = 'recibida'` y **nadie la calificaba**: el monto de la multa no existía hasta que un juez lo fijara, y ese acto no tenía registro propio.
+3. El ciudadano que iba a pagar salía de la ventanilla **sin un papel** que dijera cuánto, hasta cuándo y dónde (§7.9).
+
+La fase de cobros se organizó en **doce tickets repartidos en tres carriles paralelos**, con una regla de coordinación explícita: **cada carril agrega, ninguno cambia las fórmulas de otro**. Esa regla es la que permitió que este carril (documentos y ciudadano) escribiera la hoja de pago **sin tocar `CobroService` ni `ResolverMontoInfraccionService`**.
+
+#### 11.8.2. Tablero de tickets y estado real
+
+| Ticket | Alcance verificado en el repositorio | Carril | Estado |
+|---|---|---|---|
+| **COB-01** | Base de cobros: tablas `cobros` y `cobro_movimientos`, folios `COB-AAAA-NNNNNN` / `REC-AAAA-NNNNNN`, `CobroService` con creación, cobro, cancelación e historial | Cobros | **Entregado** |
+| **COB-02** | Sin alcance técnico escrito en el repositorio | Por asignar | **Pendiente** |
+| **COB-03** | Sin alcance técnico escrito en el repositorio | Por asignar | **Pendiente** |
+| **COB-04** | Sin alcance técnico escrito en el repositorio | Por asignar | **Pendiente** |
+| **COB-05** | **Hoja de ayuda para el pago imprimible** (trámites y multas) desde panel, portal y panel del juez | Documentos y ciudadano | **Entregado en este corte** |
+| **COB-06** | Sin alcance técnico escrito en el repositorio; el catálogo `CobroService::LUGARES_PAGO` ya contempla `banbajio`, pero no hay integración bancaria | Por asignar | **Pendiente** |
+| **COB-07** | Consulta pública del adeudo por folio, sin sesión: está citada en el código como pendiente explícito (`DocumentosPagoController`) y por eso la hoja no enlaza a ella (§7.9) | Cobros | **Pendiente** |
+| **COB-08** | **Ciudadano registrado solo con nombre**: CURP opcional, cuenta sin acceso y reclamo desde el autorregistro | Documentos y ciudadano | **Entregado en este corte** |
+| **COB-09** | Rol `juez_calificador`, panel `/juez` y acceso rápido desde el login | Juez | **Entregado** |
+| **COB-10** | **Calificación judicial de boletas**: `CalificarBoletaService`, tablas `boleta_calificaciones` y `boleta_calificacion_detalles`, generación del cobro | Juez | **Entregado** |
+| **COB-11** | Sin alcance técnico escrito en el repositorio | Por asignar | **Sin asignar** |
+| **COB-12** | Sin alcance técnico escrito en el repositorio | Por asignar | **Sin asignar** |
+
+> **Nota de honestidad documental:** solo se describe el alcance de los tickets cuyo contenido está escrito en el código o en los comentarios del repositorio (COB-01, 05, 07, 08, 09, 10). Los demás se listan con su número y su estado sin inventarles contenido, porque un tablero de proyecto que inventa alcances deja de servir para verificar el avance.
+
+#### 11.8.3. Las dos decisiones de diseño que sostienen la fase
+
+**1. Un solo cobro para dos orígenes distintos.** Un derecho municipal y una multa se cobran igual en ventanilla, pero nacen en tablas distintas. En lugar de dos módulos, `cobros` tiene un campo `origen` (`solicitud` / `boleta`) y dos llaves foráneas excluyentes, ambas con `ON DELETE RESTRICT`: **un cobro es un registro contable y no puede desaparecer porque alguien borre el expediente que lo originó** (§3.2.I).
+
+**2. El dinero tiene un solo dueño.** `CobroService` es el único que crea y mueve cobros; `ResolverMontoInfraccionService` es el único que sabe de UMA, descuento por pronto pago y recargo por mora. Todo lo demás **consume**:
+
+```php
+// HojaPagoService: lee, nunca calcula por su cuenta
+$cobro = $this->cobros->vigenteDeSolicitud($solicitudId);
+$monto = round((float) ($cobro->monto_base ?? $solicitud->monto ?? 0), 2);
+$calculo = $this->montos->aplicarDescuentoRecargo($montoBase, $boleta->fecha_infraccion);
+```
+
+Ese orden de dependencias fue lo que hizo posible trabajar en tres carriles sin conflictos de fusión en las reglas de importes.
+
+#### 11.8.4. Lo que falta y de quién depende
+
+El cierre de la fase no depende de programación sino de **datos que solo la dependencia puede entregar**:
+
+| Dato pendiente | Para qué se necesita | Sin él… |
+|---|---|---|
+| Referencia de convenio de **BanBajío** | Imprimir en la hoja una referencia que el banco reconozca | La hoja imprime «ventanilla bancaria» sin número de convenio |
+| Formato del **recibo oficial** | Que el folio `REC-…` coincida con el talonario que usa la dependencia | El sistema genera folio propio, válido para control interno pero no para el talonario físico |
+| Texto del **oficio de comisión** al juez | Que el panel del juez pueda imprimir el documento que respalda su actuación | El juez califica y el registro queda en base, sin impreso asociado |
+| **Tope de condonación** autorizado | Validar en servidor el límite que puede aplicar cada rol | La condonación queda registrada con motivo, sin límite automático |
+| **Fecha de la sesión con el juez calificador** | Levantamiento del acto judicial real y validación del flujo en operación | El módulo está probado, pero no validado con el usuario final |
+
+#### 11.8.5. Evidencia verificable de este corte
+
+* **Migraciones:** `000027` (cobros), `000028` (roles), `000029` (`password_hash` nullable), `000030` (calificación judicial), con sus espejos `supabase/migrations/0012` a `0015`.
+* **Rutas nuevas:** `/juez`, `/juez/boletas`, `/juez/boletas/(:num)`, `/juez/boletas/(:num)/vista-previa`, `/juez/boletas/(:num)/calificar`, `/documentos/hoja-pago/solicitud/{folio o id}`, `/documentos/hoja-pago/boleta/(:num)`.
+* **Pruebas nuevas:** `CobroServiceTest`, `CalificarBoletaServiceTest`, `HojaPagoServiceTest`, `CuentaCiudadanoServiceTest`, `DocumentosPagoTest`, `RegistroCurpOpcionalTest`, `JuezCalificadorAccessTest`, más las ampliaciones de `SolicitudPresencialTest` y `AuthFormsRenderTest` (§10.2).
+* **Suite completa:** 347 casos y 1358 aserciones en 37 clases, sin fallos.
+* **Verificación de migraciones:** el esquema completo se aplicó sobre una base SQLite en archivo (30 migraciones, 25 tablas, `integrity_check ok`) comprobando además el alta de un usuario **sin contraseña** con rol de ciudadano, que es el corazón de COB-08.
+* **Prueba de humo local:** `/`, `/auth/login`, `/auth/register`, `/agentes` responden 200; `/portal`, `/juez` y la hoja de pago sin sesión redirigen al acceso (302) en lugar de fallar.
+
+> **Error de proceso que conviene dejar registrado:** al intentar verificar las migraciones con `php spark migrate -g tests` se descubrió que `MigrationRunner::setGroup()` **no reconecta** la base —el constructor ya se conectó al grupo por omisión—, de modo que el comando corrió contra la base institucional. El daño se midió (12 filas de historial insertadas, todas de migraciones idempotentes `CREATE TABLE IF NOT EXISTS`, sin cambio de esquema real), se revirtió con un script transaccional que verificó primero que el lote tuviera **exactamente** los 12 registros esperados y se comprobó después que el historial volviera a sus 28 filas originales. La verificación definitiva se hizo con un grupo de base registrado en tiempo de ejecución contra un archivo SQLite temporal. **Lección: una bandera de comando no es una garantía de aislamiento; hay que comprobarlo contra la base que se está tocando.**
+
+---
+
 ## 12. Conclusiones Técnicas de la Metodología
 
 La arquitectura construida para el **Portal Ciudadano y Panel Administrativo Web** resolvió con éxito las demandas operativas y normativas de la Dirección de Movilidad y Transporte de Uriangato:
@@ -1784,7 +2012,7 @@ La arquitectura construida para el **Portal Ciudadano y Panel Administrativo Web
 3. **Mantenibilidad y Escalabilidad:** El desacoplamiento mediante patrones de diseño (EAV para trámites heterogéneos, Feature Flags para control de versiones y Gateway para pagos) proporciona al H. Ayuntamiento una base tecnológica sólida. El catálogo declarativo de campos (§7.6.2) demostró su valor concreto: agregar un trámite nuevo al canal presencial es **añadir una entrada al arreglo**, no escribir un controlador y una vista nuevos.
 4. **Cobertura del Mundo Real (Canal Híbrido):** El sistema no asume un ciudadano digitalmente competente. La coexistencia del portal de autogestión (§6) y la radicación presencial con validez idéntica (§7.6), ambas escribiendo en el mismo expediente y compartiendo folio, tarifario y máquina de estados, es la decisión que convierte la plataforma en una herramienta **usable por la totalidad de la población** y no solo por su segmento conectado.
 5. **Usabilidad Multidispositiva como Requisito, no como Adorno:** El diseño *mobile-first* con objetivos táctiles de 44 px, navegación inferior en el portal, gaveta lateral con áreas seguras en el panel y una portada que degrada el desenfoque para priorizar contraste (§9) responde al dispositivo real con el que la gente tramita. La corrección del servidor de borde para recursos estáticos (§9.6) dejó registrada una restricción de arquitectura que de otra forma se manifestaría como fallos silenciosos en producción.
-6. **Calidad Comprobable:** La verificación no es una afirmación sino un resultado reproducible: **247 casos de prueba y 931 aserciones en verde**, en 27 clases, sobre un harness SQLite aislado de los datos institucionales (§10), con cobertura de permisos, estados, montos dinámicos, validaciones por trámite, renderizado de vistas, candados de integridad del padrón, cotejo estático de enlaces y blindajes de almacenamiento.
+6. **Calidad Comprobable:** La verificación no es una afirmación sino un resultado reproducible: **347 casos de prueba y 1358 aserciones en verde**, en 37 clases, sobre un harness SQLite aislado de los datos institucionales (§10), con cobertura de permisos, estados, montos dinámicos, validaciones por trámite, renderizado de vistas, candados de integridad del padrón, cotejo estático de enlaces, blindajes de almacenamiento y, desde la fase de cobros, de la creación y cobro de adeudos, la calificación judicial de boletas, el alta de ciudadano sin acceso y la hoja de pago.
 7. **Medir en Lugar de Suponer:** Tres hallazgos del cierre del proyecto no habrían aparecido con una revisión visual: el título de todas las páginas administrativas se pintaba vacío (§10.5), el texto largo del panel se recortaba en silencio por debajo del *overflow-x: hidden* (§9.8) y el botón "Iniciar sesión" de la página 404 propia llevaba a otro 404 porque CI4 descartaba el atajo por colisión de nombre con la ruta (§7.8, §10.7). El cuarto caso es inverso y también vale: la queja de que el haz publicado de la app móvil seguía en inglés se descartó con evidencia —reexportar produjo salida **idéntica byte a byte** y el bundle servido en producción no contenía esa cadena—, lo que demuestra que medir también sirve para no "arreglar" algo que no está roto. Los tres defectos reales se detectaron con instrumentación —barrido de HTML producido, medición a 360/320/290 px con página de control y sondeo de la URL desplegada— y los tres se convirtieron en candados automatizados para que no puedan regresar.
 8. **El Proceso También Es Resultado:** La secuencia iterativa e incremental (§1.3) y el levantamiento presencial en dos vertientes (§11.1) no son un preámbulo del trabajo sino parte de él: explican por qué el andamiaje soportó siete trámites sin reescribirse, por qué el esquema de datos es portable entre PostgreSQL y SQLite y por qué el panel habla el vocabulario operativo de la dependencia en lugar de imponer otro.
 

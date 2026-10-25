@@ -122,6 +122,8 @@ stateDiagram-v2
 8. **Usuarios y Ciudadanos (`/admin/usuarios`):** Alta, edición y desactivación de cuentas de ciudadanos desde la ventanilla. La baja definitiva es exclusiva del administrador.
 9. **Permisos del Operador (`/admin/permisos-operador`, solo administrador):** El administrador enciende o apaga secciones del panel para el rol `operador_ventanilla` (solicitudes, usuarios, tarifas, concesiones, formatos, auditoría, convocatorias y los tres módulos de App Tránsito) **sin programar ni crear roles nuevos**. Se persiste como JSON en `parametros_app` y lo hace cumplir `PermisoOperadorFilter` en todo el prefijo `admin`.
 10. **Bitácora de Auditoría Municipal:** Registro de todas las operaciones administrativas críticas (altas, modificaciones, cancelaciones) con IP y usuario.
+11. **Panel del Juez Calificador (`/juez`):** Superficie de solo lectura para el rol `juez_calificador`. Reúne la bandeja de boletas de infracción recibidas desde la app de campo, su detalle con evidencia fotográfica, la calificación con vista previa y una **mesa de cobros pendientes** con folio de recibo, monto exigible, descuento o recargo aplicado y lugar de pago. El juez **califica pero no cobra**: registrar el pago es acto de ventanilla o del módulo de cobros, y el panel lo refleja separando ambas columnas.
+12. **Módulo de cobros y hoja de pago (COB-05):** Cada solicitud aprobada o boleta calificada exige un **cobro** con folio propio (`COB-AAAA-NNNNNN`); cada pago efectivo deja su recibo (`REC-AAAA-NNNNNN`) como movimiento, sin sobrescribir el cobro original. Desde la solicitud, la boleta y el portal se imprime la **hoja de ayuda para el pago** (`/documentos/hoja-pago/solicitud/{folio o id}` y `/documentos/hoja-pago/boleta/{id}`), que concentra folio, concepto, desglose de multas por fundamento legal, descuento por pronto pago o recargo mensual, condonaciones y lugares de pago habilitados. La ruta solo exige sesión y el permiso fino vive en el controlador: **el personal de ventanilla imprime cualquier documento; el ciudadano únicamente los de sus propios trámites y nunca las multas**. La hoja es de apoyo: no sustituye el recibo oficial ni la referencia bancaria, que dependen de los datos pendientes de la Dirección de Finanzas (COB-04 y COB-07).
 
 ---
 
@@ -213,8 +215,8 @@ La persistencia unificada reside en PostgreSQL alojado en Supabase:
 
 | Tabla | Módulo Principal | Propósito / Contenido |
 |---|---|---|
-| `users` | Portal / Admin | Cuentas de ciudadanos y funcionarios con contraseña encriptada (bcrypt) y perfil civil (nombre, CURP, RFC, domicilio, teléfono, INE). |
-| `roles` / `user_roles` | Portal / Admin | Catálogo de los tres roles del sistema (`administrador`, `operador_ventanilla`, `ciudadano`) y su asignación por cuenta. |
+| `users` | Portal / Admin | Cuentas de ciudadanos y funcionarios con perfil civil (nombre, CURP, RFC, domicilio, teléfono, INE). `password_hash` es **nullable**: una cuenta puede existir sin acceso mientras el ciudadano no reclame el expediente que ventanilla le radicó. |
+| `roles` / `user_roles` | Portal / Admin | Catálogo de los cuatro roles del sistema (`administrador`, `operador_ventanilla`, `ciudadano`, `juez_calificador`) y su asignación por cuenta. |
 | `ci_sessions` | Backend CI4 | Manejador de sesiones persistentes en base de datos para entornos serverless en Vercel. |
 | `solicitudes` | Portal / Admin | Registro maestro de trámites con folio único, estatus, monto, fechas de radicación y pago, y ligas **opcionales** a `concesion_id` y `convocatoria_id`. Ambas llaves son `ON DELETE RESTRICT` (con `ON UPDATE SET NULL`): el expediente sobrevive si el catálogo de arriba se va. |
 | `solicitud_datos` | Portal / Admin | Almacenamiento tipo EAV (Entity-Attribute-Value) de campos específicos según el tipo de trámite (vehículos, rutas, placas, motivos) y el marcador de canal `origen` (`portal` o `presencial`). |
@@ -233,6 +235,14 @@ La persistencia unificada reside en PostgreSQL alojado en Supabase:
 | `boleta_checklist_item` | Móvil | Items de verificación asociados a cada boleta de infracción. |
 | `catalogo_infracciones` / `catalogo_infracciones_app` | Móvil / Admin | Tipificación del reglamento municipal: fundamento legal, descripción, categoría de actor y rangos de UMA mínimo/máximo. |
 | `auditoria` | Admin | Registro de eventos sensibles: inicios de sesión, cambios de permisos, resoluciones de trámites, intentos de registro y IP de origen. |
+| `cobros` | Admin / Juez | Obligación de pago derivada de una solicitud o de una boleta: folio `COB-AAAA-NNNNNN`, concepto, monto base, descuento o recargo aplicado, total, estado (`pendiente`, `aprobado`, `cancelado`), lugar de pago y marca de cobro efectivo con fecha y funcionario. Una solicitud o boleta tiene **un solo cobro vigente**. |
+| `cobro_movimientos` | Admin | Bitácora de cada movimiento de un cobro (alta, condonación, pago), con folio de recibo `REC-AAAA-NNNNNN`, importe, usuario responsable y notas. Es la fuente de verdad del historial: el cobro no se edita hacia atrás. |
+| `boleta_calificaciones` | Juez | Calificación formal de una boleta por el juez: nombre del infractor, valor de la UMA aplicado, total en UMA, monto base, si procede descuento por pronto pago o recargo, y juez responsable. |
+| `boleta_calificacion_detalles` | Juez | Desglose por falta calificada: fundamento legal, descripción, UMA mínima y máxima y valor asignado, en el orden en que se imprimen. |
+
+**Migraciones del corte de cobros.** Del lado de la aplicación, `2026-10-23-000028_AddJuezCalificadorRole` (rol del juez), `2026-10-24-000027_CreateCobrosTables` (`cobros` y `cobro_movimientos`), `2026-10-24-000030_CreateBoletaCalificaciones` (calificación y su detalle) y `2026-10-25-000029_PermitirCiudadanoSinAcceso` (`users.password_hash` nullable), junto con `2026-10-21-000025_SeedTarifasBaseFaltantes` y `2026-10-22-000026_ResyncSecuenciasPostgres`. Para la base hosteada existen sus espejos SQL en `supabase/migrations/`: `0010_tarifas_base_faltantes`, `0011_resincronizar_secuencias`, `0012_cobros`, `0013_juez_calificador_role`, `0014_ciudadano_sin_acceso` y `0015_boleta_calificaciones`. **Los dos caminos deben aplicarse juntos**: el archivo PHP corre en la suite de pruebas y en instalaciones locales, y el `.sql` en el SQL Editor de Supabase.
+
+> **Nota de operación (SQLite):** cambiar la nulabilidad de una columna obliga al Forge de CI4 a reconstruir la tabla renombrando `users` a `temp_users`. Desde SQLite 3.25 ese renombre reescribe las claves foráneas de otras tablas, así que `user_roles.user_id` terminaría apuntando a una tabla que se borra al final. La migración `000029` activa `PRAGMA legacy_alter_table` alrededor del cambio para evitarlo; está verificado con `PRAGMA foreign_key_check` e `integrity_check` en limpio.
 
 ---
 
@@ -252,7 +262,8 @@ Cada vez que un ciudadano o funcionario sube un documento, el backend calcula su
 
 ### 3. Control de Acceso: Roles y Permisos Configurables
 
-* **RBAC por rol** (`AuthFilter`, `RoleFilter`, `AdminRedirectFilter`): tres roles — `ciudadano` usa el portal; `administrador` y `operador_ventanilla` usan el panel; los funcionarios son redirigidos automáticamente si intentan entrar al portal.
+* **RBAC por rol** (`AuthFilter`, `RoleFilter`, `AdminRedirectFilter`): cuatro roles — `ciudadano` usa el portal; `administrador` y `operador_ventanilla` usan el panel; `juez_calificador` entra solo a `/juez` y no puede cobrar; los funcionarios son redirigidos automáticamente si intentan entrar al portal.
+* **Cobrar no es administrar:** la calificación de una boleta (juez) y el registro de su pago (ventanilla o módulo de cobros) son permisos distintos y quedan en tablas distintas (`boleta_calificaciones` frente a `cobro_movimientos`), de modo que ninguna cuenta puede cerrar sola el ciclo completo de una multa.
 * **Autorización de grano fino** (`PermisoOperadorFilter`): dentro del rol `operador_ventanilla`, el administrador habilita o bloquea secciones concretas del panel desde `/admin/permisos-operador`. El mapa se guarda como JSON en `parametros_app`, sin migraciones y sin crear roles nuevos. La coincidencia se hace por **prefijo de URI más largo**, así que una ruta nueva bajo un prefijo ya catalogado queda protegada automáticamente.
 * **Invariantes:** el administrador nunca se filtra; las bajas definitivas no son configurables (grupo de ruta exclusivo `role:administrador`); sin configuración guardada todo está permitido.
 * **Agentes de tránsito:** no se autorregistran ni por el portal ni desde la app; no existe un endpoint público de registro de agentes. Solo el administrador los da de alta en `/admin/app-transito`, por ser personal con capacidad de sanción.
@@ -323,7 +334,7 @@ El proyecto está configurado para despliegue continuo en Vercel Serverless medi
 ./vendor/bin/phpunit                       # Linux / macOS
 ./php82/php.exe vendor/bin/phpunit         # Windows con el PHP del repositorio
 ```
-La suite consta de **247 casos de prueba y 931 aserciones** repartidas en 27 clases (control de acceso, permisos del operador, los 7 trámites, tarifario dinámico, máquina de estados, radicación presencial, API REST de agentes, almacenamiento local, renderizado de vistas, desglose del tablero, **CRUD de convocatorias, protección del catálogo de concesiones y cotejo de los enlaces estáticos de las vistas**). Corre contra SQLite en memoria con prefijo `db_`, de modo que **jamás toca la base institucional**. Requiere migraciones aplicadas. Duración de referencia: ~1 min con 28 MB de memoria.
+La suite consta de **347 casos de prueba y 1358 aserciones** repartidas en 37 clases (control de acceso, permisos del operador, los 7 trámites, tarifario dinámico, máquina de estados, radicación presencial, API REST de agentes, almacenamiento local, renderizado de vistas, desglose del tablero, **CRUD de convocatorias, protección del catálogo de concesiones, cotejo de los enlaces estáticos de las vistas, alta de ciudadano sin acceso con aviso de homónimos, reclamo de cuenta desde el autorregistro y hoja de pago con su permiso fino**). Corre contra SQLite en memoria con prefijo `db_`, de modo que **jamás toca la base institucional**. Requiere migraciones aplicadas. Duración de referencia: ~2 min 20 s con 30 MB de memoria.
 
 La app móvil tiene su propio verificador, independiente de PHPUnit:
 
@@ -350,6 +361,22 @@ El proyecto se desarrolló con una **metodología iterativa e incremental**: pri
 | **App Móvil de Agentes** | `mobile/agentes-transito/` y su exportación servida en `public/agentes/` | `node tests/auth-flow.test.cjs`, `npx tsc --noEmit` y cotejo de endpoints contra `app/Config/Routes.php` |
 
 Recorrido completo por fases, con las tablas de evidencia listas para desplegar en el documento final: `DOC_METODOLOGIA_PORTAL_PANEL.md` §11.
+
+**Fase de cobros: tablero COB (12 tickets).** La fase se organizó en tres carriles con un tablero de doce tickets. Estado real al cierre de este corte:
+
+| Ticket | Estado | Alcance entregado o motivo de espera |
+|---|---|---|
+| **COB-01** | Entregado | `CobroService`, `CobroModel` y las tablas `cobros` / `cobro_movimientos` con sus folios `COB-` y `REC-` (migraciones `000027` y `0012`). |
+| **COB-09** | Entregado | Rol `juez_calificador`, migraciones `000028` y `0013`, panel `/juez` de solo consulta. |
+| **COB-10** | Entregado | `CalificarBoletaService` y el desglose de la calificación (migraciones `000030` y `0015`). |
+| **COB-08** | Entregado en este corte | Ciudadano registrado con solo su nombre: CURP opcional, cuenta sin contraseña, aviso de homónimos y reclamo posterior desde el autorregistro (migración `000029` y espejo `0014`). |
+| **COB-05** | Entregado en este corte | Hoja de ayuda para el pago, imprimible en tamaño carta, para trámites y multas, con su permiso fino y sus accesos desde panel, portal y panel del juez. |
+| **COB-02**, **COB-03** | Pendiente | Inciden en `CobroService`; no se intervinieron para respetar la regla de carriles y evitar choques con la hoja de pago, que solo consume ese servicio. |
+| **COB-04** | Pendiente por datos | Referencia de pago del convenio con BanBajío. Mientras no exista, la hoja imprime «Se entrega al formalizar el convenio» en lugar de una referencia inventada. |
+| **COB-06**, **COB-07** | Pendiente por datos | Requieren el tope de condonación autorizado, el formato del recibo y del oficio reales y la fecha de la sesión con el juez. La hoja de pago ya contempla la consulta por folio, pero la imprime **sin enlace** para no publicar una ruta muerta. |
+| **COB-11**, **COB-12** | Pendiente | Cierre de la fase: faltan por asignar en el tablero del equipo. |
+
+La regla de carriles que hizo posible el avance en paralelo: **cada carril agrega métodos y archivos nuevos, pero no modifica lo que otro ya entregó**. La hoja de pago lo ejemplifica: `HojaPagoService` consume `CobroService` y `ResolverMontoInfraccionService` sin tocar una línea de ambos.
 
 ---
 
