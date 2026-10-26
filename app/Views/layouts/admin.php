@@ -126,6 +126,13 @@ $__tituloPagina = trim($this->renderSection('pageTitle', true));
         </a>
         <?php endif; ?>
 
+        <?php if ($permitido('cobros')): ?>
+        <a href="/admin/cobros" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/cobros') ? 'active' : '' ?>">
+            <i class="bi bi-cash-stack me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Cobros</span>
+        </a>
+        <?php endif; ?>
+
         <?php if ($permitido('usuarios')): ?>
         <div class="sidebar-section-title mt-3">Ventanilla</div>
         <a href="/admin/usuarios" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/usuarios') ? 'active' : '' ?>">

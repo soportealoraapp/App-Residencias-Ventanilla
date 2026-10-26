@@ -37,6 +37,12 @@ final class PermisosOperador
             'icono'       => 'folder2-open',
             'rutas'       => ['admin/solicitudes'],
         ],
+        'cobros' => [
+            'nombre'      => 'Cobros',
+            'descripcion' => 'Listado de cobros de trámites y multas: cobrar, mandar a completar y cancelar con motivo.',
+            'icono'       => 'cash-stack',
+            'rutas'       => ['admin/cobros'],
+        ],
         'usuarios' => [
             'nombre'      => 'Usuarios y ciudadanos',
             'descripcion' => 'Crear y editar cuentas de ciudadanos desde la ventanilla (eliminar sigue siendo solo del administrador).',

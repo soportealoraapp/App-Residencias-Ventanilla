@@ -95,6 +95,12 @@ class DemoFuncionamientoSeeder extends Seeder
 
         $boletas = $this->crearBoletas($hoy);
 
+        // Las solicitudes demo en "Pago pendiente" se insertan directo, sin pasar
+        // por EstadoSolicitudService: se les crea su cobro para el listado.
+        if ($this->db->tableExists('cobros')) {
+            (new \App\Libraries\CobroService())->crearPendientesFaltantes($operadorId);
+        }
+
         echo sprintf(
             "Datos demo listos: %d ciudadanos, %d solicitudes nuevas, %d boletas nuevas. Contraseña de ciudadanos demo: %s\n",
             count($ciudadanos), $creadas, $boletas, self::PASSWORD_DEMO

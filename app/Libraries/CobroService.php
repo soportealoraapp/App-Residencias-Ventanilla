@@ -241,6 +241,28 @@ class CobroService
         }
     }
 
+    /**
+     * Crea el cobro de las solicitudes que ya estaban en "Pago pendiente" antes
+     * de que existiera el módulo de cobros (o que se cargaron directo a la base,
+     * como los datos demo). Es idempotente. Devuelve cuántos cobros creó.
+     */
+    public function crearPendientesFaltantes(?int $usuarioId = null): int
+    {
+        $sinCobro = \Config\Database::connect()->table('solicitudes s')
+            ->select('s.id')
+            ->join('cobros c', "c.solicitud_id = s.id AND c.estatus IN ('pendiente', 'aprobado')", 'left', false)
+            ->where('s.estatus', 'Pago pendiente')
+            ->where('c.id', null)
+            ->orderBy('s.id', 'ASC')
+            ->get()->getResult();
+
+        foreach ($sinCobro as $fila) {
+            $this->crearDesdeSolicitud((int) $fila->id, $usuarioId);
+        }
+
+        return count($sinCobro);
+    }
+
     // ─── Consultas ────────────────────────────────────────────────────────────
 
     /** @return list<object> */

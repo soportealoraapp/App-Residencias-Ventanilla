@@ -173,6 +173,24 @@ class CobroServiceTest extends DatabaseTestCase
         $this->cobros->marcarCobrado($cobroId, 'ventanilla');
     }
 
+    public function testCreaLosCobrosQueFaltabanSinDuplicar(): void
+    {
+        // Solicitudes cargadas directo en "Pago pendiente", sin pasar por el servicio de estatus.
+        $sinCobro = $this->solicitud('UR-TT-T-07', 'Pago pendiente', 400.0);
+        $otra     = $this->solicitud('UR-TT-T-05', 'Pago pendiente', 287.0);
+        $this->solicitud('UR-TT-T-07', 'Recibido', 400.0);
+        $conCobro = $this->solicitud('UR-TT-T-07', 'Recibido', 400.0);
+        $this->estados->cambiarEstatus($conCobro, 'Pago pendiente', $this->operadorId);
+
+        $this->assertSame(2, $this->cobros->crearPendientesFaltantes());
+        $this->assertSame(0, $this->cobros->crearPendientesFaltantes());
+
+        $this->assertSame('pendiente', $this->cobroDeSolicitud($sinCobro)->estatus);
+        $this->assertNotNull($this->cobroDeSolicitud($otra));
+        $this->assertSame(1, (new CobroModel())->where('solicitud_id', $conCobro)->countAllResults());
+        $this->assertSame(3, (new CobroModel())->countAllResults());
+    }
+
     public function testMultaPagadaAProntoPagoLlevaDescuento(): void
     {
         $boletaId = $this->boleta(date('Y-m-d'));

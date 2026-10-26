@@ -37,11 +37,13 @@
             <span class="sidebar-text">Boletas por calificar</span>
         </a>
 
-        <div class="sidebar-section-title mt-3">Próximas funciones</div>
-        <div class="sidebar-link text-white-50" aria-disabled="true">
+        <div class="sidebar-section-title mt-3">Cobros</div>
+        <a href="/juez/cobros" class="sidebar-link <?= str_starts_with(uri_string(), 'juez/cobros') ? 'active' : '' ?>">
             <i class="bi bi-cash-coin me-2 sidebar-link-icon"></i>
-            <span class="sidebar-text">Cobros · pendiente</span>
-        </div>
+            <span class="sidebar-text">Listado de cobros</span>
+        </a>
+
+        <div class="sidebar-section-title mt-3">Próximas funciones</div>
         <div class="sidebar-link text-white-50" aria-disabled="true">
             <i class="bi bi-file-earmark-minus me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Condonaciones · pendiente</span>
@@ -77,6 +79,9 @@
     </a>
     <a href="/juez/boletas" class="admin-bottom-item <?= str_starts_with(uri_string(), 'juez/boletas') ? 'active' : '' ?>">
         <i class="bi bi-receipt-cutoff" aria-hidden="true"></i><span>Boletas</span>
+    </a>
+    <a href="/juez/cobros" class="admin-bottom-item <?= str_starts_with(uri_string(), 'juez/cobros') ? 'active' : '' ?>">
+        <i class="bi bi-cash-coin" aria-hidden="true"></i><span>Cobros</span>
     </a>
     <button type="button" class="admin-bottom-item" id="btnBottomMenu" aria-controls="sidebarAdmin" aria-expanded="false">
         <i class="bi bi-list" aria-hidden="true"></i><span>Menú</span>

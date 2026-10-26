@@ -50,6 +50,12 @@ $routes->group('juez', ['filter' => 'auth'], static function ($routes) {
         $routes->get('boletas/(:num)', 'Juez\DashboardController::detalle/$1', ['as' => 'juez.boleta']);
         $routes->post('boletas/(:num)/vista-previa', 'Juez\DashboardController::vistaPrevia/$1', ['as' => 'juez.boleta.previa']);
         $routes->post('boletas/(:num)/calificar', 'Juez\DashboardController::calificar/$1', ['as' => 'juez.boleta.calificar']);
+        // COB-02: el juez cobra trámites y multas con el mismo listado del panel.
+        $routes->get('cobros', 'CobrosController::index', ['as' => 'juez.cobros']);
+        $routes->get('cobros/(:num)', 'CobrosController::ver/$1', ['as' => 'juez.cobro']);
+        $routes->post('cobros/(:num)/cobrar', 'CobrosController::cobrar/$1');
+        $routes->post('cobros/(:num)/completar', 'CobrosController::completar/$1');
+        $routes->post('cobros/(:num)/cancelar', 'CobrosController::cancelar/$1');
     });
 });
 
@@ -81,6 +87,12 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->post('solicitudes/dictamen-ur02/(:num)', 'Admin\\AdminController::registrarDictamenUr02/$1');
         $routes->get('solicitudes/descargar-documento/(:num)', 'Admin\\AdminController::descargarDocumento/$1');
         $routes->post('solicitudes/validar-documento/(:num)', 'Admin\\AdminController::validarDocumento/$1');
+        // COB-02: listado de cobros de trámites y multas.
+        $routes->get('cobros', 'CobrosController::index', ['as' => 'admin.cobros']);
+        $routes->get('cobros/(:num)', 'CobrosController::ver/$1', ['as' => 'admin.cobro']);
+        $routes->post('cobros/(:num)/cobrar', 'CobrosController::cobrar/$1');
+        $routes->post('cobros/(:num)/completar', 'CobrosController::completar/$1');
+        $routes->post('cobros/(:num)/cancelar', 'CobrosController::cancelar/$1');
         $routes->get('tarifas', 'Admin\\CatalogoTarifasController::index');
         $routes->get('tarifas/nuevo', 'Admin\\CatalogoTarifasController::formNuevo');
         $routes->post('tarifas/guardar', 'Admin\\CatalogoTarifasController::guardar');

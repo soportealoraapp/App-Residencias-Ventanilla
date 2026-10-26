@@ -77,7 +77,8 @@ class DocumentosPagoController extends Controller
 
     private function puedeVerSolicitud(object $solicitud): bool
     {
-        if ($this->tieneAlgunRol(['administrador', 'operador_ventanilla'])) {
+        // El juez también cobra trámites desde su listado de cobros (COB-02).
+        if ($this->tieneAlgunRol(['administrador', 'operador_ventanilla', 'juez_calificador'])) {
             return true;
         }
 
