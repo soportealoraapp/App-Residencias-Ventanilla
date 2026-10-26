@@ -57,7 +57,8 @@ $urlEstatus = static function (string $estatus) use ($base, $filtros): string {
     </div>
     <div class="col-12 col-lg-6">
         <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
+            <div class="card-body position-relative">
+                <a href="<?= esc($base . '/corte', 'attr') ?>" class="stretched-link" aria-label="Ver el corte de caja de hoy"></a>
                 <div class="text-muted small">Cobrado hoy</div>
                 <div class="fs-4 fw-bold text-success-emphasis"><?= $pesos($resumen['monto_cobrado_hoy'] ?? 0) ?></div>
                 <div class="small text-muted"><?= (int) ($resumen['cobrados_hoy'] ?? 0) ?> cobro<?= (int) ($resumen['cobrados_hoy'] ?? 0) === 1 ? '' : 's' ?> registrados hoy</div>
@@ -105,8 +106,9 @@ $urlEstatus = static function (string $estatus) use ($base, $filtros): string {
 </form>
 
 <div class="card border-0 shadow-sm">
-    <div class="card-header bg-white py-3">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center gap-2">
         <h2 class="h6 mb-0"><i class="bi bi-cash-stack me-2 text-primary"></i>Cobros (<?= number_format($pager ? $pager->getTotal() : count($cobros)) ?>)</h2>
+        <a href="<?= esc($base . '/corte', 'attr') ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-calculator me-1"></i>Corte de caja</a>
     </div>
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">

@@ -23,6 +23,9 @@ class CobrosControllerTest extends DatabaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // La caché de permisos es estática: sin esto, una prueba que quita el
+        // permiso de cobros a la ventanilla contamina a las que corren después.
+        PermisosOperador::reiniciarCache();
 
         foreach (['administrador', 'operador_ventanilla', 'ciudadano', 'juez_calificador'] as $rol) {
             if ($this->db->table('roles')->where('nombre', $rol)->countAllResults() === 0) {
@@ -51,6 +54,12 @@ class CobrosControllerTest extends DatabaseTestCase
             'vehiculo_placas' => 'GTA-123-B', 'estado' => 'calificada',
         ]);
         $this->cobroMulta = (new CobroService())->crearDesdeBoleta((int) $this->db->insertID(), 1000.0, $this->usuarios['juez_calificador']);
+    }
+
+    protected function tearDown(): void
+    {
+        PermisosOperador::reiniciarCache();
+        parent::tearDown();
     }
 
     private function como(string $rol): self
@@ -147,6 +156,26 @@ class CobrosControllerTest extends DatabaseTestCase
         ])->assertRedirectTo('/admin/cobros/' . $this->cobroTramite);
     }
 
+    public function testCorteDeCajaDelDiaEnPantallaYEnCsv(): void
+    {
+        $this->como('operador_ventanilla')->post('/admin/cobros/' . $this->cobroTramite . '/cobrar', ['lugar_pago' => 'ventanilla']);
+
+        $html = $this->como('administrador')->get('/admin/cobros/corte')->response()->getBody();
+        $this->assertStringContainsString('Total cobrado', $html);
+        $this->assertStringContainsString('$400.00', $html);
+        $this->assertStringContainsString('Laura Ramírez Gómez', $html);
+        $this->assertStringContainsString('Permiso de Carga y Descarga', $html);
+
+        $csv = $this->como('juez_calificador')->get('/juez/cobros/corte/csv?periodo=mes');
+        $csv->assertOK();
+        $this->assertStringContainsString('text/csv', $csv->response()->getHeaderLine('Content-Type'));
+        $cuerpo = $csv->response()->getBody();
+        $this->assertStringStartsWith("\xEF\xBB\xBF", $cuerpo);
+        $this->assertStringContainsString('Laura Ramírez Gómez', $cuerpo);
+        $this->assertStringContainsString('Total del corte', $cuerpo);
+        $this->assertStringContainsString('400.00', $cuerpo);
+    }
+
     public function testElOperadorSinPermisoDeCobrosNoEntra(): void
     {
         $permisos = PermisosOperador::todos();
@@ -154,6 +183,7 @@ class CobrosControllerTest extends DatabaseTestCase
         PermisosOperador::guardar($permisos);
 
         $this->como('operador_ventanilla')->get('/admin/cobros')->assertRedirect();
+        $this->como('operador_ventanilla')->get('/admin/cobros/corte')->assertRedirect();
         $this->como('administrador')->get('/admin/cobros')->assertOK();
     }
 }

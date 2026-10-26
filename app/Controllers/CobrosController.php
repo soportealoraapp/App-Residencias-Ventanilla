@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Libraries\CobroException;
 use App\Libraries\CobroService;
+use App\Libraries\CorteCajaService;
 use App\Models\CobroModel;
 use CodeIgniter\Controller;
 use CodeIgniter\Exceptions\PageNotFoundException;
@@ -126,7 +127,72 @@ class CobrosController extends Controller
         });
     }
 
+    /** Corte de caja del día, la semana, el mes o un rango (COB-03). */
+    public function corte()
+    {
+        [$filtros, $rango, $cobradorId] = $this->filtrosCorte();
+        $servicio = new CorteCajaService();
+
+        return view('cobros/corte', [
+            'layout'     => $this->layout(),
+            'base'       => $this->base(),
+            'filtros'    => $filtros,
+            'rango'      => $rango,
+            'corte'      => $servicio->corte($rango['desde'], $rango['hasta'], $cobradorId),
+            'cobradores' => $servicio->cobradores(),
+            'periodos'   => CorteCajaService::PERIODOS,
+        ]);
+    }
+
+    /** El mismo corte en CSV para abrirlo en Excel. */
+    public function corteCsv()
+    {
+        [, $rango, $cobradorId] = $this->filtrosCorte();
+        $corte = (new CorteCajaService())->corte($rango['desde'], $rango['hasta'], $cobradorId);
+
+        $salida = fopen('php://temp', 'r+');
+        fputcsv($salida, ['Recibo', 'Folio de cobro', 'Fecha de cobro', 'Nombre', 'Concepto', 'Tipo', 'Monto base', 'Descuento', 'Recargo', 'Condonado', 'Total', 'Lugar de pago', 'Referencia', 'Cobró']);
+        foreach ($corte['cobros'] as $c) {
+            fputcsv($salida, [
+                $c->folio_recibo, $c->folio, $c->fecha_cobro, $c->nombre_pagador, $c->concepto, $c->tipo_concepto,
+                number_format((float) $c->monto_base, 2, '.', ''), number_format((float) $c->descuento, 2, '.', ''),
+                number_format((float) $c->recargo, 2, '.', ''), number_format((float) $c->condonado, 2, '.', ''),
+                number_format((float) $c->total, 2, '.', ''), $c->lugar, $c->referencia_pago, $c->cobrador,
+            ]);
+        }
+        fputcsv($salida, ['', '', '', '', '', 'Total del corte', '', '', '', '', number_format($corte['total'], 2, '.', '')]);
+        rewind($salida);
+        $csv = stream_get_contents($salida);
+        fclose($salida);
+
+        $nombre = 'corte-caja-' . $rango['desde']->format('Y-m-d') . ($rango['hasta'] != $rango['desde'] ? '-a-' . $rango['hasta']->format('Y-m-d') : '') . '.csv';
+
+        // BOM para que Excel lea bien los acentos.
+        return $this->response
+            ->setHeader('Content-Type', 'text/csv; charset=UTF-8')
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $nombre . '"')
+            ->setBody("\xEF\xBB\xBF" . $csv);
+    }
+
     // ─── Internos ─────────────────────────────────────────────────────────────
+
+    /** @return array{0: array<string, string>, 1: array, 2: ?int} */
+    private function filtrosCorte(): array
+    {
+        $filtros = [
+            'periodo'  => (string) $this->request->getGet('periodo'),
+            'fecha'    => $this->fecha($this->request->getGet('fecha')),
+            'desde'    => $this->fecha($this->request->getGet('desde')),
+            'hasta'    => $this->fecha($this->request->getGet('hasta')),
+            'cobrador' => ctype_digit((string) $this->request->getGet('cobrador')) ? (string) $this->request->getGet('cobrador') : '',
+        ];
+        if (! array_key_exists($filtros['periodo'], CorteCajaService::PERIODOS)) {
+            $filtros['periodo'] = 'dia';
+        }
+        $rango = CorteCajaService::rango($filtros['periodo'], $filtros['fecha'], $filtros['desde'], $filtros['hasta']);
+
+        return [$filtros, $rango, $filtros['cobrador'] !== '' ? (int) $filtros['cobrador'] : null];
+    }
 
     /** @param callable(CobroService, int): string $accion */
     private function ejecutar(int $id, callable $accion): RedirectResponse
