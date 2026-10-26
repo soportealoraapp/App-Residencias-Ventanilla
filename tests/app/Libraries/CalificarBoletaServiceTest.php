@@ -52,12 +52,17 @@ class CalificarBoletaServiceTest extends DatabaseTestCase
         $this->assertCount(2,$s->faltasDeBoleta($m->find($this->boleta($json))));
         $this->assertCount(2,$s->faltasDeBoleta($m->find($this->boleta(json_encode($json)))));
     }
-    public function testRechazaJsonDanadoYNombreFaltante(): void
+    public function testRechazaJsonDanadoSinPersistirloEnJsonb(): void
     {
-        $s=new CalificarBoletaService(); $m=new BoletaInfraccionModel();
-        try{$s->faltasDeBoleta($m->find($this->boleta('{mal json')));$this->fail('Debió rechazarse.');}catch(CalificacionBoletaException){$this->addToAssertionCount(1);}
+        $boleta=(object)['faltas_json'=>'{mal json'];
+        $this->expectException(CalificacionBoletaException::class);
+        $this->expectExceptionMessage('faltas de la boleta están dañadas');
+        (new CalificarBoletaService())->faltasDeBoleta($boleta);
+    }
+    public function testRechazaNombreFaltanteConJsonValido(): void
+    {
         $this->expectException(CalificacionBoletaException::class); $this->expectExceptionMessage('nombre del infractor');
-        $s->calificar($this->boleta($this->faltas()),'   ',['2','3'],$this->juezId);
+        (new CalificarBoletaService())->calificar($this->boleta($this->faltas()),'   ',['2','3'],$this->juezId);
     }
     public function testRechazaMarcadorDeConductorAusente(): void
     {
