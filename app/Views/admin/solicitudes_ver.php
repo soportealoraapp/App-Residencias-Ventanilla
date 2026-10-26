@@ -22,6 +22,15 @@ $historial = $__view['historial'] ?? [];
 /** @var array<int, string> $estatusSiguientes */
 $estatusSiguientes = $__view['estatusSiguientes'] ?? [];
 
+/** @var array<int, array<string, mixed>> $accionesSeguimiento */
+$accionesSeguimiento = $__view['accionesSeguimiento'] ?? [];
+
+$requiereFlujoEspecializado = (bool) ($__view['requiereFlujoEspecializado'] ?? false);
+$requiereRegistroCobro = (bool) ($__view['requiereRegistroCobro'] ?? false);
+
+/** @var object|null $cobroVigente */
+$cobroVigente = $__view['cobroVigente'] ?? null;
+
 /** @var array<string, mixed> $datosSolicitud */
 $datosSolicitud = $__view['datosSolicitud'] ?? [];
 
@@ -159,28 +168,12 @@ $claveEtiquetas = [
 
     <div class="col-md-6">
         <?php if ($solicitud->tramite === 'UR-TT-T-05'): ?>
-            <?php
-            $etiquetasAccionUr05 = [
-                'En validación' => 'Iniciar validación',
-                'Pagado' => 'Registrar pago',
-                'Permiso emitido' => 'Emitir permiso',
-                'Rechazado' => 'Rechazar solicitud',
-            ];
-            ?>
             <div class="card h-100 border-primary">
-                <div class="card-header bg-primary text-white">
-                    <h6 class="mb-0">Acciones de cierre de calle</h6>
-                </div>
+                <div class="card-header bg-primary text-white"><h6 class="mb-0">Acciones de cierre de calle</h6></div>
                 <div class="card-body">
-                    <div class="small text-muted mb-3">
-                        Estatus actual: <span class="badge estatus-badge <?= estatus_badge($solicitud->estatus) ?>"><?= esc($solicitud->estatus) ?></span>
-                    </div>
-
+                    <div class="small text-muted mb-3">Estatus actual: <span class="badge estatus-badge <?= estatus_badge($solicitud->estatus) ?>"><?= esc($solicitud->estatus) ?></span></div>
                     <?php if (empty($estatusSiguientes)): ?>
-                        <div class="text-center py-4">
-                            <i class="bi bi-lock-fill fs-1 text-muted d-block mb-2" aria-hidden="true"></i>
-                            <p class="text-muted mb-0">Este estatus es terminal. No hay acciones disponibles.</p>
-                        </div>
+                        <div class="text-center py-4"><i class="bi bi-lock-fill fs-1 text-muted d-block mb-2" aria-hidden="true"></i><p class="text-muted mb-0">Este estatus es terminal. No hay acciones disponibles.</p></div>
                     <?php else: ?>
                         <?php if (in_array('Pago pendiente', $estatusSiguientes, true)): ?>
                             <form method="post" action="<?= site_url('admin/solicitudes/ur05/validacion/' . $solicitud->id) ?>" id="formAutorizarUr05" data-no-loading="1" class="mb-3">
@@ -191,12 +184,7 @@ $claveEtiquetas = [
                                 <?php endif; ?>
                                 <div class="row g-2 mb-3">
                                     <?php foreach (['afluencia_baja' => 'La calle tiene baja afluencia vehicular', 'sin_transporte_publico' => 'No circula transporte público', 'horario_no_entorpece' => 'El horario no entorpece el tráfico'] as $campo => $etiqueta): ?>
-                                        <div class="col-12">
-                                            <label class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="<?= $campo ?>" value="1" <?= (string) old($campo, $datosSolicitud[$campo] ?? '') === '1' ? 'checked' : '' ?>>
-                                                <span class="form-check-label"><?= esc($etiqueta) ?></span>
-                                            </label>
-                                        </div>
+                                        <div class="col-12"><label class="form-check"><input class="form-check-input" type="checkbox" name="<?= $campo ?>" value="1" <?= (string) old($campo, $datosSolicitud[$campo] ?? '') === '1' ? 'checked' : '' ?>><span class="form-check-label"><?= esc($etiqueta) ?></span></label></div>
                                     <?php endforeach; ?>
                                 </div>
                                 <label for="observaciones_validacion" class="form-label small fw-semibold">Observaciones <span class="text-muted fw-normal">(opcionales)</span></label>
@@ -204,20 +192,22 @@ $claveEtiquetas = [
                                 <button class="btn btn-success btn-sm" type="submit"><i class="bi bi-check2-circle me-1"></i>Autorizar pago</button>
                             </form>
                         <?php endif; ?>
-
+                        <?php if ($requiereRegistroCobro): ?>
+                            <?php if ($cobroVigente !== null): ?>
+                                <a class="btn btn-success btn-sm mb-3" href="<?= site_url('admin/cobros/' . $cobroVigente->id) ?>"><i class="bi bi-cash-stack me-1"></i>Registrar pago</a>
+                            <?php else: ?>
+                                <button type="button" class="btn btn-success btn-sm mb-2" disabled><i class="bi bi-cash-stack me-1"></i>Registrar pago</button>
+                                <div class="alert alert-warning py-2 small">No se encontró un cobro vigente. Revísalo en el módulo de cobros antes de registrar el pago.</div>
+                            <?php endif; ?>
+                        <?php endif; ?>
                         <div class="d-flex flex-column gap-2">
                             <?php foreach ($estatusSiguientes as $est): ?>
-                                <?php if ($est === 'Pago pendiente') continue; ?>
+                                <?php if (in_array($est, ['Pago pendiente', 'Pagado'], true)) continue; ?>
+                                <?php $accionUr05 = \App\Libraries\AccionesSeguimientoSolicitud::descriptor($est); ?>
                                 <form method="post" action="<?= site_url('admin/solicitudes/cambiar-estatus/' . $solicitud->id) ?>" class="formAccionUr05" data-accion="<?= esc($est) ?>" data-no-loading="1">
-                                    <?= csrf_field() ?>
-                                    <input type="hidden" name="nuevo_estatus" value="<?= esc($est) ?>">
-                                    <?php if ($est === 'Rechazado'): ?>
-                                        <label for="comentario_rechazo_ur05" class="form-label small fw-semibold">Motivo del rechazo <span class="text-danger">*</span></label>
-                                        <textarea name="comentario" id="comentario_rechazo_ur05" class="form-control mb-2" rows="2" required placeholder="Explica por qué se rechaza la solicitud..."><?= esc(old('comentario')) ?></textarea>
-                                    <?php endif; ?>
-                                    <button type="submit" class="btn btn-sm <?= $est === 'Rechazado' ? 'btn-outline-danger' : 'btn-outline-primary' ?>">
-                                        <i class="bi <?= $est === 'Rechazado' ? 'bi-x-circle' : 'bi-arrow-right-circle' ?> me-1"></i><?= esc($etiquetasAccionUr05[$est] ?? $est) ?>
-                                    </button>
+                                    <?= csrf_field() ?><input type="hidden" name="nuevo_estatus" value="<?= esc($est) ?>">
+                                    <?php if ($accionUr05['motivo']): ?><label for="comentario_rechazo_ur05" class="form-label small fw-semibold">Motivo del rechazo <span class="text-danger">*</span></label><textarea name="comentario" id="comentario_rechazo_ur05" class="form-control mb-2" rows="2" required placeholder="Explica por qué se rechaza la solicitud..."><?= esc(old('comentario')) ?></textarea><?php endif; ?>
+                                    <button type="submit" class="btn btn-sm <?= esc($accionUr05['clase']) ?>"><i class="bi <?= esc($accionUr05['icono']) ?> me-1"></i><?= esc($accionUr05['etiqueta']) ?></button>
                                 </form>
                             <?php endforeach; ?>
                         </div>
@@ -226,29 +216,39 @@ $claveEtiquetas = [
             </div>
         <?php else: ?>
             <div class="card h-100 border-primary">
-                <div class="card-header bg-primary text-white"><h6 class="mb-0">Cambio de estatus</h6></div>
+                <div class="card-header bg-primary text-white"><h6 class="mb-0">Acciones de seguimiento</h6></div>
                 <div class="card-body">
-                    <?php if (empty($estatusSiguientes)): ?>
-                        <div class="text-center py-4"><i class="bi bi-lock-fill fs-1 text-muted d-block mb-2" aria-hidden="true"></i><p class="text-muted mb-0">Este estatus es terminal. No hay transiciones disponibles.</p></div>
-                    <?php else: ?>
-                        <form method="post" action="<?= site_url('admin/solicitudes/cambiar-estatus/' . $solicitud->id) ?>" id="formCambiarEstatus">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="solicitud_id" value="<?= $solicitud->id ?>">
-                            <div class="mb-3">
-                                <label for="nuevo_estatus" class="form-label fw-bold">Nuevo estatus</label>
-                                <select name="nuevo_estatus" id="nuevo_estatus" class="form-select" required>
-                                    <option value="" disabled selected>-- selecciona --</option>
-                                    <?php foreach ($estatusSiguientes as $est): ?><option value="<?= esc($est) ?>"><?= esc($est) ?></option><?php endforeach; ?>
-                                </select>
-                                <div class="form-text">Estatus actual: <span class="badge estatus-badge <?= estatus_badge($solicitud->estatus) ?>"><?= esc($solicitud->estatus) ?></span></div>
-                            </div>
-                            <div class="mb-3" id="grupoComentario" style="display:none;">
-                                <label for="comentario" class="form-label fw-bold">Comentario / Motivo <span class="text-danger">*</span></label>
-                                <textarea name="comentario" id="comentario" rows="4" class="form-control" placeholder="Explica el motivo de la prevención o rechazo..."></textarea>
-                                <div class="form-text text-danger">Este campo es obligatorio para estatus "Prevención" o "Rechazado".</div>
-                            </div>
-                            <div class="d-grid"><button type="submit" class="btn btn-outline-primary btn-sm fw-bold"><i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Cambiar estatus</button></div>
-                        </form>
+                    <div class="small text-muted mb-3">Estatus actual: <span class="badge estatus-badge <?= estatus_badge($solicitud->estatus) ?>"><?= esc($solicitud->estatus) ?></span></div>
+                    <div class="d-flex flex-column gap-3">
+                        <?php foreach ($accionesSeguimiento as $indice => $accion): ?>
+                            <?php $campoMotivo = 'comentario_accion_' . $indice; ?>
+                            <form method="post" action="<?= site_url('admin/solicitudes/cambiar-estatus/' . $solicitud->id) ?>" class="formAccionSeguimiento" data-confirmacion="<?= esc($accion['confirmacion'] ?? '', 'attr') ?>" data-no-loading="1">
+                                <?= csrf_field() ?><input type="hidden" name="nuevo_estatus" value="<?= esc($accion['destino']) ?>">
+                                <?php if ($accion['motivo']): ?><label for="<?= $campoMotivo ?>" class="form-label small fw-semibold">Motivo de la acción <span class="text-danger">*</span></label><textarea name="comentario" id="<?= $campoMotivo ?>" class="form-control mb-2" rows="2" required placeholder="Explica el motivo..."><?= esc(old('comentario')) ?></textarea><?php endif; ?>
+                                <button type="submit" class="btn btn-sm <?= esc($accion['clase']) ?>"><i class="bi <?= esc($accion['icono']) ?> me-1"></i><?= esc($accion['etiqueta']) ?></button>
+                            </form>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if ($requiereRegistroCobro): ?>
+                        <div class="mt-3">
+                            <?php if ($cobroVigente !== null): ?>
+                                <a class="btn btn-success btn-sm" href="<?= site_url('admin/cobros/' . $cobroVigente->id) ?>"><i class="bi bi-cash-stack me-1"></i>Registrar pago</a>
+                                <div class="form-text">El pago se registra en el cobro para generar recibo, movimiento y auditoría.</div>
+                            <?php else: ?>
+                                <button type="button" class="btn btn-success btn-sm mb-2" disabled><i class="bi bi-cash-stack me-1"></i>Registrar pago</button>
+                                <div class="alert alert-warning py-2 small mb-0">No se encontró un cobro vigente. Revísalo en el módulo de cobros antes de registrar el pago.</div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($requiereFlujoEspecializado && $solicitud->tramite === 'UR-TT-T-01'): ?>
+                        <div class="alert alert-info py-2 small mt-3 mb-0">La selección se resuelve en la evaluación comparativa para actualizar conjuntamente a los participantes. <?php if (!empty($solicitud->convocatoria_id)): ?><a class="alert-link" href="<?= site_url('admin/convocatorias/' . $solicitud->convocatoria_id . '/evaluacion') ?>">Abrir evaluación</a><?php endif; ?></div>
+                    <?php elseif ($requiereFlujoEspecializado && $solicitud->tramite === 'UR-TT-T-02' && $solicitud->estatus === 'Recibido'): ?>
+                        <div class="alert alert-info py-2 small mt-3 mb-0">La cita requiere capturar una fecha mediante el flujo de agenda; un cambio simple no agenda la verificación.</div>
+                    <?php elseif ($requiereFlujoEspecializado && $solicitud->tramite === 'UR-TT-T-02'): ?>
+                        <div class="alert alert-info py-2 small mt-3 mb-0">Registra el resultado y las observaciones en el dictamen de inspección física que aparece debajo.</div>
+                    <?php endif; ?>
+                    <?php if ($accionesSeguimiento === [] && ! $requiereFlujoEspecializado && ! $requiereRegistroCobro): ?>
+                        <div class="text-center py-4"><i class="bi bi-lock-fill fs-1 text-muted d-block mb-2" aria-hidden="true"></i><p class="text-muted mb-0">Este estatus es terminal. No hay acciones disponibles.</p></div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -293,34 +293,34 @@ $claveEtiquetas = [
                 </div>
             </div>
             <div class="col-md-6">
-                <form method="post" action="<?= site_url('admin/solicitudes/dictamen-ur02/' . $solicitud->id) ?>">
-                    <?= csrf_field() ?>
-                    <h6 class="fw-bold mb-2 text-dark">Registrar o Actualizar Dictamen</h6>
-                    <div class="mb-2">
-                        <label class="form-label small fw-bold">Resultado de la inspección <span class="text-danger">*</span></label>
-                        <div class="d-flex gap-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="resultado" id="dict_aprobado" value="aprobado" <?= (!empty($verificacion->resultado) && $verificacion->resultado === 'aprobado') ? 'checked' : '' ?> required>
-                                <label class="form-check-label text-success fw-bold" for="dict_aprobado">
-                                    <i class="bi bi-check2-circle me-1"></i>Aprobar (Despintado)
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="resultado" id="dict_rechazado" value="rechazado" <?= (!empty($verificacion->resultado) && $verificacion->resultado === 'rechazado') ? 'checked' : '' ?> required>
-                                <label class="form-check-label text-danger fw-bold" for="dict_rechazado">
-                                    <i class="bi bi-x-circle me-1"></i>Rechazar (Incumple)
-                                </label>
+                <?php if ($solicitud->estatus === 'Cita agendada'): ?>
+                    <form method="post" action="<?= site_url('admin/solicitudes/dictamen-ur02/' . $solicitud->id) ?>" class="formAccionSeguimiento" data-confirmacion="¿Guardar este dictamen y resolver la verificación?" data-no-loading="1">
+                        <?= csrf_field() ?>
+                        <h6 class="fw-bold mb-2 text-dark">Registrar dictamen</h6>
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold">Resultado de la inspección <span class="text-danger">*</span></label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="resultado" id="dict_aprobado" value="aprobado" <?= old('resultado', $verificacion->resultado ?? '') === 'aprobado' ? 'checked' : '' ?> required>
+                                    <label class="form-check-label text-success fw-bold" for="dict_aprobado"><i class="bi bi-check2-circle me-1"></i>Aprobar (Despintado)</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="resultado" id="dict_rechazado" value="rechazado" <?= old('resultado', $verificacion->resultado ?? '') === 'rechazado' ? 'checked' : '' ?> required>
+                                    <label class="form-check-label text-danger fw-bold" for="dict_rechazado"><i class="bi bi-x-circle me-1"></i>Rechazar (Incumple)</label>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="mb-2">
-                        <label for="obs_verificacion" class="form-label small fw-bold">Observaciones del dictamen <span class="text-danger">*</span></label>
-                        <textarea name="observaciones" id="obs_verificacion" rows="2" class="form-control form-control-sm" required placeholder="Describe las condiciones físicas de la unidad inspeccionada..."><?= esc($verificacion->observaciones ?? '') ?></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-warning btn-sm fw-bold w-100 shadow-sm">
-                        <i class="bi bi-file-earmark-check me-1"></i>Guardar Dictamen de Verificación
-                    </button>
-                </form>
+                        <div class="mb-2">
+                            <label for="obs_verificacion" class="form-label small fw-bold">Observaciones del dictamen <span class="text-danger">*</span></label>
+                            <textarea name="observaciones" id="obs_verificacion" rows="2" class="form-control form-control-sm" required placeholder="Describe las condiciones físicas de la unidad inspeccionada..."><?= esc(old('observaciones', $verificacion->observaciones ?? '')) ?></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-warning btn-sm fw-bold w-100 shadow-sm"><i class="bi bi-file-earmark-check me-1"></i>Guardar dictamen de verificación</button>
+                    </form>
+                <?php elseif ($solicitud->estatus === 'Recibido'): ?>
+                    <div class="alert alert-info mb-0">Primero debe agendarse una cita con fecha mediante el flujo de agenda.</div>
+                <?php else: ?>
+                    <div class="alert alert-secondary mb-0">El dictamen solo se captura cuando la solicitud está en <strong>Cita agendada</strong>.</div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -589,32 +589,22 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    const selectEstatus = document.getElementById('nuevo_estatus');
-    const grupoComentario = document.getElementById('grupoComentario');
-    const comentario = document.getElementById('comentario');
-    if (!selectEstatus || !grupoComentario || !comentario) return;
+    document.querySelectorAll('.formAccionSeguimiento').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            const motivo = form.querySelector('textarea[name="comentario"][required]');
+            if (motivo && motivo.value.trim() === '') {
+                e.preventDefault();
+                motivo.classList.add('is-invalid');
+                motivo.focus();
+                alert('Escribe el motivo obligatorio antes de continuar.');
+                return;
+            }
 
-    function actualizarComentario() {
-        const valor = selectEstatus.value;
-        const requiere = (valor === 'Prevención' || valor === 'Rechazado');
-        grupoComentario.style.display = requiere ? '' : 'none';
-        comentario.required = requiere;
-        if (!requiere) comentario.value = '';
-    }
-
-    selectEstatus.addEventListener('change', actualizarComentario);
-    actualizarComentario();
-
-    const form = document.getElementById('formCambiarEstatus');
-    form?.addEventListener('submit', function (e) {
-        const valor = selectEstatus.value;
-        const requiere = (valor === 'Prevención' || valor === 'Rechazado');
-        if (requiere && comentario.value.trim() === '') {
-            e.preventDefault();
-            comentario.classList.add('is-invalid');
-            comentario.focus();
-            alert('El comentario/motivo es obligatorio para Prevención o Rechazado.');
-        }
+            const mensaje = form.dataset.confirmacion || '';
+            if (mensaje !== '' && !confirm(mensaje)) {
+                e.preventDefault();
+            }
+        });
     });
 });
 </script>

@@ -11,6 +11,8 @@ use App\Models\AuditoriaModel;
 use App\Models\UserModel;
 use App\Models\FormatoTramiteModel;
 use App\Libraries\EstadoSolicitudService;
+use App\Libraries\AccionesSeguimientoSolicitud;
+use App\Models\CobroModel;
 use Config\Services;
 use DateTime;
 
@@ -315,6 +317,10 @@ class AdminController extends Controller
         }
 
         $estatusSiguientes = EstadoSolicitudService::TRANSICIONES_VALIDAS[$solicitud->tramite][$solicitud->estatus] ?? [];
+        $accionesSeguimiento = AccionesSeguimientoSolicitud::genericas((string) $solicitud->tramite, (string) $solicitud->estatus);
+        $requiereFlujoEspecializado = AccionesSeguimientoSolicitud::requiereFlujoEspecializado((string) $solicitud->tramite, (string) $solicitud->estatus);
+        $requiereRegistroCobro = AccionesSeguimientoSolicitud::requiereRegistroCobro((string) $solicitud->tramite, (string) $solicitud->estatus);
+        $cobroVigente = $requiereRegistroCobro ? (new CobroModel())->vigenteDeSolicitud((int) $solicitud->id) : null;
         $verificacion = (new \App\Models\VerificacionFisicaModel())->primerPorSolicitud((int)$solicitud->id);
 
         return view('admin/solicitudes_ver', [
@@ -323,7 +329,11 @@ class AdminController extends Controller
             'documentos'        => $documentos,
             'historial'         => $historialCompleto,
             'ciudadano'         => $ciudadano,
-            'estatusSiguientes' => $estatusSiguientes,
+            'estatusSiguientes'          => $estatusSiguientes,
+            'accionesSeguimiento'        => $accionesSeguimiento,
+            'requiereFlujoEspecializado' => $requiereFlujoEspecializado,
+            'requiereRegistroCobro'      => $requiereRegistroCobro,
+            'cobroVigente'               => $cobroVigente,
             'verificacion'      => $verificacion,
         ]);
     }
@@ -335,19 +345,28 @@ class AdminController extends Controller
         $resultado = (string) $this->request->getPost('resultado');
         $observaciones = trim((string) $this->request->getPost('observaciones'));
 
+        if ($userId <= 0) {
+            return redirect()->back()->withInput()->with('error', 'La sesión expiró. Inicia sesión nuevamente.');
+        }
         if (! in_array($resultado, ['aprobado', 'rechazado'], true)) {
-            return redirect()->back()->with('error', 'El resultado debe ser aprobado o rechazado.');
+            return redirect()->back()->withInput()->with('error', 'El resultado debe ser aprobado o rechazado.');
         }
         if ($observaciones === '') {
-            return redirect()->back()->with('error', 'Las observaciones son obligatorias para emitir el dictamen.');
+            return redirect()->back()->withInput()->with('error', 'Las observaciones son obligatorias para emitir el dictamen.');
         }
 
         $solicitudModel = new SolicitudModel();
         $solicitud = $solicitudModel->find($solicitudId);
         if (! $solicitud || $solicitud->tramite !== 'UR-TT-T-02') {
-            return redirect()->back()->with('error', 'Solicitud no válida para verificación de despintado.');
+            return redirect()->back()->withInput()->with('error', 'Solicitud no válida para verificación de despintado.');
+        }
+        if ($solicitud->estatus !== 'Cita agendada') {
+            return redirect()->to('/admin/solicitudes/' . $solicitud->folio)->withInput()
+                ->with('error', 'El dictamen solo puede registrarse cuando la solicitud tiene una cita agendada.');
         }
 
+        $db = \Config\Database::connect();
+        $db->transBegin();
         $verificacionModel = new \App\Models\VerificacionFisicaModel();
         $verificacion = $verificacionModel->primerPorSolicitud($solicitudId);
         if ($verificacion) {
@@ -367,14 +386,23 @@ class AdminController extends Controller
             ]);
         }
 
-        $nuevoEstatus = ($resultado === 'aprobado') ? 'Verificado' : 'Rechazado';
-        $estadoService = new EstadoSolicitudService();
-        $estadoService->cambiarEstatus($solicitudId, $nuevoEstatus, $userId, 'Dictamen de inspección física: ' . $observaciones);
+        $nuevoEstatus = $resultado === 'aprobado' ? 'Verificado' : 'Rechazado';
+        $cambioAplicado = (new EstadoSolicitudService())->cambiarEstatus(
+            $solicitudId,
+            $nuevoEstatus,
+            $userId,
+            'Dictamen de inspección física: ' . $observaciones
+        );
+        if (! $cambioAplicado || ! $db->transStatus()) {
+            $db->transRollback();
+            return redirect()->to('/admin/solicitudes/' . $solicitud->folio)->withInput()
+                ->with('error', 'No se pudo registrar el dictamen porque el estado de la solicitud cambió.');
+        }
+        $db->transCommit();
 
-        return redirect()->to('/admin/solicitudes/ver/' . $solicitud->folio)
-            ->with('message', '¡Dictamen de verificación física registrado con éxito con estatus: ' . $nuevoEstatus . '!');
+        return redirect()->to('/admin/solicitudes/' . $solicitud->folio)
+            ->with('message', 'Dictamen de verificación física registrado con estatus: ' . $nuevoEstatus . '.');
     }
-
     public function guardarEvaluacionUr04(int $solicitudId)
     {
         $solicitudModel = new SolicitudModel();
@@ -444,25 +472,37 @@ class AdminController extends Controller
         $solicitudModel = new SolicitudModel();
         $estadoService = new EstadoSolicitudService();
 
-        $nuevoEstatus = $this->request->getPost('nuevo_estatus') ?? '';
+        $nuevoEstatus = (string) ($this->request->getPost('nuevo_estatus') ?? '');
         $comentario = $this->request->getPost('comentario') ?? null;
 
         $userId = session('user_id');
-        if (!$userId) {
-            return redirect()->back()->with('errors', ['Sesión expirada']);
+        if (! $userId) {
+            return redirect()->back()->withInput()->with('errors', ['Sesión expirada']);
         }
-
-        $resultado = $estadoService->cambiarEstatus($solicitudId, $nuevoEstatus, (int)$userId, $comentario);
 
         $solicitud = $solicitudModel->find($solicitudId);
-
-        if (!$resultado) {
-            return redirect()->back()->withInput()->with('errors', ['No se pudo cambiar estatus: transición inválida, falta comentario o se requiere la validación específica del trámite']);
+        if ($solicitud === null) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+        if (! AccionesSeguimientoSolicitud::permiteEndpointGenerico(
+            (string) $solicitud->tramite,
+            (string) $solicitud->estatus,
+            $nuevoEstatus
+        )) {
+            return redirect()->back()->withInput()->with('errors', [
+                'La acción solicitada no está disponible desde el estado actual o requiere su flujo específico.',
+            ]);
         }
 
-        return redirect()->to(site_url('admin/solicitudes/' . $solicitud->folio))->with('message', 'Estatus actualizado exitosamente');
-    }
+        $resultado = $estadoService->cambiarEstatus($solicitudId, $nuevoEstatus, (int) $userId, $comentario);
+        $solicitudActual = $solicitudModel->find($solicitudId);
 
+        if (! $resultado) {
+            return redirect()->back()->withInput()->with('errors', ['No se pudo ejecutar la acción: transición inválida o falta el motivo obligatorio.']);
+        }
+
+        return redirect()->to(site_url('admin/solicitudes/' . $solicitudActual->folio))->with('message', 'Acción aplicada exitosamente.');
+    }
     public function descargarDocumento(int $documentoId)
     {
         $documentoModel = new DocumentoModel();

@@ -48,6 +48,12 @@ class CobrosControllerTest extends DatabaseTestCase
         (new EstadoSolicitudService())->cambiarEstatus($this->solicitudId, 'Pago pendiente', $this->usuarios['operador_ventanilla']);
         $this->cobroTramite = (int) (new CobroModel())->where('solicitud_id', $this->solicitudId)->first()->id;
 
+        // PostgreSQL aplica la llave foránea agente_placa; el fixture debe crear su agente.
+        $this->db->table('agentes_transito')->insert([
+            'placa' => 'AGT-204', 'nombre_completo' => 'Agente de prueba', 'password_hash' => 'x',
+            'rol' => 'operativo', 'sector' => 'Pruebas', 'activo' => 1,
+        ]);
+
         $this->db->table('boletas_infracciones')->insert([
             'folio' => 'BOLETA-COB02-1', 'agente_placa' => 'AGT-204', 'fecha_infraccion' => date('Y-m-d'),
             'hora_infraccion' => '09:15:00', 'lugar' => 'Calle Hidalgo', 'infractor_nombre' => 'Martín Aguilar Rosas',
