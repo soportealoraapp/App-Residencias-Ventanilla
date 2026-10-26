@@ -38,8 +38,10 @@ class CorteCajaServiceTest extends DatabaseTestCase
         $estados = new EstadoSolicitudService();
         if ($tramite === 'UR-TT-T-05') {
             $estados->cambiarEstatus($id, 'En validación', $this->operadorId);
+            $estados->autorizarPagoUr05($id, ['afluencia_baja' => '1', 'sin_transporte_publico' => '1', 'horario_no_entorpece' => '1'], $this->operadorId);
+        } else {
+            $estados->cambiarEstatus($id, 'Pago pendiente', $this->operadorId);
         }
-        $estados->cambiarEstatus($id, 'Pago pendiente', $this->operadorId);
         $cobroId = (int) (new CobroModel())->where('solicitud_id', $id)->first()->id;
         $this->cobros->marcarCobrado($cobroId, $lugar, $lugar === 'banbajio' ? 'BB-1' : null, $cobrador);
         (new CobroModel())->update($cobroId, ['fecha_cobro' => $fechaCobro]);

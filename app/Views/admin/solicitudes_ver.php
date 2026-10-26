@@ -158,53 +158,102 @@ $claveEtiquetas = [
     </div>
 
     <div class="col-md-6">
-        <div class="card h-100 border-primary">
-            <div class="card-header bg-primary text-white">
-                <h6 class="mb-0">Cambio de estatus</h6>
-            </div>
-            <div class="card-body">
-                <?php if (empty($estatusSiguientes)): ?>
-                    <div class="text-center py-4">
-                        <i class="bi bi-lock-fill fs-1 text-muted d-block mb-2" aria-hidden="true"></i>
-                        <p class="text-muted mb-0">Este estatus es terminal. No hay transiciones disponibles.</p>
+        <?php if ($solicitud->tramite === 'UR-TT-T-05'): ?>
+            <?php
+            $etiquetasAccionUr05 = [
+                'En validación' => 'Iniciar validación',
+                'Pagado' => 'Registrar pago',
+                'Permiso emitido' => 'Emitir permiso',
+                'Rechazado' => 'Rechazar solicitud',
+            ];
+            ?>
+            <div class="card h-100 border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">Acciones de cierre de calle</h6>
+                </div>
+                <div class="card-body">
+                    <div class="small text-muted mb-3">
+                        Estatus actual: <span class="badge estatus-badge <?= estatus_badge($solicitud->estatus) ?>"><?= esc($solicitud->estatus) ?></span>
                     </div>
-                <?php else: ?>
-                    <form method="post" action="<?= site_url('admin/solicitudes/cambiar-estatus/' . $solicitud->id) ?>" id="formCambiarEstatus">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="solicitud_id" value="<?= $solicitud->id ?>">
-                        <div class="mb-3">
-                            <label for="nuevo_estatus" class="form-label fw-bold">Nuevo estatus</label>
-                            <select name="nuevo_estatus" id="nuevo_estatus" class="form-select" required>
-                                <option value="" disabled selected>-- selecciona --</option>
-                                <?php foreach ($estatusSiguientes as $est): ?>
-                                    <option value="<?= esc($est) ?>"><?= esc($est) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                            <div class="form-text">
-                                Estatus actual: <span class="badge estatus-badge <?= estatus_badge($solicitud->estatus) ?>"><?= esc($solicitud->estatus) ?></span>
-                            </div>
+
+                    <?php if (empty($estatusSiguientes)): ?>
+                        <div class="text-center py-4">
+                            <i class="bi bi-lock-fill fs-1 text-muted d-block mb-2" aria-hidden="true"></i>
+                            <p class="text-muted mb-0">Este estatus es terminal. No hay acciones disponibles.</p>
                         </div>
-                        <div class="mb-3" id="grupoComentario" style="display:none;">
-                            <label for="comentario" class="form-label fw-bold">
-                                Comentario / Motivo
-                                <span class="text-danger">*</span>
-                            </label>
-                            <textarea name="comentario" id="comentario" rows="4" class="form-control"
-                                placeholder="Explica el motivo de la prevención o rechazo..."
-                                ></textarea>
-                            <div class="form-text text-danger">
-                                Este campo es obligatorio para estatus "Prevención" o "Rechazado".
-                            </div>
+                    <?php else: ?>
+                        <?php if (in_array('Pago pendiente', $estatusSiguientes, true)): ?>
+                            <form method="post" action="<?= site_url('admin/solicitudes/ur05/validacion/' . $solicitud->id) ?>" id="formAutorizarUr05" data-no-loading="1" class="mb-3">
+                                <?= csrf_field() ?>
+                                <p class="small text-muted">Para autorizar el pago confirma los 3 criterios de seguridad vial.</p>
+                                <?php if (old('afluencia_baja') !== null || old('sin_transporte_publico') !== null || old('horario_no_entorpece') !== null || old('observaciones_validacion') !== null): ?>
+                                    <div class="alert alert-warning py-2 small">Se recuperó tu captura anterior para corregirla; estos criterios todavía no están confirmados ni guardados.</div>
+                                <?php endif; ?>
+                                <div class="row g-2 mb-3">
+                                    <?php foreach (['afluencia_baja' => 'La calle tiene baja afluencia vehicular', 'sin_transporte_publico' => 'No circula transporte público', 'horario_no_entorpece' => 'El horario no entorpece el tráfico'] as $campo => $etiqueta): ?>
+                                        <div class="col-12">
+                                            <label class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="<?= $campo ?>" value="1" <?= (string) old($campo, $datosSolicitud[$campo] ?? '') === '1' ? 'checked' : '' ?>>
+                                                <span class="form-check-label"><?= esc($etiqueta) ?></span>
+                                            </label>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <label for="observaciones_validacion" class="form-label small fw-semibold">Observaciones <span class="text-muted fw-normal">(opcionales)</span></label>
+                                <textarea name="observaciones_validacion" id="observaciones_validacion" class="form-control mb-3" rows="2" placeholder="Observaciones de la validación..."><?= esc(old('observaciones_validacion', $datosSolicitud['observaciones_validacion'] ?? '')) ?></textarea>
+                                <button class="btn btn-success btn-sm" type="submit"><i class="bi bi-check2-circle me-1"></i>Autorizar pago</button>
+                            </form>
+                        <?php endif; ?>
+
+                        <div class="d-flex flex-column gap-2">
+                            <?php foreach ($estatusSiguientes as $est): ?>
+                                <?php if ($est === 'Pago pendiente') continue; ?>
+                                <form method="post" action="<?= site_url('admin/solicitudes/cambiar-estatus/' . $solicitud->id) ?>" class="formAccionUr05" data-accion="<?= esc($est) ?>" data-no-loading="1">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="nuevo_estatus" value="<?= esc($est) ?>">
+                                    <?php if ($est === 'Rechazado'): ?>
+                                        <label for="comentario_rechazo_ur05" class="form-label small fw-semibold">Motivo del rechazo <span class="text-danger">*</span></label>
+                                        <textarea name="comentario" id="comentario_rechazo_ur05" class="form-control mb-2" rows="2" required placeholder="Explica por qué se rechaza la solicitud..."><?= esc(old('comentario')) ?></textarea>
+                                    <?php endif; ?>
+                                    <button type="submit" class="btn btn-sm <?= $est === 'Rechazado' ? 'btn-outline-danger' : 'btn-outline-primary' ?>">
+                                        <i class="bi <?= $est === 'Rechazado' ? 'bi-x-circle' : 'bi-arrow-right-circle' ?> me-1"></i><?= esc($etiquetasAccionUr05[$est] ?? $est) ?>
+                                    </button>
+                                </form>
+                            <?php endforeach; ?>
                         </div>
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-outline-primary btn-sm fw-bold">
-                                <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Cambiar estatus
-                            </button>
-                        </div>
-                    </form>
-                <?php endif; ?>
+                    <?php endif; ?>
+                </div>
             </div>
-        </div>
+        <?php else: ?>
+            <div class="card h-100 border-primary">
+                <div class="card-header bg-primary text-white"><h6 class="mb-0">Cambio de estatus</h6></div>
+                <div class="card-body">
+                    <?php if (empty($estatusSiguientes)): ?>
+                        <div class="text-center py-4"><i class="bi bi-lock-fill fs-1 text-muted d-block mb-2" aria-hidden="true"></i><p class="text-muted mb-0">Este estatus es terminal. No hay transiciones disponibles.</p></div>
+                    <?php else: ?>
+                        <form method="post" action="<?= site_url('admin/solicitudes/cambiar-estatus/' . $solicitud->id) ?>" id="formCambiarEstatus">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="solicitud_id" value="<?= $solicitud->id ?>">
+                            <div class="mb-3">
+                                <label for="nuevo_estatus" class="form-label fw-bold">Nuevo estatus</label>
+                                <select name="nuevo_estatus" id="nuevo_estatus" class="form-select" required>
+                                    <option value="" disabled selected>-- selecciona --</option>
+                                    <?php foreach ($estatusSiguientes as $est): ?><option value="<?= esc($est) ?>"><?= esc($est) ?></option><?php endforeach; ?>
+                                </select>
+                                <div class="form-text">Estatus actual: <span class="badge estatus-badge <?= estatus_badge($solicitud->estatus) ?>"><?= esc($solicitud->estatus) ?></span></div>
+                            </div>
+                            <div class="mb-3" id="grupoComentario" style="display:none;">
+                                <label for="comentario" class="form-label fw-bold">Comentario / Motivo <span class="text-danger">*</span></label>
+                                <textarea name="comentario" id="comentario" rows="4" class="form-control" placeholder="Explica el motivo de la prevención o rechazo..."></textarea>
+                                <div class="form-text text-danger">Este campo es obligatorio para estatus "Prevención" o "Rechazado".</div>
+                            </div>
+                            <div class="d-grid"><button type="submit" class="btn btn-outline-primary btn-sm fw-bold"><i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Cambiar estatus</button></div>
+                        </form>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+    </div>
 </div>
 
 <?php if ($solicitud->tramite === 'UR-TT-T-02'): ?>
@@ -297,29 +346,6 @@ $claveEtiquetas = [
                 <div class="col-12"><label class="form-label small fw-bold">Observaciones de revista / seguro</label><textarea name="observaciones_revista_mecanica" class="form-control" rows="2"><?= esc($datosSolicitud['observaciones_revista_mecanica'] ?? '') ?></textarea><textarea name="observaciones_seguro" class="form-control mt-2" rows="2"><?= esc($datosSolicitud['observaciones_seguro'] ?? '') ?></textarea></div>
             </div>
             <button class="btn btn-primary btn-sm mt-3" type="submit"><i class="bi bi-save me-1"></i>Guardar evaluación</button>
-        </form>
-    </div>
-</div>
-<?php endif; ?>
-
-<?php if ($solicitud->tramite === 'UR-TT-T-05' && in_array($solicitud->estatus, ['Recibido', 'En validación'], true)): ?>
-<div class="card mb-3 border-primary shadow-sm">
-    <div class="card-header bg-primary bg-opacity-10"><h6 class="mb-0 text-primary fw-bold"><i class="bi bi-shield-check me-2"></i>Validación rápida UR-05</h6></div>
-    <div class="card-body">
-        <p class="small text-muted">Para autorizar el pago deben cumplirse los 3 criterios de seguridad vial. Si alguno no se cumple, rechaza la solicitud indicando el motivo.</p>
-        <form method="post" action="<?= site_url('admin/solicitudes/ur05/validacion/' . $solicitud->id) ?>" id="formValidacionUr05" data-no-loading="1">
-            <?= csrf_field() ?>
-            <div class="row g-2 mb-3">
-                <?php foreach (['afluencia_baja' => 'La calle tiene baja afluencia vehicular', 'sin_transporte_publico' => 'No circula transporte público', 'horario_no_entorpece' => 'El horario no entorpece el tráfico'] as $campo => $etiqueta): ?>
-                <div class="col-12"><label class="form-check"><input class="form-check-input" type="checkbox" name="<?= $campo ?>" value="1" <?= ($datosSolicitud[$campo] ?? '') === '1' ? 'checked' : '' ?>><span class="form-check-label"><?= esc($etiqueta) ?></span></label></div>
-                <?php endforeach; ?>
-            </div>
-            <label for="observaciones_validacion" class="form-label small fw-semibold">Observaciones <span class="text-muted fw-normal">(obligatorias para rechazar)</span></label>
-            <textarea name="observaciones_validacion" id="observaciones_validacion" class="form-control mb-3" rows="2" placeholder="Observaciones de la validación..."><?= esc($datosSolicitud['observaciones_validacion'] ?? '') ?></textarea>
-            <div class="d-flex flex-wrap gap-2">
-                <button class="btn btn-success btn-sm" type="submit" name="accion" value="autorizar"><i class="bi bi-check2-circle me-1"></i>Autorizar pago</button>
-                <button class="btn btn-outline-danger btn-sm" type="submit" name="accion" value="rechazar"><i class="bi bi-x-circle me-1"></i>Rechazar solicitud</button>
-            </div>
         </form>
     </div>
 </div>
@@ -532,6 +558,37 @@ $claveEtiquetas = [
 <?= $this->section('scripts') ?>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const formAutorizar = document.getElementById('formAutorizarUr05');
+    formAutorizar?.addEventListener('submit', function (e) {
+        const sinMarcar = [...formAutorizar.querySelectorAll('input[type=checkbox]')].some(c => !c.checked);
+        if (sinMarcar) {
+            e.preventDefault();
+            alert('Para autorizar el pago marca los 3 criterios.');
+            return;
+        }
+        if (!confirm('¿Autorizar el pago de esta solicitud? Se generará el cobro pendiente.')) {
+            e.preventDefault();
+        }
+    });
+
+    document.querySelectorAll('.formAccionUr05').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            if (form.dataset.accion !== 'Rechazado') return;
+
+            const motivo = form.querySelector('textarea[name="comentario"]');
+            if (!motivo || motivo.value.trim() === '') {
+                e.preventDefault();
+                motivo?.classList.add('is-invalid');
+                motivo?.focus();
+                alert('Escribe el motivo del rechazo.');
+                return;
+            }
+            if (!confirm('¿Rechazar esta solicitud? Esta acción no se puede deshacer.')) {
+                e.preventDefault();
+            }
+        });
+    });
+
     const selectEstatus = document.getElementById('nuevo_estatus');
     const grupoComentario = document.getElementById('grupoComentario');
     const comentario = document.getElementById('comentario');
@@ -545,48 +602,20 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!requiere) comentario.value = '';
     }
 
-    // UR-05: autorizar exige los 3 criterios; rechazar exige motivo y confirmación.
-    const formUr05 = document.getElementById('formValidacionUr05');
-    formUr05?.addEventListener('submit', function (e) {
-        const accion = e.submitter ? e.submitter.value : '';
-        const obs = document.getElementById('observaciones_validacion');
-        if (accion === 'autorizar') {
-            const sinMarcar = [...formUr05.querySelectorAll('input[type=checkbox]')].some(c => !c.checked);
-            if (sinMarcar) {
-                e.preventDefault();
-                alert('Para autorizar el pago marca los 3 criterios. Si alguno no se cumple, usa "Rechazar solicitud".');
-            }
-        } else if (accion === 'rechazar') {
-            if (obs.value.trim() === '') {
-                e.preventDefault();
-                obs.classList.add('is-invalid');
-                obs.focus();
-                alert('Escribe el motivo del rechazo en Observaciones.');
-            } else if (!confirm('¿Rechazar esta solicitud? Esta acción no se puede deshacer.')) {
-                e.preventDefault();
-            }
-        }
-    });
-
     selectEstatus.addEventListener('change', actualizarComentario);
     actualizarComentario();
 
     const form = document.getElementById('formCambiarEstatus');
-    if (form) {
-        form.addEventListener('submit', function (e) {
-            const valor = selectEstatus.value;
-            const requiere = (valor === 'Prevención' || valor === 'Rechazado');
-            if (requiere && comentario.value.trim() === '') {
-                e.preventDefault();
-                comentario.classList.add('is-invalid');
-                comentario.focus();
-                alert('El comentario/motivo es obligatorio para Prevención o Rechazado.');
-                return false;
-            }
-            comentario.classList.remove('is-invalid');
-            return true;
-        });
-    }
+    form?.addEventListener('submit', function (e) {
+        const valor = selectEstatus.value;
+        const requiere = (valor === 'Prevención' || valor === 'Rechazado');
+        if (requiere && comentario.value.trim() === '') {
+            e.preventDefault();
+            comentario.classList.add('is-invalid');
+            comentario.focus();
+            alert('El comentario/motivo es obligatorio para Prevención o Rechazado.');
+        }
+    });
 });
 </script>
 <?= $this->endSection() ?>

@@ -32,6 +32,15 @@ class CobroServiceTest extends DatabaseTestCase
             'username' => 'operador1', 'email' => 'operador@example.com', 'password_hash' => 'x',
             'nombre_completo' => 'Operador Ventanilla', 'activo' => 1,
         ]);
+
+        // PostgreSQL aplica la llave foránea real de boletas hacia agentes.
+        $this->db->table('agentes_transito')->insert([
+            'placa' => 'AGT-204',
+            'nombre_completo' => 'Agente de prueba',
+            'password_hash' => 'x',
+            'rol' => 'operativo',
+            'activo' => 1,
+        ]);
     }
 
     private function solicitud(string $tramite = 'UR-TT-T-05', string $estatus = 'Recibido', float $monto = 287.0): int
@@ -70,7 +79,7 @@ class CobroServiceTest extends DatabaseTestCase
     {
         $id = $this->solicitud();
         $this->assertTrue($this->estados->cambiarEstatus($id, 'En validación', $this->operadorId));
-        $this->assertTrue($this->estados->cambiarEstatus($id, 'Pago pendiente', $this->operadorId, 'Pago autorizado.'));
+        $this->assertTrue($this->estados->autorizarPagoUr05($id, ['afluencia_baja' => '1', 'sin_transporte_publico' => '1', 'horario_no_entorpece' => '1'], $this->operadorId, 'Pago autorizado.'));
 
         $cobro = $this->cobroDeSolicitud($id);
         $this->assertNotNull($cobro);
@@ -127,7 +136,7 @@ class CobroServiceTest extends DatabaseTestCase
     {
         $id = $this->solicitud();
         $this->estados->cambiarEstatus($id, 'En validación', $this->operadorId);
-        $this->estados->cambiarEstatus($id, 'Pago pendiente', $this->operadorId);
+        $this->estados->autorizarPagoUr05($id, ['afluencia_baja' => '1', 'sin_transporte_publico' => '1', 'horario_no_entorpece' => '1'], $this->operadorId);
         $this->assertTrue($this->estados->cambiarEstatus($id, 'Rechazado', $this->operadorId, 'La calle es ruta de transporte.'));
 
         $cobro = $this->cobroDeSolicitud($id);

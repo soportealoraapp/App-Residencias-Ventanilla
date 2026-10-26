@@ -3,12 +3,19 @@
 namespace App\Libraries;
 
 use App\Models\SolicitudModel;
+use App\Models\SolicitudDatoModel;
 use App\Models\HistorialEstatusModel;
 use App\Models\AuditoriaModel;
 use DateTime;
 
 class EstadoSolicitudService
 {
+    private const CRITERIOS_AUTORIZACION_UR05 = [
+        'afluencia_baja',
+        'sin_transporte_publico',
+        'horario_no_entorpece',
+    ];
+
     public const ESTATUS_UR_TT_T_07 = [
         'RECIBIDO' => 'Recibido',
         'PAGO_PENDIENTE' => 'Pago pendiente',
@@ -187,11 +194,92 @@ class EstadoSolicitudService
 
     public function cambiarEstatus(int $solicitudId, string $nuevoEstatus, ?int $usuarioId = null, ?string $comentario = null, ?array $auditoriaDetalle = null): bool
     {
+        return $this->cambiarEstatusInterno($solicitudId, $nuevoEstatus, $usuarioId, $comentario, $auditoriaDetalle, false);
+    }
+
+    /**
+     * Autoriza el pago de UR-05 únicamente desde "En validación" y después de
+     * comprobar los tres criterios de seguridad vial. La captura de criterios,
+     * el cambio de estado, el historial, la auditoría y el cobro comparten la
+     * misma transacción.
+     *
+     * @param array<string, mixed> $criterios
+     */
+    public function autorizarPagoUr05(int $solicitudId, array $criterios, ?int $usuarioId = null, ?string $comentario = null): bool
+    {
+        foreach (self::CRITERIOS_AUTORIZACION_UR05 as $campo) {
+            if (($criterios[$campo] ?? null) !== '1') {
+                return false;
+            }
+        }
+
+        $db = \Config\Database::connect();
+        $db->transBegin();
+
+        // PostgreSQL bloquea la fila durante toda la operación. Así una segunda
+        // autorización concurrente revalida el estado que dejó la primera.
+        if ($db->DBDriver === 'Postgre') {
+            $solicitud = $db->query(
+                'SELECT tramite, estatus FROM solicitudes WHERE id = ? FOR UPDATE',
+                [$solicitudId]
+            )->getRow();
+        } else {
+            $solicitud = (new SolicitudModel())->find($solicitudId);
+        }
+
+        if ($solicitud === null
+            || $solicitud->tramite !== 'UR-TT-T-05'
+            || $solicitud->estatus !== 'En validación') {
+            $db->transRollback();
+            return false;
+        }
+
+        $datosModel = new SolicitudDatoModel();
+        $datos = $datosModel->porSolicitudAgrupado($solicitudId);
+        foreach (self::CRITERIOS_AUTORIZACION_UR05 as $campo) {
+            $datos[$campo] = '1';
+        }
+        $datos['observaciones_validacion'] = trim((string) $comentario);
+        $datosModel->guardarDatos($solicitudId, $datos);
+
+        $detalle = ['criterios_ur05' => array_fill_keys(self::CRITERIOS_AUTORIZACION_UR05, true)];
+        $ok = $this->cambiarEstatusInterno(
+            $solicitudId,
+            'Pago pendiente',
+            $usuarioId,
+            trim((string) $comentario) ?: 'Criterios de cierre validados. Pago autorizado.',
+            $detalle,
+            true
+        );
+
+        if (! $ok) {
+            $db->transRollback();
+            return false;
+        }
+
+        if (! $db->transStatus()) {
+            $db->transRollback();
+            return false;
+        }
+
+        return $db->transCommit();
+    }
+
+    private function cambiarEstatusInterno(int $solicitudId, string $nuevoEstatus, ?int $usuarioId, ?string $comentario, ?array $auditoriaDetalle, bool $autorizarPagoUr05): bool
+    {
         $usuarioId = ($usuarioId !== null && $usuarioId > 0) ? $usuarioId : null;
         $solicitudModel = new SolicitudModel();
         $solicitud = $solicitudModel->find($solicitudId);
 
         if ($solicitud === null) {
+            return false;
+        }
+
+        // UR-05 exige una revisión específica antes de generar el cobro. Esta
+        // condición protege también llamadas directas al endpoint genérico.
+        if ($solicitud->tramite === 'UR-TT-T-05'
+            && $nuevoEstatus === 'Pago pendiente'
+            && ! $autorizarPagoUr05) {
             return false;
         }
 
