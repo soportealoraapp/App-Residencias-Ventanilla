@@ -52,6 +52,7 @@ $routes->group('juez', ['filter' => 'auth'], static function ($routes) {
         $routes->post('boletas/(:num)/calificar', 'Juez\DashboardController::calificar/$1', ['as' => 'juez.boleta.calificar']);
         // COB-02: el juez cobra trámites y multas con el mismo listado del panel.
         $routes->get('cobros', 'CobrosController::index', ['as' => 'juez.cobros']);
+        $routes->get('cobros/banco', 'CobrosController::banco', ['as' => 'juez.cobros.banco']);
         $routes->get('cobros/corte', 'CobrosController::corte', ['as' => 'juez.cobros.corte']);
         $routes->get('cobros/corte/csv', 'CobrosController::corteCsv');
         $routes->get('cobros/(:num)', 'CobrosController::ver/$1', ['as' => 'juez.cobro']);
@@ -91,6 +92,7 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->post('solicitudes/validar-documento/(:num)', 'Admin\\AdminController::validarDocumento/$1');
         // COB-02: listado de cobros de trámites y multas.
         $routes->get('cobros', 'CobrosController::index', ['as' => 'admin.cobros']);
+        $routes->get('cobros/banco', 'CobrosController::banco', ['as' => 'admin.cobros.banco']);
         $routes->get('cobros/corte', 'CobrosController::corte', ['as' => 'admin.cobros.corte']);
         $routes->get('cobros/corte/csv', 'CobrosController::corteCsv');
         $routes->get('cobros/(:num)', 'CobrosController::ver/$1', ['as' => 'admin.cobro']);

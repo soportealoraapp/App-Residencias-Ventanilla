@@ -226,7 +226,7 @@ $estatusTexto = match ($estatus) {
                         <?php if ($referencia !== ''): ?>
                             <span class="mono"><?= esc($referencia) ?></span>
                         <?php else: ?>
-                            se entrega al formalizar el convenio.
+                            se asigna cuando se autoriza el pago; vuelve a imprimir esta hoja entonces.
                         <?php endif ?>
                     </div>
                 <?php endif ?>

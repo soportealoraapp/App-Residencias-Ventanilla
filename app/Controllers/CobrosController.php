@@ -99,10 +99,16 @@ class CobrosController extends Controller
         return $this->ejecutar($id, function (CobroService $servicio, int $usuarioId) use ($id): string {
             $lugar = (string) $this->request->getPost('lugar_pago');
             $referencia = trim((string) $this->request->getPost('referencia_pago'));
-            if ($lugar === 'banbajio' && $referencia === '') {
-                throw new CobroException('Escriba la referencia del comprobante de BanBajío.');
+            if ($lugar === 'banbajio') {
+                // COB-04: con BanBajío se registra el comprobante y se valida su importe.
+                $importe = str_replace([',', '$', ' '], '', (string) $this->request->getPost('importe_pagado'));
+                if (! is_numeric($importe)) {
+                    throw new CobroException('Escriba el importe que aparece en el comprobante.');
+                }
+                $servicio->registrarPagoBancario($id, $referencia, (string) $this->request->getPost('fecha_pago_banco'), (float) $importe, $usuarioId);
+            } else {
+                $servicio->marcarCobrado($id, $lugar, $referencia, $usuarioId);
             }
-            $servicio->marcarCobrado($id, $lugar, $referencia, $usuarioId);
             $cobro = (new CobroModel())->find($id);
 
             return 'Cobro registrado. Recibo ' . $cobro->folio_recibo . ' por $' . number_format((float) $cobro->total, 2) . '.';
@@ -125,6 +131,40 @@ class CobrosController extends Controller
 
             return 'Cobro cancelado.';
         });
+    }
+
+    /**
+     * Pago en BanBajío (COB-04): se busca el cobro por la referencia impresa en
+     * la hoja de pago y se registra el comprobante.
+     */
+    public function banco()
+    {
+        $referencia = trim((string) $this->request->getGet('referencia'));
+        $cobro = null;
+        $aviso = null;
+        if ($referencia !== '') {
+            $encontrado = (new CobroService())->buscarPorReferencia($referencia);
+            if ($encontrado === null) {
+                $aviso = service('referenciaBancaria')->esValida($referencia)
+                    ? 'No hay ningún cobro con esa referencia.'
+                    : 'La referencia no es válida. Revise que esté completa y sin errores de captura.';
+            } else {
+                $cobro = (new CobroModel())
+                    ->select('cobros.*, solicitudes.folio AS solicitud_folio, boletas_infracciones.folio AS boleta_folio, boletas_infracciones.fecha_infraccion')
+                    ->join('solicitudes', 'solicitudes.id = cobros.solicitud_id', 'left')
+                    ->join('boletas_infracciones', 'boletas_infracciones.id = cobros.boleta_id', 'left')
+                    ->where('cobros.id', $encontrado->id)
+                    ->first();
+            }
+        }
+
+        return view('cobros/banco', [
+            'layout'     => $this->layout(),
+            'base'       => $this->base(),
+            'referencia' => $referencia,
+            'cobro'      => $cobro,
+            'aviso'      => $aviso,
+        ]);
     }
 
     /** Corte de caja del día, la semana, el mes o un rango (COB-03). */
@@ -235,6 +275,7 @@ class CobrosController extends Controller
                 ->orLike('cobros.concepto', $filtros['q'], 'both', null, true)
                 ->orLike('cobros.folio', $filtros['q'], 'both', null, true)
                 ->orLike('cobros.folio_recibo', $filtros['q'], 'both', null, true)
+                ->orLike('cobros.referencia_bancaria', preg_replace('/[\s\-.]+/', '', $filtros['q']), 'both', null, true)
                 ->groupEnd();
         }
         if ($filtros['desde'] !== '') {

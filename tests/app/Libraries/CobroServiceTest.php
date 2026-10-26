@@ -206,6 +206,60 @@ class CobroServiceTest extends DatabaseTestCase
         $this->assertSame('pagada', $this->db->table('boletas_infracciones')->where('id', $boletaId)->get()->getRow()->estado);
     }
 
+    public function testPagoEnBanBajioValidaElComprobante(): void
+    {
+        $id = $this->solicitud('UR-TT-T-07', 'Recibido', 400.0);
+        $this->estados->cambiarEstatus($id, 'Pago pendiente', $this->operadorId);
+        $cobro = $this->cobroDeSolicitud($id);
+        $this->assertSame(service('referenciaBancaria')->generar('solicitud', (int) $cobro->id), $cobro->referencia_bancaria);
+
+        // Se encuentra aunque se escriba con espacios.
+        $ref = $cobro->referencia_bancaria;
+        $this->assertSame((int) $cobro->id, (int) $this->cobros->buscarPorReferencia(substr($ref, 0, 4) . ' ' . substr($ref, 4))->id);
+        $this->assertNull($this->cobros->buscarPorReferencia('100000000191'));
+
+        foreach ([
+            ['', date('Y-m-d'), 400.0, 'comprobante'],
+            ['OP-1', date('Y-m-d', strtotime('+1 day')), 400.0, 'posterior a hoy'],
+            ['OP-1', date('Y-m-d'), 350.0, 'no coincide'],
+        ] as [$comprobante, $fecha, $importe, $mensaje]) {
+            try {
+                $this->cobros->registrarPagoBancario((int) $cobro->id, $comprobante, $fecha, $importe, $this->operadorId);
+                $this->fail('Debió rechazar: ' . $mensaje);
+            } catch (CobroException $e) {
+                $this->assertStringContainsString($mensaje, $e->getMessage());
+            }
+        }
+        $this->assertSame('pendiente', $this->cobroDeSolicitud($id)->estatus);
+
+        $this->cobros->registrarPagoBancario((int) $cobro->id, 'OP-778899', date('Y-m-d'), 400.0, $this->operadorId);
+        $cobro = $this->cobroDeSolicitud($id);
+        $this->assertSame('aprobado', $cobro->estatus);
+        $this->assertSame('banbajio', $cobro->lugar_pago);
+        $this->assertSame('OP-778899', $cobro->referencia_pago);
+        $this->assertSame(date('Y-m-d'), substr((string) $cobro->fecha_pago_banco, 0, 10));
+        $this->assertEqualsWithDelta(400.0, (float) $cobro->importe_pagado, 0.001);
+        $this->assertSame('Pagado', (new SolicitudModel())->find($id)->estatus);
+    }
+
+    public function testMultaPagadaEnElBancoConProntoPagoConservaElDescuento(): void
+    {
+        // La multa se pagó en el banco a tiempo, pero el comprobante se registra
+        // tres meses después: cuenta la fecha del comprobante, no la del registro.
+        $infraccion = date('Y-m-d', strtotime('-3 months'));
+        $boletaId = $this->boleta($infraccion);
+        $cobroId  = $this->cobros->crearDesdeBoleta($boletaId, 1000.0);
+        $this->db->table('cobros')->where('id', $cobroId)->update(['created_at' => $infraccion . ' 12:00:00']);
+
+        $this->cobros->registrarPagoBancario($cobroId, 'OP-1', $infraccion, 600.0);
+
+        $cobro = (new CobroModel())->find($cobroId);
+        $this->assertSame('aprobado', $cobro->estatus);
+        $this->assertEqualsWithDelta(400.0, (float) $cobro->descuento, 0.001);
+        $this->assertEqualsWithDelta(0.0, (float) $cobro->recargo, 0.001);
+        $this->assertEqualsWithDelta(600.0, (float) $cobro->total, 0.001);
+    }
+
     public function testMultaAtrasadaSeRecalculaConRecargoAlCobrar(): void
     {
         $boletaId = $this->boleta(date('Y-m-d', strtotime('-3 months -2 days')), 'Conductor Ausente');

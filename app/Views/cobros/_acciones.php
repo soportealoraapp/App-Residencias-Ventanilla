@@ -36,9 +36,20 @@ $volver = '/' . uri_string() . (($q = (string) service('request')->getUri()->get
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="mb-1">
-                    <label for="cobroReferencia" class="form-label fw-semibold">Referencia del pago <span class="text-muted fw-normal" id="cobroReferenciaOpcional">(opcional)</span></label>
-                    <input id="cobroReferencia" name="referencia_pago" class="form-control" maxlength="100" autocomplete="off" placeholder="Ej. folio del comprobante de BanBajío">
+                <div class="mb-3">
+                    <label for="cobroReferencia" class="form-label fw-semibold"><span id="cobroReferenciaEtiqueta">Referencia del pago</span> <span class="text-muted fw-normal" id="cobroReferenciaOpcional">(opcional)</span></label>
+                    <input id="cobroReferencia" name="referencia_pago" class="form-control" maxlength="100" autocomplete="off" placeholder="Ej. número de operación del comprobante">
+                </div>
+                <div class="row g-2" id="cobroComprobante" hidden>
+                    <div class="col-6">
+                        <label for="cobroFechaBanco" class="form-label fw-semibold">Fecha del pago</label>
+                        <input id="cobroFechaBanco" type="date" name="fecha_pago_banco" class="form-control" max="<?= date('Y-m-d') ?>">
+                    </div>
+                    <div class="col-6">
+                        <label for="cobroImporte" class="form-label fw-semibold">Importe pagado</label>
+                        <input id="cobroImporte" name="importe_pagado" class="form-control" inputmode="decimal" autocomplete="off" placeholder="0.00">
+                    </div>
+                    <div class="col-12 form-text">Copie los datos del comprobante de BanBajío. Si el importe no coincide con el total del día del pago, el cobro no se registra. En multas, el total depende de la fecha (pronto pago o recargo).</div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -88,6 +99,11 @@ document.addEventListener('click', function (evento) {
         modal.querySelector('[data-campo="total"]').textContent = boton.getAttribute('data-total');
         modal.querySelector('[data-campo="nota-multa"]').hidden = boton.getAttribute('data-origen') !== 'boleta';
         form.querySelector('[name="referencia_pago"]').value = '';
+        form.querySelector('[name="fecha_pago_banco"]').value = '';
+        form.querySelector('[name="importe_pagado"]').value = (boton.getAttribute('data-total') || '').replace(/[$,]/g, '');
+        var lugar = form.querySelector('[name="lugar_pago"]');
+        if (boton.getAttribute('data-lugar')) { lugar.value = boton.getAttribute('data-lugar'); }
+        ajustarLugar(lugar);
     } else {
         var cancelar = accion === 'cancelar';
         modal.querySelector('#modalMotivoTitulo').textContent = cancelar ? 'Cancelar cobro' : 'Mandar a completar';
@@ -103,11 +119,17 @@ document.addEventListener('click', function (evento) {
     bootstrap.Modal.getOrCreateInstance(modal).show();
 });
 
+// Con BanBajío se piden los datos del comprobante (COB-04).
+function ajustarLugar(select) {
+    var banco = select.value === 'banbajio';
+    document.getElementById('cobroReferencia').required = banco;
+    document.getElementById('cobroReferenciaEtiqueta').textContent = banco ? 'Folio u operación del comprobante' : 'Referencia del pago';
+    document.getElementById('cobroReferenciaOpcional').textContent = banco ? '' : '(opcional)';
+    document.getElementById('cobroComprobante').hidden = !banco;
+    document.getElementById('cobroFechaBanco').required = banco;
+    document.getElementById('cobroImporte').required = banco;
+}
 document.addEventListener('change', function (evento) {
-    if (evento.target.id !== 'cobroLugar') { return; }
-    var banco = evento.target.value === 'banbajio';
-    var referencia = document.getElementById('cobroReferencia');
-    referencia.required = banco;
-    document.getElementById('cobroReferenciaOpcional').textContent = banco ? '(obligatoria para BanBajío)' : '(opcional)';
+    if (evento.target.id === 'cobroLugar') { ajustarLugar(evento.target); }
 });
 </script>

@@ -114,12 +114,46 @@ class CobrosControllerTest extends DatabaseTestCase
         $this->assertSame('Pagado', (new SolicitudModel())->find($this->solicitudId)->estatus);
     }
 
-    public function testBanBajioPideLaReferencia(): void
+    public function testBanBajioPideLosDatosDelComprobante(): void
     {
         $this->como('juez_calificador')->post('/juez/cobros/' . $this->cobroMulta . '/cobrar', ['lugar_pago' => 'banbajio']);
+        $this->assertStringContainsString('importe', (string) session('error'));
 
-        $this->assertStringContainsString('referencia', (string) session('error'));
+        $this->como('juez_calificador')->post('/juez/cobros/' . $this->cobroMulta . '/cobrar', [
+            'lugar_pago' => 'banbajio', 'importe_pagado' => '600', 'fecha_pago_banco' => date('Y-m-d'),
+        ]);
+        $this->assertStringContainsString('comprobante', (string) session('error'));
         $this->assertSame('pendiente', (new CobroModel())->find($this->cobroMulta)->estatus);
+
+        // Multa de hoy: 1,000 con 40 % de pronto pago.
+        $this->como('juez_calificador')->post('/juez/cobros/' . $this->cobroMulta . '/cobrar', [
+            'lugar_pago' => 'banbajio', 'referencia_pago' => 'OP-55', 'importe_pagado' => '$600.00', 'fecha_pago_banco' => date('Y-m-d'),
+        ]);
+        $this->assertSame('aprobado', (new CobroModel())->find($this->cobroMulta)->estatus);
+    }
+
+    public function testBuscarPorReferenciaBancaria(): void
+    {
+        $referencia = (new CobroModel())->find($this->cobroTramite)->referencia_bancaria;
+
+        $html = $this->como('operador_ventanilla')->get('/admin/cobros/banco?referencia=' . urlencode(chunk_split($referencia, 4, ' ')))->response()->getBody();
+        $this->assertStringContainsString('Laura Ramírez Gómez', $html);
+        $this->assertStringContainsString('Registrar comprobante de BanBajío', $html);
+
+        $html = $this->como('operador_ventanilla')->get('/admin/cobros/banco?referencia=123')->response()->getBody();
+        $this->assertStringContainsString('La referencia no es válida', $html);
+
+        $html = $this->como('operador_ventanilla')->get('/admin/cobros?q=' . $referencia)->response()->getBody();
+        $this->assertStringContainsString('Laura Ramírez Gómez', $html);
+        $this->assertStringNotContainsString('Martín Aguilar Rosas', $html);
+    }
+
+    public function testLaHojaDePagoMuestraLaReferenciaBancaria(): void
+    {
+        $referencia = (new CobroModel())->find($this->cobroTramite)->referencia_bancaria;
+
+        $html = $this->como('administrador')->get('/documentos/hoja-pago/solicitud/FOLCOB02TRAMITE00001')->response()->getBody();
+        $this->assertStringContainsString($referencia, $html);
     }
 
     public function testMandarACompletarPideMotivoYAparaceEnSuFiltro(): void

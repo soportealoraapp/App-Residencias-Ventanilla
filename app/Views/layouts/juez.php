@@ -38,9 +38,13 @@
         </a>
 
         <div class="sidebar-section-title mt-3">Cobros</div>
-        <a href="/juez/cobros" class="sidebar-link <?= str_starts_with(uri_string(), 'juez/cobros') && ! str_starts_with(uri_string(), 'juez/cobros/corte') ? 'active' : '' ?>">
+        <a href="/juez/cobros" class="sidebar-link <?= str_starts_with(uri_string(), 'juez/cobros') && ! str_starts_with(uri_string(), 'juez/cobros/corte') && ! str_starts_with(uri_string(), 'juez/cobros/banco') ? 'active' : '' ?>">
             <i class="bi bi-cash-coin me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Listado de cobros</span>
+        </a>
+        <a href="/juez/cobros/banco" class="sidebar-link <?= str_starts_with(uri_string(), 'juez/cobros/banco') ? 'active' : '' ?>">
+            <i class="bi bi-bank me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Pago en BanBajío</span>
         </a>
         <a href="/juez/cobros/corte" class="sidebar-link <?= str_starts_with(uri_string(), 'juez/cobros/corte') ? 'active' : '' ?>">
             <i class="bi bi-calculator me-2 sidebar-link-icon"></i>

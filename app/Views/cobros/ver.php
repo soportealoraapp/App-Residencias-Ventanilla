@@ -73,6 +73,9 @@ $datos = sprintf(
 
                 <dl class="row small mb-0">
                     <dt class="col-5 col-sm-4 text-muted fw-normal">Folio del cobro</dt><dd class="col-7 col-sm-8 font-monospace"><?= esc($cobro->folio) ?></dd>
+                    <?php if (! empty($cobro->referencia_bancaria)): ?>
+                        <dt class="col-5 col-sm-4 text-muted fw-normal">Referencia bancaria</dt><dd class="col-7 col-sm-8 font-monospace"><?= esc($cobro->referencia_bancaria) ?></dd>
+                    <?php endif; ?>
                     <?php if ($cobro->origen === 'boleta'): ?>
                         <dt class="col-5 col-sm-4 text-muted fw-normal">Boleta</dt><dd class="col-7 col-sm-8 font-monospace"><?= esc($cobro->boleta_folio) ?></dd>
                     <?php else: ?>
@@ -83,7 +86,8 @@ $datos = sprintf(
                         <dt class="col-5 col-sm-4 text-muted fw-normal">Recibo</dt><dd class="col-7 col-sm-8 font-monospace"><?= esc($cobro->folio_recibo) ?></dd>
                         <dt class="col-5 col-sm-4 text-muted fw-normal">Fecha de cobro</dt><dd class="col-7 col-sm-8"><?= $fecha($cobro->fecha_cobro) ?></dd>
                         <dt class="col-5 col-sm-4 text-muted fw-normal">Lugar de pago</dt><dd class="col-7 col-sm-8"><?= esc($lugares[$cobro->lugar_pago] ?? 'Sin registrar') ?></dd>
-                        <?php if (! empty($cobro->referencia_pago)): ?><dt class="col-5 col-sm-4 text-muted fw-normal">Referencia</dt><dd class="col-7 col-sm-8 font-monospace"><?= esc($cobro->referencia_pago) ?></dd><?php endif; ?>
+                        <?php if (! empty($cobro->referencia_pago)): ?><dt class="col-5 col-sm-4 text-muted fw-normal"><?= $cobro->lugar_pago === 'banbajio' ? 'Comprobante' : 'Referencia' ?></dt><dd class="col-7 col-sm-8 font-monospace"><?= esc($cobro->referencia_pago) ?></dd><?php endif; ?>
+                        <?php if (! empty($cobro->fecha_pago_banco)): ?><dt class="col-5 col-sm-4 text-muted fw-normal">Pagado en el banco</dt><dd class="col-7 col-sm-8"><?= date('d/m/Y', strtotime((string) $cobro->fecha_pago_banco)) ?> · <?= $pesos($cobro->importe_pagado) ?></dd><?php endif; ?>
                         <dt class="col-5 col-sm-4 text-muted fw-normal">Cobró</dt><dd class="col-7 col-sm-8"><?= esc($cobro->cobrado_por_nombre ?: 'Sin registrar') ?></dd>
                     <?php else: ?>
                         <dt class="col-5 col-sm-4 text-muted fw-normal">Registrado</dt><dd class="col-7 col-sm-8"><?= $fecha($cobro->created_at) ?></dd>

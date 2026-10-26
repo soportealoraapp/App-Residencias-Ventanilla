@@ -38,4 +38,17 @@ class Services extends BaseService
 
         return new \App\Libraries\BanbajioMockGateway();
     }
+
+    /**
+     * Formato de la referencia bancaria de los cobros (COB-04). Cuando llegue el
+     * formato del convenio con BanBajío, se cambia aquí la clase.
+     */
+    public static function referenciaBancaria(bool $getShared = true): \App\Interfaces\ReferenciaBancariaInterface
+    {
+        if ($getShared) {
+            return static::getSharedInstance('referenciaBancaria');
+        }
+
+        return new \App\Libraries\ReferenciaBancariaProvisional();
+    }
 }

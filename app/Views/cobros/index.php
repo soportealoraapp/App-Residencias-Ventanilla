@@ -71,7 +71,7 @@ $urlEstatus = static function (string $estatus) use ($base, $filtros): string {
     <div class="card-body row g-2 align-items-end">
         <div class="col-12 col-md-4">
             <label for="filtroQ" class="form-label small fw-semibold mb-1">Buscar</label>
-            <input id="filtroQ" name="q" class="form-control" value="<?= esc($filtros['q'], 'attr') ?>" placeholder="Nombre, concepto o folio">
+            <input id="filtroQ" name="q" class="form-control" value="<?= esc($filtros['q'], 'attr') ?>" placeholder="Nombre, concepto, folio o referencia">
         </div>
         <div class="col-6 col-md-2">
             <label for="filtroEstatus" class="form-label small fw-semibold mb-1">Estatus</label>
@@ -108,7 +108,10 @@ $urlEstatus = static function (string $estatus) use ($base, $filtros): string {
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center gap-2">
         <h2 class="h6 mb-0"><i class="bi bi-cash-stack me-2 text-primary"></i>Cobros (<?= number_format($pager ? $pager->getTotal() : count($cobros)) ?>)</h2>
-        <a href="<?= esc($base . '/corte', 'attr') ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-calculator me-1"></i>Corte de caja</a>
+        <div class="d-flex gap-2">
+            <a href="<?= esc($base . '/banco', 'attr') ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-bank me-1"></i>Pago en BanBajío</a>
+            <a href="<?= esc($base . '/corte', 'attr') ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-calculator me-1"></i>Corte de caja</a>
+        </div>
     </div>
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">

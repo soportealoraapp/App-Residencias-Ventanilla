@@ -130,10 +130,17 @@ class CobroService
 
     /**
      * Registra el pago. Asigna folio de recibo y lleva la solicitud o la boleta
-     * a pagada. En multas recalcula descuento y recargo a la fecha de cobro.
+     * a pagada. En multas recalcula descuento y recargo a la fecha de pago
+     * (hoy, o la del comprobante bancario si se indica).
      */
-    public function marcarCobrado(int $cobroId, string $lugarPago, ?string $referencia = null, ?int $usuarioId = null): void
-    {
+    public function marcarCobrado(
+        int $cobroId,
+        string $lugarPago,
+        ?string $referencia = null,
+        ?int $usuarioId = null,
+        ?DateTimeImmutable $fechaPagoBanco = null,
+        ?float $importePagado = null
+    ): void {
         if (! array_key_exists($lugarPago, self::LUGARES_PAGO)) {
             throw new CobroException('Lugar de pago no válido.');
         }
@@ -155,9 +162,11 @@ class CobroService
             'referencia_pago'      => $referencia !== null && trim($referencia) !== '' ? trim($referencia) : null,
             'cobrado_por'          => $usuarioId ?: null,
             'fecha_cobro'          => $ahora->format('Y-m-d H:i:s'),
+            'fecha_pago_banco'     => $fechaPagoBanco?->format('Y-m-d'),
+            'importe_pagado'       => $importePagado !== null ? round($importePagado, 2) : null,
         ];
         if ($cobro->origen === 'boleta') {
-            $cambios += $this->recalculoBoleta($cobro, $ahora);
+            $cambios += $this->recalculoBoleta($cobro, $fechaPagoBanco ?? $ahora);
         }
 
         $db = \Config\Database::connect();
@@ -165,12 +174,14 @@ class CobroService
 
         $cambios['folio_recibo'] = $this->siguienteFolioRecibo($ahora);
         $this->cobros->update($cobroId, $cambios);
-        $this->movimiento($cobro, 'cobrar', self::APROBADO, null, $usuarioId, [
-            'lugar_pago' => $lugarPago,
-            'referencia' => $cambios['referencia_pago'],
-            'total'      => (float) ($cambios['total'] ?? $cobro->total),
-            'recibo'     => $cambios['folio_recibo'],
-        ]);
+        $this->movimiento($cobro, 'cobrar', self::APROBADO, null, $usuarioId, array_filter([
+            'lugar_pago'       => $lugarPago,
+            'referencia'       => $cambios['referencia_pago'],
+            'total'            => (float) ($cambios['total'] ?? $cobro->total),
+            'recibo'           => $cambios['folio_recibo'],
+            'fecha_pago_banco' => $cambios['fecha_pago_banco'],
+            'importe_pagado'   => $cambios['importe_pagado'],
+        ], static fn ($v) => $v !== null));
 
         if ($cobro->origen === 'solicitud') {
             (new EstadoSolicitudService())->cambiarEstatus(
@@ -187,6 +198,55 @@ class CobroService
         if (! $db->transStatus()) {
             throw new CobroException('No se pudo registrar el pago. Intente de nuevo.');
         }
+    }
+
+    /**
+     * Registra un pago hecho en BanBajío a partir de su comprobante (COB-04).
+     * El importe del comprobante debe coincidir con el total a pagar en la
+     * fecha del pago; en multas ese total depende del día (pronto pago o mora).
+     */
+    public function registrarPagoBancario(int $cobroId, string $comprobante, string $fechaPago, float $importe, ?int $usuarioId = null): void
+    {
+        $comprobante = trim($comprobante);
+        if ($comprobante === '') {
+            throw new CobroException('Escriba el folio o número de operación del comprobante.');
+        }
+        $fecha = DateTimeImmutable::createFromFormat('!Y-m-d', trim($fechaPago));
+        if ($fecha === false || $fecha->format('Y-m-d') !== trim($fechaPago)) {
+            throw new CobroException('Escriba la fecha del pago que aparece en el comprobante.');
+        }
+        if ($fecha > new DateTimeImmutable('today')) {
+            throw new CobroException('La fecha del pago no puede ser posterior a hoy.');
+        }
+
+        $cobro = $this->pendiente($cobroId);
+        if ($fecha < new DateTimeImmutable(substr((string) $cobro->created_at, 0, 10))) {
+            throw new CobroException('La fecha del pago es anterior a la emisión de la referencia; revise el comprobante.');
+        }
+
+        $esperado = $cobro->origen === 'boleta'
+            ? (float) $this->recalculoBoleta($cobro, $fecha)['total']
+            : round((float) $cobro->total, 2);
+        if (abs(round($importe, 2) - $esperado) > 0.009) {
+            throw new CobroException(sprintf(
+                'El importe del comprobante ($%s) no coincide con el total a pagar ($%s) para el %s.',
+                number_format($importe, 2), number_format($esperado, 2), $fecha->format('d/m/Y')
+            ));
+        }
+
+        $this->marcarCobrado($cobroId, 'banbajio', $comprobante, $usuarioId, $fecha, $importe);
+    }
+
+    /** Cobro de una referencia bancaria (acepta espacios y guiones). */
+    public function buscarPorReferencia(string $referencia): ?object
+    {
+        $formato    = service('referenciaBancaria');
+        $referencia = $formato->normalizar($referencia);
+        if (! $formato->esValida($referencia)) {
+            return null;
+        }
+
+        return $this->cobros->where('referencia_bancaria', $referencia)->first();
     }
 
     /** El cobro sigue pendiente, pero marcado como incompleto con el motivo. */
@@ -282,7 +342,13 @@ class CobroService
             'estatus'    => self::PENDIENTE,
             'created_by' => $usuarioId ?: null,
         ]);
-        $this->cobros->update($id, ['folio' => sprintf('COB-%s-%06d', date('Y'), $id)]);
+        $folios = ['folio' => sprintf('COB-%s-%06d', date('Y'), $id)];
+        // La columna llega con la migración 000032; las migraciones anteriores que
+        // crean cobros corren antes de ella, y 000032 les asigna su referencia.
+        if ($db->fieldExists('referencia_bancaria', 'cobros')) {
+            $folios['referencia_bancaria'] = service('referenciaBancaria')->generar((string) $datos['origen'], $id);
+        }
+        $this->cobros->update($id, $folios);
         $this->movimiento((object) ['id' => $id, 'estatus' => null], 'crear', self::PENDIENTE, null, $usuarioId, ['total' => (float) ($datos['total'] ?? 0)]);
 
         $db->transComplete();

@@ -158,7 +158,7 @@ class HojaPagoService
             'total'                  => $total,
             'estatus'                => $cobro?->estatus ?? 'pendiente',
             'lugar_pago'             => $cobro?->lugar_pago,
-            'referencia'             => $cobro?->referencia_pago,
+            'referencia'             => $cobro?->referencia_bancaria,
             'fecha_limite_descuento' => $this->fechaLimiteDescuento((string) ($boleta->fecha_infraccion ?? '')),
             'aplica_descuento'       => (bool) ($calculo['aplica_descuento'] ?? false),
             'meses_mora'             => (int) ($calculo['meses_mora'] ?? 0),
@@ -273,7 +273,9 @@ class HojaPagoService
     /** @param array<string, mixed> $datos */
     private function referencia(array $datos, ?object $cobro): ?string
     {
-        foreach ([$cobro->referencia_pago ?? null, $datos['referencia_pago'] ?? null] as $candidato) {
+        // COB-04: la referencia para pagar en BanBajío es la del cobro. referencia_pago
+        // es el comprobante que se captura después de pagar.
+        foreach ([$cobro->referencia_bancaria ?? null, $datos['referencia_pago'] ?? null] as $candidato) {
             $referencia = trim((string) $candidato);
             if ($referencia !== '') {
                 return $referencia;

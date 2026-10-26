@@ -127,9 +127,13 @@ $__tituloPagina = trim($this->renderSection('pageTitle', true));
         <?php endif; ?>
 
         <?php if ($permitido('cobros')): ?>
-        <a href="/admin/cobros" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/cobros') && ! str_starts_with(uri_string(), 'admin/cobros/corte') ? 'active' : '' ?>">
+        <a href="/admin/cobros" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/cobros') && ! str_starts_with(uri_string(), 'admin/cobros/corte') && ! str_starts_with(uri_string(), 'admin/cobros/banco') ? 'active' : '' ?>">
             <i class="bi bi-cash-stack me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Cobros</span>
+        </a>
+        <a href="/admin/cobros/banco" class="sidebar-link ms-2 small <?= str_starts_with(uri_string(), 'admin/cobros/banco') ? 'active' : '' ?>">
+            <i class="bi bi-bank me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Pago en BanBajío</span>
         </a>
         <a href="/admin/cobros/corte" class="sidebar-link ms-2 small <?= str_starts_with(uri_string(), 'admin/cobros/corte') ? 'active' : '' ?>">
             <i class="bi bi-calculator me-2 sidebar-link-icon"></i>
