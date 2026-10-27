@@ -127,7 +127,7 @@ $__tituloPagina = trim($this->renderSection('pageTitle', true));
         <?php endif; ?>
 
         <?php if ($permitido('cobros')): ?>
-        <a href="/admin/cobros" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/cobros') && ! str_starts_with(uri_string(), 'admin/cobros/corte') && ! str_starts_with(uri_string(), 'admin/cobros/banco') ? 'active' : '' ?>">
+        <a href="/admin/cobros" class="sidebar-link <?= str_starts_with(uri_string(), 'admin/cobros') && ! str_starts_with(uri_string(), 'admin/cobros/corte') && ! str_starts_with(uri_string(), 'admin/cobros/banco') && ! str_starts_with(uri_string(), 'admin/cobros/condonaciones') ? 'active' : '' ?>">
             <i class="bi bi-cash-stack me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Cobros</span>
         </a>
@@ -139,6 +139,12 @@ $__tituloPagina = trim($this->renderSection('pageTitle', true));
             <i class="bi bi-calculator me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Corte de caja</span>
         </a>
+        <?php if ($esAdministrador): ?>
+        <a href="/admin/cobros/condonaciones" class="sidebar-link ms-2 small <?= str_starts_with(uri_string(), 'admin/cobros/condonaciones') ? 'active' : '' ?>">
+            <i class="bi bi-file-earmark-minus me-2 sidebar-link-icon"></i>
+            <span class="sidebar-text">Condonaciones</span>
+        </a>
+        <?php endif; ?>
         <?php endif; ?>
 
         <?php if ($permitido('usuarios')): ?>

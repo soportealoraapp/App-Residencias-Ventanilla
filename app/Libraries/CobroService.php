@@ -9,7 +9,9 @@ use App\Models\CobroMovimientoModel;
 use App\Models\SolicitudDatoModel;
 use App\Models\SolicitudModel;
 use App\Models\UserModel;
+use CodeIgniter\Database\BaseConnection;
 use DateTimeImmutable;
+use Throwable;
 
 /**
  * Cobros de trámites y de multas (COB-01).
@@ -141,63 +143,91 @@ class CobroService
         ?DateTimeImmutable $fechaPagoBanco = null,
         ?float $importePagado = null
     ): void {
+        $this->cobrar($cobroId, $lugarPago, $referencia, $usuarioId, $fechaPagoBanco, $importePagado, false);
+    }
+
+    /**
+     * El cobro se bloquea y se vuelve a leer antes de calcular: una condonación
+     * o una cancelación confirmadas antes de este pago quedan reflejadas en el
+     * total, y ninguna puede confirmarse después de aprobarlo.
+     */
+    private function cobrar(
+        int $cobroId,
+        string $lugarPago,
+        ?string $referencia,
+        ?int $usuarioId,
+        ?DateTimeImmutable $fechaPagoBanco,
+        ?float $importePagado,
+        bool $validarImporte
+    ): void {
         if (! array_key_exists($lugarPago, self::LUGARES_PAGO)) {
             throw new CobroException('Lugar de pago no válido.');
         }
-        $cobro = $this->pendiente($cobroId);
-        $ahora = new DateTimeImmutable();
 
-        $estadoSolicitud = null;
-        if ($cobro->origen === 'solicitud') {
-            $estadoSolicitud = $this->estatusPagadoDe((int) $cobro->solicitud_id);
-            if ($estadoSolicitud === null) {
-                throw new CobroException('La solicitud ya no está en "Pago pendiente"; revise su estatus antes de cobrar.');
+        $this->enTransaccion(function (BaseConnection $db) use ($cobroId, $lugarPago, $referencia, $usuarioId, $fechaPagoBanco, $importePagado, $validarImporte): void {
+            $cobro = $this->pendienteBloqueado($cobroId, $db);
+            $ahora = new DateTimeImmutable();
+
+            $estadoSolicitud = null;
+            if ($cobro->origen === 'solicitud') {
+                $estadoSolicitud = $this->estatusPagadoDe((int) $cobro->solicitud_id);
+                if ($estadoSolicitud === null) {
+                    throw new CobroException('La solicitud ya no está en "Pago pendiente"; revise su estatus antes de cobrar.');
+                }
             }
-        }
 
-        $cambios = [
-            'estatus'              => self::APROBADO,
-            'pendiente_documentos' => 0,
-            'lugar_pago'           => $lugarPago,
-            'referencia_pago'      => $referencia !== null && trim($referencia) !== '' ? trim($referencia) : null,
-            'cobrado_por'          => $usuarioId ?: null,
-            'fecha_cobro'          => $ahora->format('Y-m-d H:i:s'),
-            'fecha_pago_banco'     => $fechaPagoBanco?->format('Y-m-d'),
-            'importe_pagado'       => $importePagado !== null ? round($importePagado, 2) : null,
-        ];
-        if ($cobro->origen === 'boleta') {
-            $cambios += $this->recalculoBoleta($cobro, $fechaPagoBanco ?? $ahora);
-        }
+            $cambios = [
+                'estatus'              => self::APROBADO,
+                'pendiente_documentos' => 0,
+                'lugar_pago'           => $lugarPago,
+                'referencia_pago'      => $referencia !== null && trim($referencia) !== '' ? trim($referencia) : null,
+                'cobrado_por'          => $usuarioId ?: null,
+                'fecha_cobro'          => $ahora->format('Y-m-d H:i:s'),
+                'fecha_pago_banco'     => $fechaPagoBanco?->format('Y-m-d'),
+                'importe_pagado'       => $importePagado !== null ? round($importePagado, 2) : null,
+            ];
+            $fechaCalculo = $fechaPagoBanco ?? $ahora;
+            if ($cobro->origen === 'boleta') {
+                $cambios += $this->recalculoBoleta($cobro, $fechaCalculo);
+            }
 
-        $db = \Config\Database::connect();
-        $db->transStart();
+            if ($validarImporte) {
+                $esperado = round((float) ($cambios['total'] ?? $cobro->total), 2);
+                if (abs(round((float) $importePagado, 2) - $esperado) > 0.009) {
+                    throw new CobroException(sprintf(
+                        'El importe del comprobante ($%s) no coincide con el total a pagar ($%s) para el %s.',
+                        number_format((float) $importePagado, 2), number_format($esperado, 2), $fechaCalculo->format('d/m/Y')
+                    ));
+                }
+            }
 
-        $cambios['folio_recibo'] = $this->siguienteFolioRecibo($ahora);
-        $this->cobros->update($cobroId, $cambios);
-        $this->movimiento($cobro, 'cobrar', self::APROBADO, null, $usuarioId, array_filter([
-            'lugar_pago'       => $lugarPago,
-            'referencia'       => $cambios['referencia_pago'],
-            'total'            => (float) ($cambios['total'] ?? $cobro->total),
-            'recibo'           => $cambios['folio_recibo'],
-            'fecha_pago_banco' => $cambios['fecha_pago_banco'],
-            'importe_pagado'   => $cambios['importe_pagado'],
-        ], static fn ($v) => $v !== null));
+            $cambios['folio_recibo'] = $this->siguienteFolioRecibo($ahora);
+            $this->cobros->update($cobroId, $cambios);
+            $detalle = [
+                'lugar_pago'       => $lugarPago,
+                'referencia'       => $cambios['referencia_pago'],
+                'total'            => (float) ($cambios['total'] ?? $cobro->total),
+                'recibo'           => $cambios['folio_recibo'],
+                'fecha_pago_banco' => $cambios['fecha_pago_banco'],
+                'importe_pagado'   => $cambios['importe_pagado'],
+            ];
+            if ($cobro->origen === 'boleta') {
+                $detalle['condonado_autorizado'] = round((float) $cobro->condonado, 2);
+                $detalle['condonado_aplicado']   = (float) $cambios['condonado'];
+            }
+            $this->movimiento($cobro, 'cobrar', self::APROBADO, null, $usuarioId, array_filter($detalle, static fn ($v) => $v !== null));
 
-        if ($cobro->origen === 'solicitud') {
-            (new EstadoSolicitudService())->cambiarEstatus(
-                (int) $cobro->solicitud_id,
-                $estadoSolicitud,
-                $usuarioId,
-                'Pago registrado (' . self::LUGARES_PAGO[$lugarPago] . '). Recibo ' . $cambios['folio_recibo'] . '.'
-            );
-        } else {
-            (new BoletaInfraccionModel())->update((int) $cobro->boleta_id, ['estado' => 'pagada']);
-        }
-
-        $db->transComplete();
-        if (! $db->transStatus()) {
-            throw new CobroException('No se pudo registrar el pago. Intente de nuevo.');
-        }
+            if ($cobro->origen === 'solicitud') {
+                (new EstadoSolicitudService())->cambiarEstatus(
+                    (int) $cobro->solicitud_id,
+                    $estadoSolicitud,
+                    $usuarioId,
+                    'Pago registrado (' . self::LUGARES_PAGO[$lugarPago] . '). Recibo ' . $cambios['folio_recibo'] . '.'
+                );
+            } else {
+                (new BoletaInfraccionModel())->update((int) $cobro->boleta_id, ['estado' => 'pagada']);
+            }
+        }, 'No se pudo registrar el pago. Intente de nuevo.');
     }
 
     /**
@@ -224,17 +254,8 @@ class CobroService
             throw new CobroException('La fecha del pago es anterior a la emisión de la referencia; revise el comprobante.');
         }
 
-        $esperado = $cobro->origen === 'boleta'
-            ? (float) $this->recalculoBoleta($cobro, $fecha)['total']
-            : round((float) $cobro->total, 2);
-        if (abs(round($importe, 2) - $esperado) > 0.009) {
-            throw new CobroException(sprintf(
-                'El importe del comprobante ($%s) no coincide con el total a pagar ($%s) para el %s.',
-                number_format($importe, 2), number_format($esperado, 2), $fecha->format('d/m/Y')
-            ));
-        }
-
-        $this->marcarCobrado($cobroId, 'banbajio', $comprobante, $usuarioId, $fecha, $importe);
+        // El importe se compara contra el total recalculado dentro del bloqueo del cobro.
+        $this->cobrar($cobroId, 'banbajio', $comprobante, $usuarioId, $fecha, $importe, true);
     }
 
     /** Cobro de una referencia bancaria (acepta espacios y guiones). */
@@ -263,10 +284,99 @@ class CobroService
     public function cancelar(int $cobroId, string $motivo, ?int $usuarioId = null): void
     {
         $motivo = $this->motivoObligatorio($motivo);
-        $cobro  = $this->pendiente($cobroId);
 
-        $this->cobros->update($cobroId, ['estatus' => self::CANCELADO, 'motivo' => $motivo, 'pendiente_documentos' => 0]);
-        $this->movimiento($cobro, 'cancelar', self::CANCELADO, $motivo, $usuarioId);
+        $this->enTransaccion(function (BaseConnection $db) use ($cobroId, $motivo, $usuarioId): void {
+            $cobro = $this->pendienteBloqueado($cobroId, $db);
+
+            $this->cobros->update($cobroId, ['estatus' => self::CANCELADO, 'motivo' => $motivo, 'pendiente_documentos' => 0]);
+            $this->movimiento($cobro, 'cancelar', self::CANCELADO, $motivo, $usuarioId);
+        }, 'No se pudo cancelar el cobro.');
+    }
+
+    // ─── Condonación de recargos (COB-11) ─────────────────────────────────────
+
+    /**
+     * Estado de la condonación de un cobro de multa a una fecha: lo que ve el
+     * formulario y lo que el servidor vuelve a calcular al confirmar.
+     *
+     * @return array<string, mixed>
+     */
+    public function vistaCondonacion(int $cobroId, ?DateTimeImmutable $fecha = null): array
+    {
+        $cobro = $this->cobros->find($cobroId);
+        if ($cobro === null) {
+            throw new CobroException('El cobro no existe.');
+        }
+
+        return $this->estadoCondonacion($cobro, $fecha ?? new DateTimeImmutable());
+    }
+
+    /**
+     * Autoriza un importe ADICIONAL de condonación sobre el recargo de una
+     * multa pendiente. Cada llamada suma al acumulado y deja su propio
+     * movimiento. `$version` es la del formulario (vistaCondonacion): si el cobro
+     * cambió desde entonces —incluido un reenvío de la misma petición— se
+     * rechaza y hay que revisar de nuevo.
+     *
+     * @return array<string, mixed> Importe autorizado, acumulados y totales.
+     */
+    public function condonar(int $cobroId, string $importe, string $motivo, int $usuarioId, string $version): array
+    {
+        $motivo   = $this->motivoObligatorio($motivo);
+        $centavos = CondonacionRecargo::importeACentavos($importe);
+
+        return $this->enTransaccion(function (BaseConnection $db) use ($cobroId, $centavos, $motivo, $usuarioId, $version): array {
+            $cobro = $this->bloquear($cobroId, $db);
+            if ($cobro === null) {
+                throw new CobroException('El cobro no existe.');
+            }
+            if (! CondonacionRecargo::puedeAutorizar($usuarioId)) {
+                throw new CobroException('Su cuenta no está autorizada para condonar recargos.');
+            }
+
+            $estado = $this->estadoCondonacion($cobro, new DateTimeImmutable());
+            if ($estado['error'] !== null) {
+                throw new CobroException($estado['error']);
+            }
+            if (! hash_equals((string) $estado['version'], $version)) {
+                throw new CobroException('El cobro cambió desde que abrió el formulario (otra autorización, otro pago o un recargo distinto). Revise los importes actuales y vuelva a confirmar.');
+            }
+            if ($estado['disponible_centavos'] <= 0) {
+                throw new CobroException('No hay recargo disponible para condonar.');
+            }
+            if ($centavos > $estado['disponible_centavos']) {
+                throw new CobroException(sprintf(
+                    'El importe ($%s) excede el recargo disponible ($%s).',
+                    number_format(CondonacionRecargo::aPesos($centavos), 2), number_format($estado['disponible'], 2)
+                ));
+            }
+
+            $nuevo      = CondonacionRecargo::aPesos($estado['autorizado_centavos'] + $centavos);
+            $calculo    = $estado['calculo'];
+            $totalNuevo = CondonacionRecargo::total($calculo, $nuevo);
+
+            $this->cobros->update($cobroId, [
+                'descuento'       => $calculo['monto_descuento'],
+                'recargo'         => $calculo['monto_recargo'],
+                'condonado'       => $nuevo,
+                'total'           => $totalNuevo,
+                'detalle_calculo' => json_encode($calculo, JSON_UNESCAPED_UNICODE),
+            ]);
+
+            $detalle = [
+                'importe_adicional'  => CondonacionRecargo::aPesos($centavos),
+                'condonado_anterior' => $estado['autorizado'],
+                'condonado_nuevo'    => $nuevo,
+                'recargo'            => $estado['recargo'],
+                'monto_base'         => $estado['monto_base'],
+                'total_anterior'     => $estado['total'],
+                'total_nuevo'        => $totalNuevo,
+                'fecha_calculo'      => $estado['fecha_calculo'],
+            ];
+            $this->movimiento($cobro, 'condonar', self::PENDIENTE, $motivo, $usuarioId, $detalle);
+
+            return $detalle;
+        }, 'No se pudo registrar la condonación.');
     }
 
     /**
@@ -361,7 +471,11 @@ class CobroService
 
     private function pendiente(int $cobroId): object
     {
-        $cobro = $this->cobros->find($cobroId);
+        return $this->validarPendiente($this->cobros->find($cobroId));
+    }
+
+    private function validarPendiente(?object $cobro): object
+    {
         if ($cobro === null) {
             throw new CobroException('El cobro no existe.');
         }
@@ -369,6 +483,90 @@ class CobroService
             throw new CobroException($cobro->estatus === self::APROBADO ? 'El cobro ya fue cobrado.' : 'El cobro ya fue cancelado.');
         }
         return $cobro;
+    }
+
+    /** Lee el cobro con bloqueo de fila (SELECT ... FOR UPDATE en PostgreSQL). */
+    private function bloquear(int $cobroId, BaseConnection $db): ?object
+    {
+        if ($db->DBDriver === 'Postgre') {
+            return $db->query('SELECT * FROM cobros WHERE id = ? FOR UPDATE', [$cobroId])->getRow();
+        }
+        return $db->table('cobros')->where('id', $cobroId)->get()->getRow();
+    }
+
+    private function pendienteBloqueado(int $cobroId, BaseConnection $db): object
+    {
+        return $this->validarPendiente($this->bloquear($cobroId, $db));
+    }
+
+    /**
+     * Ejecuta la operación en una transacción: confirma solo si termina bien y
+     * deshace todo ante cualquier error.
+     *
+     * @template T
+     * @param callable(BaseConnection): T $operacion
+     * @return T
+     */
+    private function enTransaccion(callable $operacion, string $mensajeFallo): mixed
+    {
+        $db = \Config\Database::connect();
+        $db->transBegin();
+        try {
+            $resultado = $operacion($db);
+            if (! $db->transStatus() || ! $db->transCommit()) {
+                throw new CobroException($mensajeFallo);
+            }
+            return $resultado;
+        } catch (Throwable $e) {
+            $db->transRollback();
+            throw $e instanceof CobroException ? $e : new CobroException($mensajeFallo, 0, $e);
+        }
+    }
+
+    /**
+     * Cálculo único de la condonación de una multa a una fecha. Todos los
+     * importes se comparan con el mismo cálculo (misma fecha), de modo que el
+     * paso del tiempo no se atribuye al ajuste.
+     *
+     * @return array<string, mixed>
+     */
+    private function estadoCondonacion(object $cobro, DateTimeImmutable $fecha): array
+    {
+        $estado = [
+            'cobro' => $cobro, 'error' => null, 'calculo' => null,
+            'fecha_calculo' => $fecha->format('Y-m-d H:i:s'),
+            'monto_base' => round((float) $cobro->monto_base, 2),
+            'recargo' => 0.0, 'autorizado' => round((float) $cobro->condonado, 2), 'aplicado' => 0.0,
+            'disponible' => 0.0, 'total' => round((float) $cobro->total, 2),
+            'autorizado_centavos' => CondonacionRecargo::aCentavos($cobro->condonado),
+            'disponible_centavos' => 0, 'excede_recargo' => false, 'version' => '',
+        ];
+
+        $ultimo   = \Config\Database::connect()->table('cobro_movimientos')->selectMax('id', 'ultimo')->where('cobro_id', (int) $cobro->id)->get()->getRow();
+        $ultimoId = (int) ($ultimo->ultimo ?? 0);
+
+        if ($cobro->origen !== 'boleta') {
+            $estado['error'] = 'Solo se condonan recargos de multas de tránsito.';
+        } elseif ($cobro->estatus === self::APROBADO) {
+            $estado['error'] = 'El cobro ya fue cobrado; no se puede condonar.';
+        } elseif ($cobro->estatus === self::CANCELADO) {
+            $estado['error'] = 'El cobro fue cancelado; no se puede condonar.';
+        } else {
+            $boleta  = (new BoletaInfraccionModel())->find((int) $cobro->boleta_id);
+            $calculo = $this->montos->aplicarDescuentoRecargo((float) $cobro->monto_base, $boleta->fecha_infraccion ?? null, $fecha);
+
+            $recargoCent = CondonacionRecargo::aCentavos($calculo['monto_recargo']);
+            $estado['calculo']             = $calculo;
+            $estado['recargo']             = CondonacionRecargo::aPesos($recargoCent);
+            $estado['aplicado']            = CondonacionRecargo::aplicado($cobro->condonado, $calculo['monto_recargo']);
+            $estado['disponible_centavos'] = max(0, $recargoCent - $estado['autorizado_centavos']);
+            $estado['disponible']          = CondonacionRecargo::aPesos($estado['disponible_centavos']);
+            $estado['excede_recargo']      = $estado['autorizado_centavos'] > $recargoCent;
+            $estado['total']               = CondonacionRecargo::total($calculo, $cobro->condonado);
+        }
+        $estado['version'] = sprintf('%d:%d:%d', $ultimoId, $estado['autorizado_centavos'], CondonacionRecargo::aCentavos($estado['recargo']));
+
+        return $estado;
     }
 
     private function motivoObligatorio(string $motivo): string
@@ -380,7 +578,7 @@ class CobroService
         return $motivo;
     }
 
-    private function movimiento(object $cobro, string $accion, string $estatusNuevo, ?string $motivo, ?int $usuarioId, array $detalle = []): void
+    protected function movimiento(object $cobro, string $accion, string $estatusNuevo, ?string $motivo, ?int $usuarioId, array $detalle = []): void
     {
         $this->movimientos->insert([
             'cobro_id'         => (int) $cobro->id,
@@ -411,17 +609,17 @@ class CobroService
         return null;
     }
 
-    /** Descuento y recargo de una multa a la fecha de cobro; respeta lo condonado. */
+    /** Descuento y recargo de una multa a la fecha de cobro; la condonación solo absorbe recargo. */
     private function recalculoBoleta(object $cobro, DateTimeImmutable $fechaPago): array
     {
         $boleta  = (new BoletaInfraccionModel())->find((int) $cobro->boleta_id);
         $calculo = $this->montos->aplicarDescuentoRecargo((float) $cobro->monto_base, $boleta->fecha_infraccion ?? null, $fechaPago);
-        $total   = max(0.0, round($calculo['monto_final'] - (float) $cobro->condonado, 2));
 
         return [
             'descuento'       => $calculo['monto_descuento'],
             'recargo'         => $calculo['monto_recargo'],
-            'total'           => $total,
+            'condonado'       => CondonacionRecargo::aplicado($cobro->condonado, $calculo['monto_recargo']),
+            'total'           => CondonacionRecargo::total($calculo, $cobro->condonado),
             'detalle_calculo' => json_encode($calculo, JSON_UNESCAPED_UNICODE),
         ];
     }

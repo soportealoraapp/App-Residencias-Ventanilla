@@ -184,7 +184,7 @@ $estatusTexto = match ($estatus) {
             <?php endif ?>
             <?php if ($condonado > 0): ?>
                 <tr>
-                    <td>Condonado por el Juez Calificador</td>
+                    <td>Recargo condonado</td>
                     <td class="num">&minus; <?= formatear_dinero($condonado) ?></td>
                 </tr>
             <?php endif ?>
@@ -194,6 +194,13 @@ $estatusTexto = match ($estatus) {
             </tr>
         </tbody>
     </table>
+
+    <?php if (! empty($hoja['importes_registrados'])): ?>
+        <p class="aviso">
+            <strong>Importes del pago registrado</strong><?= ! empty($hoja['fecha_cobro']) ? ' el ' . esc((string) $hoja['fecha_cobro']) : '' ?>.
+            No se recalculan por la fecha de impresión.
+        </p>
+    <?php endif ?>
 
     <?php if ($montoBase <= 0): ?>
         <p class="aviso alerta">

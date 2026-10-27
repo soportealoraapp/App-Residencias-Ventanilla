@@ -55,6 +55,9 @@ $routes->group('juez', ['filter' => 'auth'], static function ($routes) {
         $routes->get('cobros/banco', 'CobrosController::banco', ['as' => 'juez.cobros.banco']);
         $routes->get('cobros/corte', 'CobrosController::corte', ['as' => 'juez.cobros.corte']);
         $routes->get('cobros/corte/csv', 'CobrosController::corteCsv');
+        $routes->get('cobros/condonaciones', 'CobrosController::condonaciones', ['as' => 'juez.cobros.condonaciones']);
+        $routes->get('cobros/(:num)/condonar', 'CobrosController::formularioCondonar/$1');
+        $routes->post('cobros/(:num)/condonar', 'CobrosController::condonar/$1');
         $routes->get('cobros/(:num)', 'CobrosController::ver/$1', ['as' => 'juez.cobro']);
         $routes->post('cobros/(:num)/cobrar', 'CobrosController::cobrar/$1');
         $routes->post('cobros/(:num)/completar', 'CobrosController::completar/$1');
@@ -95,6 +98,9 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->get('cobros/banco', 'CobrosController::banco', ['as' => 'admin.cobros.banco']);
         $routes->get('cobros/corte', 'CobrosController::corte', ['as' => 'admin.cobros.corte']);
         $routes->get('cobros/corte/csv', 'CobrosController::corteCsv');
+        $routes->get('cobros/condonaciones', 'CobrosController::condonaciones', ['as' => 'admin.cobros.condonaciones']);
+        $routes->get('cobros/(:num)/condonar', 'CobrosController::formularioCondonar/$1');
+        $routes->post('cobros/(:num)/condonar', 'CobrosController::condonar/$1');
         $routes->get('cobros/(:num)', 'CobrosController::ver/$1', ['as' => 'admin.cobro']);
         $routes->post('cobros/(:num)/cobrar', 'CobrosController::cobrar/$1');
         $routes->post('cobros/(:num)/completar', 'CobrosController::completar/$1');

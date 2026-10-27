@@ -38,7 +38,7 @@
         </a>
 
         <div class="sidebar-section-title mt-3">Cobros</div>
-        <a href="/juez/cobros" class="sidebar-link <?= str_starts_with(uri_string(), 'juez/cobros') && ! str_starts_with(uri_string(), 'juez/cobros/corte') && ! str_starts_with(uri_string(), 'juez/cobros/banco') ? 'active' : '' ?>">
+        <a href="/juez/cobros" class="sidebar-link <?= str_starts_with(uri_string(), 'juez/cobros') && ! str_starts_with(uri_string(), 'juez/cobros/corte') && ! str_starts_with(uri_string(), 'juez/cobros/banco') && ! str_starts_with(uri_string(), 'juez/cobros/condonaciones') ? 'active' : '' ?>">
             <i class="bi bi-cash-coin me-2 sidebar-link-icon"></i>
             <span class="sidebar-text">Listado de cobros</span>
         </a>
@@ -51,11 +51,10 @@
             <span class="sidebar-text">Corte de caja</span>
         </a>
 
-        <div class="sidebar-section-title mt-3">Próximas funciones</div>
-        <div class="sidebar-link text-white-50" aria-disabled="true">
+        <a href="/juez/cobros/condonaciones" class="sidebar-link <?= str_starts_with(uri_string(), 'juez/cobros/condonaciones') ? 'active' : '' ?>">
             <i class="bi bi-file-earmark-minus me-2 sidebar-link-icon"></i>
-            <span class="sidebar-text">Condonaciones · pendiente</span>
-        </div>
+            <span class="sidebar-text">Condonaciones</span>
+        </a>
 
         <div class="sidebar-section-title mt-3">Sesión</div>
         <div class="px-3 py-2 text-white-50 small sidebar-user-info">

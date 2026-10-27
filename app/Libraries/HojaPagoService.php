@@ -127,16 +127,27 @@ class HojaPagoService
             ->first();
 
         $montoBase = round((float) ($cobro->monto_base ?? $calificacion->monto_base ?? 0), 2);
-        $condonado = round((float) ($cobro->condonado ?? 0), 2);
-        $calculo   = $montoBase > 0
-            ? $this->montos->aplicarDescuentoRecargo($montoBase, $boleta->fecha_infraccion ?? null)
-            : null;
+        $autorizado = round((float) ($cobro->condonado ?? 0), 2);
+        $aprobado   = ($cobro->estatus ?? null) === CobroService::APROBADO;
 
-        $descuento = round((float) ($calculo['monto_descuento'] ?? 0), 2);
-        $recargo   = round((float) ($calculo['monto_recargo'] ?? 0), 2);
-        $total     = $calculo !== null
-            ? max(0.0, round((float) $calculo['monto_final'] - $condonado, 2))
-            : 0.0;
+        if ($aprobado) {
+            // Un pago registrado no cambia por imprimir otro día: se usan los importes guardados al cobrar.
+            $guardado  = json_decode((string) ($cobro->detalle_calculo ?? ''), true);
+            $calculo   = is_array($guardado) ? $guardado : [];
+            $descuento = round((float) $cobro->descuento, 2);
+            $recargo   = round((float) $cobro->recargo, 2);
+            $condonado = $autorizado;
+            $total     = round((float) $cobro->total, 2);
+        } else {
+            $calculo = $montoBase > 0
+                ? $this->montos->aplicarDescuentoRecargo($montoBase, $boleta->fecha_infraccion ?? null)
+                : null;
+
+            $descuento = round((float) ($calculo['monto_descuento'] ?? 0), 2);
+            $recargo   = round((float) ($calculo['monto_recargo'] ?? 0), 2);
+            $condonado = CondonacionRecargo::aplicado($autorizado, $recargo);
+            $total     = $calculo !== null ? CondonacionRecargo::total($calculo, $autorizado) : 0.0;
+        }
 
         return [
             'origen'                 => 'boleta',
@@ -164,8 +175,10 @@ class HojaPagoService
             'meses_mora'             => (int) ($calculo['meses_mora'] ?? 0),
             'porcentaje_descuento'   => (float) ($calculo['porcentaje_descuento'] ?? 0),
             'porcentaje_recargo'     => (float) ($calculo['porcentaje_recargo_mensual'] ?? 0),
-            'notas'                  => $montoBase > 0
-                ? [
+            'importes_registrados'   => $aprobado,
+            'fecha_cobro'            => $aprobado ? $this->fecha((string) ($cobro->fecha_cobro ?? '')) : null,
+                        'notas'                  => $montoBase > 0
+                            ? [
                     'El descuento por pronto pago aplica solo dentro de los días hábiles indicados; después se paga el monto completo.',
                     'Pasado un mes de la infracción se suma el recargo mensual por mora (Art. 180 del Reglamento de Tránsito).',
                 ]

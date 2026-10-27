@@ -22,6 +22,7 @@ $acciones = [
     'cobrar'             => 'Cobrado',
     'mandar_a_completar' => 'Mandado a completar',
     'cancelar'           => 'Cancelado',
+    'condonar'           => 'Recargo condonado',
 ];
 $hoja = $cobro->origen === 'boleta'
     ? '/documentos/hoja-pago/boleta/' . (int) $cobro->boleta_id
@@ -66,7 +67,7 @@ $datos = sprintf(
                         <tr><td>Monto base</td><td class="text-end"><?= $pesos($cobro->monto_base) ?></td></tr>
                         <?php if ((float) $cobro->descuento > 0): ?><tr><td>Descuento por pronto pago</td><td class="text-end text-success">− <?= $pesos($cobro->descuento) ?></td></tr><?php endif; ?>
                         <?php if ((float) $cobro->recargo > 0): ?><tr><td>Recargo por mora</td><td class="text-end text-danger">+ <?= $pesos($cobro->recargo) ?></td></tr><?php endif; ?>
-                        <?php if ((float) $cobro->condonado > 0): ?><tr><td>Condonado</td><td class="text-end text-success">− <?= $pesos($cobro->condonado) ?></td></tr><?php endif; ?>
+                        <?php if ((float) $cobro->condonado > 0): ?><tr><td>Recargo condonado</td><td class="text-end text-success">− <?= $pesos($cobro->condonado) ?></td></tr><?php endif; ?>
                         <tr class="fw-bold"><td>Total</td><td class="text-end fs-5"><?= $pesos($cobro->total) ?></td></tr>
                     </tbody>
                 </table>
@@ -99,6 +100,11 @@ $datos = sprintf(
                     <button type="button" class="btn btn-success" data-cobro-accion="cobrar" <?= $datos ?>><i class="bi bi-cash-coin me-1"></i>Cobrar</button>
                     <button type="button" class="btn btn-outline-warning" data-cobro-accion="completar" <?= $datos ?>>Mandar a completar</button>
                     <button type="button" class="btn btn-outline-danger" data-cobro-accion="cancelar" <?= $datos ?>>Cancelar</button>
+                    <?php if (! empty($__view['puedeCondonar'])): ?>
+                        <a href="<?= esc($base . '/' . (int) $cobro->id . '/condonar', 'attr') ?>" class="btn btn-outline-primary">Condonar recargo</a>
+                    <?php elseif (! empty($__view['condonacion']) && $__view['condonacion']['error'] === null && (float) $__view['condonacion']['disponible'] <= 0 && \App\Libraries\CondonacionRecargo::puedeAutorizar((int) session('user_id'))): ?>
+                        <span class="text-muted small align-self-center">Sin recargo disponible para condonar</span>
+                    <?php endif; ?>
                     <a href="<?= esc($hoja, 'attr') ?>" target="_blank" rel="noopener" class="btn btn-outline-secondary ms-auto"><i class="bi bi-printer me-1"></i>Hoja de pago</a>
                 </div>
             <?php endif; ?>
@@ -116,6 +122,9 @@ $datos = sprintf(
                             <small class="text-muted text-nowrap"><?= $fecha($m->fecha) ?></small>
                         </div>
                         <?php if (! empty($m->motivo)): ?><div class="small"><?= esc($m->motivo) ?></div><?php endif; ?>
+                        <?php if ($m->accion === 'condonar'): $d = json_decode((string) $m->detalle, true) ?: []; ?>
+                            <div class="small text-success">Importe condonado <?= $pesos($d['importe_adicional'] ?? 0) ?> · acumulado <?= $pesos($d['condonado_nuevo'] ?? 0) ?></div>
+                        <?php endif; ?>
                         <small class="text-muted"><?= esc($m->usuario_nombre ?: ($m->usuario_username ?: 'Sistema')) ?></small>
                     </li>
                 <?php endforeach; ?>

@@ -4,7 +4,9 @@ namespace App\Controllers;
 
 use App\Libraries\CobroException;
 use App\Libraries\CobroService;
+use App\Libraries\CondonacionRecargo;
 use App\Libraries\CorteCajaService;
+use App\Models\BoletaInfraccionModel;
 use App\Models\CobroModel;
 use CodeIgniter\Controller;
 use CodeIgniter\Exceptions\PageNotFoundException;
@@ -84,7 +86,16 @@ class CobrosController extends Controller
             ->orderBy('m.id', 'ASC')
             ->get()->getResult();
 
+        $puedeCondonar = false;
+        $condonacion   = null;
+        if ($cobro->origen === 'boleta' && $cobro->estatus === 'pendiente') {
+            $condonacion   = (new CobroService())->vistaCondonacion($id);
+            $puedeCondonar = CondonacionRecargo::puedeAutorizar((int) session('user_id')) && $condonacion['error'] === null;
+        }
+
         return view('cobros/ver', [
+            'puedeCondonar' => $puedeCondonar,
+            'condonacion'   => $condonacion,
             'layout'    => $this->layout(),
             'base'      => $this->base(),
             'cobro'     => $cobro,
@@ -167,6 +178,81 @@ class CobrosController extends Controller
         ]);
     }
 
+    /** Formulario de condonación de recargo (COB-11). */
+    public function formularioCondonar(int $id)
+    {
+        if (! CondonacionRecargo::puedeAutorizar((int) session('user_id'))) {
+            return redirect()->to($this->base() . '/' . $id)->with('error', 'Su cuenta no está autorizada para condonar recargos.');
+        }
+        try {
+            $vista = (new CobroService())->vistaCondonacion($id);
+        } catch (CobroException) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+        if ($vista['error'] !== null) {
+            return redirect()->to($this->base() . '/' . $id)->with('error', $vista['error']);
+        }
+
+        $boleta = (new BoletaInfraccionModel())->find((int) $vista['cobro']->boleta_id);
+
+        return view('cobros/condonar', [
+            'layout' => $this->layout(),
+            'base'   => $this->base(),
+            'vista'  => $vista,
+            'cobro'  => $vista['cobro'],
+            'boleta' => $boleta,
+        ]);
+    }
+
+    public function condonar(int $id): RedirectResponse
+    {
+        $base   = $this->base();
+        $usuario = (int) session('user_id');
+        if (! CondonacionRecargo::puedeAutorizar($usuario)) {
+            return redirect()->to($base . '/' . $id)->with('error', 'Su cuenta no está autorizada para condonar recargos.');
+        }
+
+        try {
+            if ((string) $this->request->getPost('confirmar') !== '1') {
+                throw new CobroException('Marque la confirmación para registrar la condonación.');
+            }
+            $r = (new CobroService())->condonar(
+                $id,
+                (string) $this->request->getPost('importe'),
+                (string) $this->request->getPost('motivo'),
+                $usuario,
+                (string) $this->request->getPost('version')
+            );
+        } catch (CobroException $e) {
+            return redirect()->to($base . '/' . $id . '/condonar')->withInput()->with('error', $e->getMessage());
+        }
+
+        return redirect()->to($base . '/' . $id)->with('message', sprintf(
+            'Condonación registrada por $%s. Total a pagar ahora: $%s.',
+            number_format($r['importe_adicional'], 2), number_format($r['total_nuevo'], 2)
+        ));
+    }
+
+    /** Reporte de condonaciones por periodo y por quien autorizó. */
+    public function condonaciones()
+    {
+        if (! CondonacionRecargo::puedeAutorizar((int) session('user_id'))) {
+            return redirect()->to($this->base())->with('error', 'Su cuenta no está autorizada para consultar condonaciones.');
+        }
+        [$filtros, $rango, $autorizadorId] = $this->filtrosCorte('autorizo');
+        $servicio = new CorteCajaService();
+
+        return view('cobros/condonaciones', [
+            'layout'        => $this->layout(),
+            'base'          => $this->base(),
+            'filtros'       => $filtros,
+            'rango'         => $rango,
+            'reporte'       => $servicio->condonaciones($rango['desde'], $rango['hasta'], $autorizadorId),
+            'autorizadores' => $servicio->autorizadoresCondonacion(),
+            'periodos'      => CorteCajaService::PERIODOS,
+        ]);
+    }
+
     /** Corte de caja del día, la semana, el mes o un rango (COB-03). */
     public function corte()
     {
@@ -217,21 +303,21 @@ class CobrosController extends Controller
     // ─── Internos ─────────────────────────────────────────────────────────────
 
     /** @return array{0: array<string, string>, 1: array, 2: ?int} */
-    private function filtrosCorte(): array
+    private function filtrosCorte(string $campoUsuario = 'cobrador'): array
     {
         $filtros = [
             'periodo'  => (string) $this->request->getGet('periodo'),
             'fecha'    => $this->fecha($this->request->getGet('fecha')),
             'desde'    => $this->fecha($this->request->getGet('desde')),
             'hasta'    => $this->fecha($this->request->getGet('hasta')),
-            'cobrador' => ctype_digit((string) $this->request->getGet('cobrador')) ? (string) $this->request->getGet('cobrador') : '',
+            $campoUsuario => ctype_digit((string) $this->request->getGet($campoUsuario)) ? (string) $this->request->getGet($campoUsuario) : '',
         ];
         if (! array_key_exists($filtros['periodo'], CorteCajaService::PERIODOS)) {
             $filtros['periodo'] = 'dia';
         }
         $rango = CorteCajaService::rango($filtros['periodo'], $filtros['fecha'], $filtros['desde'], $filtros['hasta']);
 
-        return [$filtros, $rango, $filtros['cobrador'] !== '' ? (int) $filtros['cobrador'] : null];
+        return [$filtros, $rango, $filtros[$campoUsuario] !== '' ? (int) $filtros[$campoUsuario] : null];
     }
 
     /** @param callable(CobroService, int): string $accion */

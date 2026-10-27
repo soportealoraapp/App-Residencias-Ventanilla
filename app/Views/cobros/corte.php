@@ -109,7 +109,7 @@ $consulta = http_build_query(array_filter($filtros, static fn ($v) => $v !== '')
             <div class="d-flex justify-content-between"><span class="text-muted">Monto base</span><span><?= $pesos($corte['monto_base']) ?></span></div>
             <div class="d-flex justify-content-between"><span class="text-muted">Descuentos</span><span class="text-success">− <?= $pesos($corte['descuentos']) ?></span></div>
             <div class="d-flex justify-content-between"><span class="text-muted">Recargos</span><span class="text-danger">+ <?= $pesos($corte['recargos']) ?></span></div>
-            <div class="d-flex justify-content-between"><span class="text-muted">Condonado</span><span class="text-success">− <?= $pesos($corte['condonado']) ?></span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted">Recargo condonado (aplicado)</span><span class="text-success">− <?= $pesos($corte['condonado']) ?></span></div>
         </div></div>
     </div>
     <div class="col-6 col-md-4">

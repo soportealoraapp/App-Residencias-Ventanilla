@@ -130,6 +130,69 @@ class CorteCajaService
         return $resultado;
     }
 
+    /**
+     * Reporte de condonaciones: un renglón por autorización (movimiento
+     * `condonar`), filtrado por la fecha de autorización. El importe es el de
+     * cada autorización, no el acumulado del cobro.
+     *
+     * @return array{filas: list<object>, total: float, cantidad: int, por_estado: array<string,float>, por_autorizador: array<string,array{cantidad:int,total:float}>}
+     */
+    public function condonaciones(DateTimeImmutable $desde, DateTimeImmutable $hasta, ?int $autorizadorId = null): array
+    {
+        $consulta = \Config\Database::connect()->table('cobro_movimientos m')
+            ->select('m.id AS movimiento_id, m.cobro_id, m.motivo, m.detalle, m.fecha, m.usuario_id, c.folio AS cobro_folio, c.estatus AS cobro_estatus, c.boleta_id, b.folio AS boleta_folio, u.nombre_completo AS autorizador_nombre, u.username AS autorizador_username')
+            ->join('cobros c', 'c.id = m.cobro_id')
+            ->join('boletas_infracciones b', 'b.id = c.boleta_id', 'left')
+            ->join('users u', 'u.id = m.usuario_id', 'left')
+            ->where('m.accion', 'condonar')
+            ->where('m.fecha >=', $desde->format('Y-m-d') . ' 00:00:00')
+            ->where('m.fecha <=', $hasta->format('Y-m-d') . ' 23:59:59')
+            ->orderBy('m.fecha', 'ASC')
+            ->orderBy('m.id', 'ASC');
+        if ($autorizadorId !== null) {
+            $consulta->where('m.usuario_id', $autorizadorId);
+        }
+
+        $filas      = $consulta->get()->getResult();
+        $total      = 0;
+        $porEstado  = [];
+        $porAutoriz = [];
+        foreach ($filas as $f) {
+            $detalle          = json_decode((string) $f->detalle, true);
+            $centavos         = CondonacionRecargo::aCentavos($detalle['importe_adicional'] ?? 0);
+            $f->importe       = CondonacionRecargo::aPesos($centavos);
+            $f->acumulado     = (float) ($detalle['condonado_nuevo'] ?? 0);
+            $f->autorizador   = $f->autorizador_nombre ?: ($f->autorizador_username ?: 'Sin registrar');
+            $total           += $centavos;
+            $porEstado[$f->cobro_estatus]  = ($porEstado[$f->cobro_estatus] ?? 0) + $centavos;
+            $porAutoriz[$f->autorizador]['cantidad'] = ($porAutoriz[$f->autorizador]['cantidad'] ?? 0) + 1;
+            $porAutoriz[$f->autorizador]['centavos'] = ($porAutoriz[$f->autorizador]['centavos'] ?? 0) + $centavos;
+        }
+        foreach ($porAutoriz as $k => $v) {
+            $porAutoriz[$k] = ['cantidad' => $v['cantidad'], 'total' => CondonacionRecargo::aPesos($v['centavos'])];
+        }
+
+        return [
+            'filas'           => $filas,
+            'total'           => CondonacionRecargo::aPesos($total),
+            'cantidad'        => count($filas),
+            'por_estado'      => array_map([CondonacionRecargo::class, 'aPesos'], $porEstado),
+            'por_autorizador' => $porAutoriz,
+        ];
+    }
+
+    /** Personas que han autorizado alguna condonación, para el filtro "Autorizó". */
+    public function autorizadoresCondonacion(): array
+    {
+        return \Config\Database::connect()->table('cobro_movimientos m')
+            ->select('u.id, u.nombre_completo, u.username')
+            ->join('users u', 'u.id = m.usuario_id')
+            ->where('m.accion', 'condonar')
+            ->groupBy('u.id, u.nombre_completo, u.username')
+            ->orderBy('u.nombre_completo', 'ASC')
+            ->get()->getResult();
+    }
+
     /** Personas que han cobrado alguna vez, para el filtro "Cobró". */
     public function cobradores(): array
     {
