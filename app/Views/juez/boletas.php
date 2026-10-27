@@ -16,7 +16,7 @@
                 <?php endif; ?>
                 <?php foreach ($boletas as $boleta): ?>
                     <tr>
-                        <td class="ps-4"><div class="fw-bold font-monospace"><?= esc($boleta->folio) ?></div><small class="text-muted"><?= esc($boleta->fecha_infraccion) ?> <?= esc(substr((string) $boleta->hora_infraccion, 0, 5)) ?></small></td>
+                        <td class="ps-4"><div class="boleta-folio fw-bold font-monospace"><?= esc($boleta->folio) ?></div><small class="text-muted"><?= esc($boleta->fecha_infraccion) ?> <?= esc(substr((string) $boleta->hora_infraccion, 0, 5)) ?></small></td>
                         <td><div><?= esc($boleta->agente_nombre ?: $boleta->agente_placa) ?></div><small class="text-muted"><?= esc($boleta->agente_placa) ?></small></td>
                         <td><div><?= esc(trim(($boleta->vehiculo_marca ?? '') . ' ' . ($boleta->vehiculo_linea ?? ''))) ?></div><small class="font-monospace"><?= esc($boleta->vehiculo_placas ?: 'Sin placas') ?></small></td>
                         <td><?= esc($boleta->infractor_nombre ?: 'Nombre pendiente') ?></td>

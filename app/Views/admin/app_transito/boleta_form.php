@@ -4,8 +4,8 @@
 $__view = get_defined_vars();
 /** @var object $boleta */
 $boleta = $__view['boleta'] ?? null;
-/** @var array $estados */
-$estados = $__view['estados'] ?? [];
+/** @var string $estadoLabel */
+$estadoLabel = (string) ($__view['estadoLabel'] ?? '');
 /** @var array $tipos */
 $tipos = $__view['tipos'] ?? [];
 ?>
@@ -39,12 +39,9 @@ $horaActual = substr((string) $valor('hora_infraccion'), 0, 5);
 
         <div class="row g-3 mb-4">
             <div class="col-md-3">
-                <label for="estado" class="form-label fw-semibold">Estado <span class="text-danger">*</span></label>
-                <select id="estado" name="estado" class="form-select" required>
-                    <?php foreach ($estados as $clave => $etiqueta): ?>
-                        <option value="<?= esc($clave) ?>" <?= $valor('estado') === $clave ? 'selected' : '' ?>><?= esc($etiqueta) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <span class="form-label fw-semibold d-block">Estado</span>
+                <span class="badge bg-light text-dark border fs-6 fw-normal" id="estado-actual"><?= esc($estadoLabel) ?></span>
+                <div class="form-text">Solo cambia con la calificación o el cobro.</div>
             </div>
             <div class="col-md-3">
                 <label for="fecha_infraccion" class="form-label fw-semibold">Fecha <span class="text-danger">*</span></label>

@@ -1245,6 +1245,40 @@ body.sidebar-open-no-scroll {
   border-color: #a7f3d0;
 }
 
+/* Listado de boletas (admin): el ancho se reparte según el contenido.
+   Folio y acciones toman el ancho de su contenido (width:1% + nowrap) y las
+   columnas de texto absorben el resto ajustando líneas, sin ocultar nada. */
+.tabla-boletas .col-folio,
+.tabla-boletas .col-acciones {
+  width: 1%;
+  white-space: nowrap;
+}
+.tabla-boletas th,
+.tabla-boletas td {
+  padding-left: 0.65rem;
+  padding-right: 0.65rem;
+}
+.tabla-boletas thead th { white-space: normal; }
+.tabla-boletas .col-folio,
+.tabla-boletas .col-acciones { white-space: nowrap; }
+.tabla-boletas .col-folio { padding-left: 1.25rem; }
+.tabla-boletas .col-acciones { padding-right: 1.5rem; }
+.tabla-boletas .boleta-folio { white-space: nowrap; font-size: 0.82rem; }
+.tabla-boletas .boleta-falta { min-width: 9rem; overflow-wrap: anywhere; }
+.tabla-boletas .boleta-monto span { white-space: nowrap; }
+
+/* Folio completo en cualquier listado: no se fragmenta en los guiones. */
+.boleta-folio { white-space: nowrap; }
+
+/* Filtro seleccionado en las tiras de filtros (.dgs-nav) */
+.dgs-nav-item.is-active,
+.dgs-nav-item.is-active:hover,
+.dgs-nav-item.is-active:focus-visible {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #ffffff;
+}
+
 /* Stat Cards & KPI Elevators */
 .stat-card-elevated {
   background: #ffffff;

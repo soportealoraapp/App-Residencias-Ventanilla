@@ -18,6 +18,8 @@ $filtros += ['placa' => '', 'fecha' => '', 'q' => '', 'estado' => '', 'falta' =>
 $valorUma = (float) ($__view['valorUma'] ?? 0);
 /** @var array<string, string> $estados */
 $estados = $__view['estados'] ?? [];
+/** @var array<int, array<string, mixed>> $acciones */
+$acciones = $__view['acciones'] ?? [];
 ?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('pageTitle') ?>Boletas de Infracción de Campo<?= $this->endSection() ?>
@@ -27,8 +29,10 @@ $estados = $__view['estados'] ?? [];
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
             <div class="d-flex align-items-center gap-2">
-                <a href="/admin/app-transito" class="text-decoration-none text-muted small">&larr; Volver a Configuración</a>
-                <span class="text-muted small">/</span>
+                <?php if (!empty($__view['puedeConfig'])): ?>
+                    <a href="/admin/app-transito" class="text-decoration-none text-muted small">&larr; Volver a Configuración</a>
+                    <span class="text-muted small">/</span>
+                <?php endif; ?>
                 <span class="badge bg-primary-subtle text-primary">Sincronización en Campo</span>
             </div>
             <h2 class="h3 fw-bold mt-1 mb-0 text-dark">Registro de Boletas de Infracción</h2>
@@ -60,32 +64,42 @@ $estados = $__view['estados'] ?? [];
                 return '/admin/app-transito/boletas' . ($limpia === [] ? '' : '?' . http_build_query($limpia));
             };
             $estadosDisponibles = $estados;
+            $hoy = date('Y-m-d');
+            $estadoActivo = (string) $filtros['estado'];
+            $hoyActivo = (string) $filtros['fecha'] === $hoy;
+            // Marca visual y atributo accesible de un filtro seleccionado.
+            $marca = static fn (bool $activo): string => $activo ? ' is-active" aria-current="true' : '';
             ?>
             <div class="dgs-nav mb-3">
-                <a href="<?= $urlBoletas([]) ?>" class="dgs-nav-item <?= array_filter($filtros) === [] ? 'fw-bold' : '' ?>">
+                <!-- Todas quita solo el estado: la búsqueda, el agente y la fecha se conservan. -->
+                <a href="<?= esc($urlBoletas(['estado' => '']), 'attr') ?>" class="dgs-nav-item<?= $marca($estadoActivo === '') ?>">
                     <i class="bi bi-list-ul" aria-hidden="true"></i>Todas
                 </a>
                 <?php if ((string) $filtros['falta'] !== ''): ?>
                     <!-- Llegamos del catálogo de faltas: el filtro debe verse y poder quitarse. -->
-                    <a href="<?= $urlBoletas(['falta' => '']) ?>" class="dgs-nav-item fw-bold bg-primary text-white border-0" title="Quitar el filtro de esta falta">
+                    <a href="<?= esc($urlBoletas(['falta' => '']), 'attr') ?>" class="dgs-nav-item fw-bold bg-primary text-white border-0" title="Quitar el filtro de esta falta">
                         <i class="bi bi-journal-text" aria-hidden="true"></i>Falta: <?= esc($filtros['falta']) ?>
                         <i class="bi bi-x-lg small" aria-hidden="true"></i>
                     </a>
                 <?php endif; ?>
-                <a href="<?= $urlBoletas(['fecha' => date('Y-m-d')]) ?>" class="dgs-nav-item <?= ($filtros['fecha'] ?? '') === date('Y-m-d') ? 'fw-bold' : '' ?>">
+                <!-- Las de hoy alterna el filtro de fecha: si ya está activo, lo quita. -->
+                <a href="<?= esc($urlBoletas(['fecha' => $hoyActivo ? '' : $hoy]), 'attr') ?>" class="dgs-nav-item<?= $marca($hoyActivo) ?>"<?= $hoyActivo ? ' title="Quitar el filtro de fecha"' : '' ?>>
                     <i class="bi bi-calendar-event" aria-hidden="true"></i>Las de hoy
                 </a>
                 <?php foreach ($estadosDisponibles as $claveEstado => $nombreEstado): ?>
-                    <a href="<?= $urlBoletas(['estado' => (string) $claveEstado]) ?>" class="dgs-nav-item <?= ($filtros['estado'] ?? '') === (string) $claveEstado ? 'fw-bold' : '' ?>">
+                    <a href="<?= esc($urlBoletas(['estado' => (string) $claveEstado]), 'attr') ?>" class="dgs-nav-item<?= $marca($estadoActivo === (string) $claveEstado) ?>">
                         <?= esc($nombreEstado) ?>
                     </a>
                 <?php endforeach; ?>
             </div>
 
             <form method="GET" action="/admin/app-transito/boletas" class="row g-2 align-items-center">
-                <input type="hidden" name="estado" value="<?= esc($filtros['estado']) ?>">
-                <input type="hidden" name="falta" value="<?= esc($filtros['falta']) ?>">
-                <div class="col-12 col-md-4">
+                <?php if ($estadoActivo !== ''): ?>
+                    <input type="hidden" name="estado" value="<?= esc($estadoActivo) ?>">
+                <?php endif; ?>
+                <?php if ((string) $filtros['falta'] !== ''): ?>
+                    <input type="hidden" name="falta" value="<?= esc($filtros['falta']) ?>">
+                <?php endif; ?>                <div class="col-12 col-md-4">
                     <div class="input-group">
                         <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
                         <input autocomplete="off" spellcheck="false" enterkeyhint="search" type="text" class="form-control border-start-0" name="q" placeholder="Buscar folio, placa o infractor..." value="<?= esc($filtros['q'] ?? '') ?>">
@@ -153,9 +167,18 @@ $estados = $__view['estados'] ?? [];
                     </div>
                     <div class="d-flex justify-content-between align-items-center">
                         <strong class="small">$<?= number_format($minUmaM * $valorUma, 2) ?> - $<?= number_format($maxUmaM * $valorUma, 2) ?></strong>
-                        <a href="/admin/app-transito/boletas/editar/<?= (int) $b->id ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                            <i class="bi bi-eye me-1"></i>Abrir
-                        </a>
+                        <?php $accM = $acciones[(int) $b->id] ?? []; ?>
+                        <?php if (!empty($accM['editar'])): ?>
+                            <a href="/admin/app-transito/boletas/editar/<?= (int) $b->id ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                <i class="bi bi-pencil me-1"></i>Corregir
+                            </a>
+                        <?php elseif (!empty($accM['cobro_url'])): ?>
+                            <a href="<?= esc($accM['cobro_url'], 'attr') ?>" class="btn btn-sm btn-outline-success rounded-pill px-3">
+                                <i class="bi bi-cash-coin me-1"></i>Cobro
+                            </a>
+                        <?php elseif (!empty($accM['nota'])): ?>
+                            <small class="text-muted text-end"><?= esc($accM['nota']) ?></small>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -166,16 +189,16 @@ $estados = $__view['estados'] ?? [];
     <div class="card border-0 shadow-sm rounded-4 bg-white d-none d-md-block">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 table-sticky-header">
+                <table class="table table-hover align-middle mb-0 table-sticky-header tabla-boletas">
                     <thead class="table-light small text-muted text-uppercase">
                         <tr>
-                            <th class="ps-4">Folio / Fecha</th>
+                            <th class="col-folio">Folio / Fecha</th>
                             <th>Agente</th>
                             <th>Infractor & Vehículo</th>
                             <th>Falta Cometida</th>
                             <th>Monto Estimado</th>
                             <th>Garantías</th>
-                            <th class="text-end pe-4">Detalle</th>
+                            <th class="col-acciones text-end">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -196,9 +219,13 @@ $estados = $__view['estados'] ?? [];
                                     $garantias = is_string($b->garantias_retenidas) ? json_decode($b->garantias_retenidas, true) : (array)$b->garantias_retenidas;
                                 ?>
                                 <tr>
-                                    <td class="ps-4">
+                                    <td class="col-folio">
                                         <div class="d-flex align-items-center gap-1">
-                                            <a class="fw-bold font-monospace text-primary text-decoration-none" href="/admin/app-transito/boletas/editar/<?= (int) $b->id ?>" title="Abrir la boleta"><?= esc($b->folio) ?></a>
+                                            <?php if ($acciones[(int) $b->id]['editar'] ?? false): ?>
+                                                <a class="boleta-folio fw-bold font-monospace text-primary text-decoration-none" href="/admin/app-transito/boletas/editar/<?= (int) $b->id ?>" title="Corregir datos de la boleta"><?= esc($b->folio) ?></a>
+                                            <?php else: ?>
+                                                <span class="boleta-folio fw-bold font-monospace text-primary"><?= esc($b->folio) ?></span>
+                                            <?php endif; ?>
                                             <button type="button" class="btn-copy" onclick="copiarFolio('<?= esc($b->folio) ?>', this)" title="Copiar Folio">
                                                 <i class="bi bi-clipboard"></i>
                                             </button>
@@ -232,31 +259,44 @@ $estados = $__view['estados'] ?? [];
                                                 <a class="text-decoration-none" href="<?= esc($urlBoletas(['falta' => (string) $b->falta_fundamento_legal])) ?>" title="Ver todas las boletas con esta falta"><?= esc($b->falta_fundamento_legal) ?></a>
                                             <?php endif; ?>
                                         </div>
-                                        <div class="text-truncate text-muted small" style="max-width: 220px;"><?= esc($b->falta_descripcion) ?></div>
+                                        <div class="boleta-falta text-muted small"><?= esc($b->falta_descripcion) ?></div>
                                     </td>
                                     <td>
-                                        <div class="fw-bold text-dark small">$<?= number_format($minPesos, 2) ?> - $<?= number_format($maxPesos, 2) ?></div>
+                                        <div class="fw-bold text-dark small boleta-monto"><span>$<?= number_format($minPesos, 2) ?></span> - <span>$<?= number_format($maxPesos, 2) ?></span></div>
                                         <small class="text-muted"><?= $minUma ?> a <?= $maxUma ?> UMAs</small>
                                     </td>
                                     <td>
                                         <?php if (!empty($garantias)): ?>
+                                            <div class="d-flex flex-wrap gap-1">
                                             <?php foreach ($garantias as $g): ?>
-                                                <span class="badge bg-secondary-subtle text-secondary small me-1"><?= esc(ucfirst((string)$g)) ?></span>
+                                                <span class="badge bg-secondary-subtle text-secondary small"><?= esc(ucfirst((string)$g)) ?></span>
                                             <?php endforeach; ?>
+                                            </div>
                                         <?php else: ?>
                                             <span class="text-muted small">Ninguna</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="text-end pe-4">
+                                    <td class="col-acciones text-end">
                                         <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3"
                                             data-bs-toggle="modal" data-bs-target="#modalBoleta<?= $b->id ?>">
                                             <i class="bi bi-eye me-1"></i>Ver Detalle
                                         </button>
                                     </td>
                                 </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
+    <?php /* Los diálogos van fuera de la tarjeta: .card conserva un transform por su animación de entrada
+       y overflow:hidden, lo que atrapaba y recortaba el diálogo (position:fixed) bajo el fondo oscuro. */ ?>
+    <?php foreach ($boletas as $b): ?>
+        <?php $acc = $acciones[(int) $b->id] ?? ['editar' => false, 'calificar_url' => null, 'cobro_url' => null, 'hoja_url' => null, 'nota' => null]; ?>
                                 <!-- MODAL DETALLE BOLETA -->
-                                <div class="modal fade" id="modalBoleta<?= $b->id ?>" tabindex="-1" aria-hidden="true">
+                                <div class="modal fade" id="modalBoleta<?= (int) $b->id ?>" tabindex="-1" aria-hidden="true">
                                     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                                         <div class="modal-content rounded-4 border-0 shadow">
                                             <div class="modal-header border-0 pb-0">
@@ -355,14 +395,34 @@ $estados = $__view['estados'] ?? [];
                                                     <?php endif; ?>
                                                 </div>
                                             </div>
+                                            <?php if ($acc['nota']): ?>
+                                                <div class="px-4 pb-2 small text-muted"><i class="bi bi-info-circle me-1"></i><?= esc($acc['nota']) ?></div>
+                                            <?php endif; ?>
                                             <div class="modal-footer border-0 pt-0 d-flex justify-content-between flex-wrap gap-2">
                                                 <div class="d-flex gap-2">
                                                     <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
                                                         <i class="bi bi-printer me-1"></i>Imprimir
                                                     </button>
+                                                    <?php if ($acc['editar']): ?>
                                                     <a href="/admin/app-transito/boletas/editar/<?= (int) $b->id ?>" class="btn btn-outline-primary">
-                                                        <i class="bi bi-pencil me-1"></i>Editar
+                                                        <i class="bi bi-pencil me-1"></i>Corregir datos
                                                     </a>
+                                                    <?php endif; ?>
+                                                    <?php if ($acc['calificar_url']): ?>
+                                                    <a href="<?= esc($acc['calificar_url'], 'attr') ?>" class="btn btn-primary">
+                                                        <i class="bi bi-clipboard-check me-1"></i>Calificar boleta
+                                                    </a>
+                                                    <?php endif; ?>
+                                                    <?php if ($acc['cobro_url']): ?>
+                                                    <a href="<?= esc($acc['cobro_url'], 'attr') ?>" class="btn btn-outline-success">
+                                                        <i class="bi bi-cash-coin me-1"></i>Abrir cobro
+                                                    </a>
+                                                    <?php endif; ?>
+                                                    <?php if ($acc['hoja_url']): ?>
+                                                    <a href="<?= esc($acc['hoja_url'], 'attr') ?>" target="_blank" rel="noopener" class="btn btn-outline-secondary">
+                                                        <i class="bi bi-file-earmark-text me-1"></i>Hoja de pago
+                                                    </a>
+                                                    <?php endif; ?>
                                                     <?php if (in_array('administrador', (array) (session('roles') ?? []), true)): ?>
                                                         <form action="/admin/app-transito/boletas/eliminar/<?= (int) $b->id ?>" method="POST" class="d-inline" data-no-loading="true"
                                                             onsubmit="return confirm('¿Eliminar la boleta <?= esc($b->folio, 'js') ?>? Quedará una copia en la auditoría.');">
@@ -376,13 +436,7 @@ $estados = $__view['estados'] ?? [];
                                         </div>
                                     </div>
                                 </div>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+    <?php endforeach; ?>
 </div>
 
 <script>

@@ -8,6 +8,8 @@ use App\Models\AgenteTransitoModel;
 use App\Models\CatalogoInfraccionAppModel;
 use App\Models\BoletaInfraccionModel;
 use App\Models\AuditoriaModel;
+use App\Libraries\BoletaAccionesService;
+use Throwable;
 
 class AppTransitoController extends Controller
 {
@@ -260,12 +262,17 @@ class AppTransitoController extends Controller
      */
     public function boletas()
     {
-        $placa  = $this->request->getGet('placa') ?? '';
-        $fecha  = $this->request->getGet('fecha') ?? '';
-        $q      = $this->request->getGet('q') ?? '';
-        $estado = $this->request->getGet('estado') ?? '';
+        // Solo se aceptan textos: un parámetro repetido como arreglo (?estado[]=x) se ignora.
+        $param  = fn (string $clave): string => is_string($valor = $this->request->getGet($clave)) ? trim($valor) : '';
+        $placa  = $param('placa');
+        $fecha  = $param('fecha');
+        $q      = $param('q');
+        // Estado validado contra el catálogo interno: lo que no existe se descarta, de modo que
+        // la pantalla marque exactamente el filtro que se aplica a la consulta.
+        $estado = $param('estado');
+        $estado = array_key_exists($estado, self::ESTADOS_BOLETA) ? $estado : '';
         // Fundamento exacto: permite que el catálogo enlace las boletas de una falta.
-        $falta  = (string) ($this->request->getGet('falta') ?? '');
+        $falta  = $param('falta');
 
         $model = new BoletaInfraccionModel();
 
@@ -278,8 +285,7 @@ class AppTransitoController extends Controller
         if ($fecha !== '') {
             $model->where('fecha_infraccion', $fecha);
         }
-        // Estado validado contra el catálogo interno: evita filtros inventados por URL.
-        if (array_key_exists($estado, self::ESTADOS_BOLETA)) {
+        if ($estado !== '') {
             $model->where('estado', $estado);
         }
         if ($q !== '') {
@@ -297,11 +303,22 @@ class AppTransitoController extends Controller
 
         return view('admin/app_transito/boletas', [
             'boletas'  => $boletas,
+            'acciones' => (new BoletaAccionesService())->paraLista($boletas, (array) (session('roles') ?? [])),
             'agentes'  => $agentes,
             'filtros'  => ['placa' => $placa, 'fecha' => $fecha, 'q' => $q, 'estado' => $estado, 'falta' => $falta],
             'valorUma' => $valorUma,
             'estados'  => self::ESTADOS_BOLETA,
+            'puedeConfig' => $this->puedeUsar('app_transito_config'),
         ]);
+    }
+
+    /** Administrador siempre; operador según su configuración efectiva; otros roles no pasan por /admin. */
+    private function puedeUsar(string $permiso): bool
+    {
+        $roles = (array) (session('roles') ?? []);
+
+        return in_array('administrador', $roles, true)
+            || (in_array('operador_ventanilla', $roles, true) && \App\Libraries\PermisosOperador::activo($permiso));
     }
 
     /**
@@ -314,10 +331,15 @@ class AppTransitoController extends Controller
             return redirect()->to(site_url('admin/app-transito/boletas'))->with('errors', ['Boleta no encontrada.']);
         }
 
+        $motivo = (new BoletaAccionesService())->motivoNoEditable($boleta);
+        if ($motivo !== null) {
+            return redirect()->to(site_url('admin/app-transito/boletas'))->with('errors', [$motivo]);
+        }
+
         return view('admin/app_transito/boleta_form', [
-            'boleta'  => $boleta,
-            'estados' => self::ESTADOS_BOLETA,
-            'tipos'   => self::TIPOS_VEHICULO,
+            'boleta'      => $boleta,
+            'estadoLabel' => self::ESTADOS_BOLETA[(string) $boleta->estado] ?? ucfirst((string) $boleta->estado),
+            'tipos'       => self::TIPOS_VEHICULO,
         ]);
     }
 
@@ -331,14 +353,21 @@ class AppTransitoController extends Controller
             return redirect()->to(site_url('admin/app-transito/boletas'))->with('errors', ['Boleta no encontrada.']);
         }
 
-        // COB-10 no contempla edición ni recalificación. La información ya
-        // confirmada solo cambia por los servicios de cobro definidos para ello.
-        if ((string) $boleta->estado === 'calificada') {
-            return redirect()->to(site_url('admin/app-transito/boletas'))
-                ->with('errors', ['Una boleta calificada no puede editarse ni recalificarse.']);
+        // El estado solo cambia por los flujos de calificación (COB-10) y cobro.
+        // Cualquier intento de enviarlo en este formulario se rechaza completo.
+        foreach (array_keys((array) $this->request->getPost()) as $clave) {
+            if (in_array(strtolower((string) $clave), ['estado', 'estatus', 'status', 'state', 'estado_boleta'], true)) {
+                return redirect()->to(site_url('admin/app-transito/boletas/editar/' . $id))
+                    ->with('errors', ['El estado de la boleta no se puede cambiar desde este formulario. No se guardó ningún cambio.']);
+            }
         }
+
+        $motivo = (new BoletaAccionesService())->motivoNoEditable($boleta);
+        if ($motivo !== null) {
+            return redirect()->to(site_url('admin/app-transito/boletas'))->with('errors', [$motivo]);
+        }
+
         $rules = [
-            'estado'              => ['label' => 'Estado', 'rules' => 'required|in_list[' . implode(',', array_keys(self::ESTADOS_BOLETA)) . ']'],
             'fecha_infraccion'    => ['label' => 'Fecha', 'rules' => 'required|valid_date[Y-m-d]'],
             'hora_infraccion'     => ['label' => 'Hora', 'rules' => 'required|regex_match[/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/]'],
             'lugar'               => ['label' => 'Lugar', 'rules' => 'required|max_length[255]'],
@@ -360,7 +389,6 @@ class AppTransitoController extends Controller
         $texto = fn (string $campo): ?string => ($v = trim((string) $this->request->getPost($campo))) === '' ? null : $v;
         $placas = $texto('vehiculo_placas');
         $data = [
-            'estado'              => (string) $this->request->getPost('estado'),
             'fecha_infraccion'    => (string) $this->request->getPost('fecha_infraccion'),
             'hora_infraccion'     => (string) $this->request->getPost('hora_infraccion'),
             'lugar'               => (string) $texto('lugar'),
@@ -377,13 +405,42 @@ class AppTransitoController extends Controller
             'hechos'              => $texto('hechos'),
         ];
 
-        $antes = array_intersect_key((array) $boleta, $data);
-        $this->boletaModel->update($id, $data);
-        $this->auditoriaModel->registrar('boletas_infracciones', $id, 'editar', session('user_id'), [
-            'folio'   => $boleta->folio,
-            'antes'   => $antes,
-            'despues' => $data,
-        ]);
+        // La comprobación previa pudo quedar obsoleta (formulario abierto antes de
+        // una calificación): se repite con la fila bloqueada dentro de la transacción.
+        $servicio = new BoletaAccionesService();
+        $db = \Config\Database::connect();
+        $db->transBegin();
+        try {
+            $actual = $servicio->bloquear($id, $db);
+            if ($actual === null) {
+                $db->transRollback();
+                return redirect()->to(site_url('admin/app-transito/boletas'))->with('errors', ['Boleta no encontrada.']);
+            }
+            $motivo = $servicio->motivoNoEditable($actual);
+            if ($motivo !== null) {
+                $db->transRollback();
+                return redirect()->to(site_url('admin/app-transito/boletas'))
+                    ->with('errors', [$motivo . ' No se guardó ningún cambio.']);
+            }
+
+            $antes = array_intersect_key((array) $actual, $data);
+            if (! $this->boletaModel->update($id, $data)) {
+                throw new \RuntimeException('No se pudo actualizar la boleta.');
+            }
+            $this->auditoriaModel->registrar('boletas_infracciones', $id, 'editar', session('user_id'), [
+                'folio'   => $actual->folio,
+                'antes'   => $antes,
+                'despues' => $data,
+            ]);
+            if (! $db->transStatus() || ! $db->transCommit()) {
+                throw new \RuntimeException('No se pudo completar la actualización.');
+            }
+        } catch (Throwable $e) {
+            $db->transRollback();
+            log_message('error', 'Error al actualizar boleta {id}: {mensaje}', ['id' => $id, 'mensaje' => $e->getMessage()]);
+
+            return redirect()->back()->withInput()->with('errors', ['No se pudo guardar la boleta. Intenta de nuevo.']);
+        }
 
         return redirect()->to(site_url('admin/app-transito/boletas'))->with('message', "Boleta {$boleta->folio} actualizada.");
     }
