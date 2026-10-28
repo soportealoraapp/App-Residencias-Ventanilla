@@ -389,7 +389,7 @@ class DemoFuncionamientoSeeder extends Seeder
         $monto = $tramite === 'UR-TT-T-07'
             ? $tarifario->calcularMontoUrTtT07('particular', 'mes', 1)
             : $tarifario->calcularMonto($tramite, 'base');
-        $respaldo = ['UR-TT-T-01' => 9055.20, 'UR-TT-T-02' => 64.90, 'UR-TT-T-03' => 50.00, 'UR-TT-T-04' => 156.94, 'UR-TT-T-05' => 287.00, 'UR-TT-T-07' => 400.00];
+        $respaldo = ['UR-TT-T-01' => 9055.20, 'UR-TT-T-02' => 64.90, 'UR-TT-T-03' => 0.00, 'UR-TT-T-04' => 156.94, 'UR-TT-T-05' => 287.00, 'UR-TT-T-07' => 1151.00];
         return (float) ($monto ?? $respaldo[$tramite]);
     }
 

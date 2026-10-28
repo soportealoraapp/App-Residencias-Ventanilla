@@ -103,7 +103,7 @@ class SolicitudPresencialController extends Controller
             ['name' => 'domicilio_negocio', 'label' => 'Domicilio del negocio o particular', 'type' => 'text', 'required' => true, 'max_length' => 250],
             ['name' => 'direccion_carga_descarga', 'label' => 'Dirección de carga/descarga', 'type' => 'text', 'required' => true, 'max_length' => 250],
             ['name' => 'periodo', 'label' => 'Periodo de vigencia', 'type' => 'select', 'required' => true, 'options' => ['dia' => 'Día', 'mes' => 'Mes', 'semestre' => 'Semestre', 'anio' => 'Año']],
-            ['name' => 'num_camiones', 'label' => 'Número de camiones (solo empresa)', 'type' => 'number', 'required' => false],
+            ['name' => 'num_camiones', 'label' => 'Número de camiones (particular: se cobra por camión; empresa: hasta 15)', 'type' => 'number', 'required' => false],
             ['name' => 'horario_inicio', 'label' => 'Horario de inicio', 'type' => 'time', 'required' => true],
             ['name' => 'horario_fin', 'label' => 'Horario de término', 'type' => 'time', 'required' => true],
             ['name' => 'es_mudanza', 'label' => '¿Es mudanza?', 'type' => 'select', 'required' => false, 'options' => ['0' => 'No', '1' => 'Sí']],

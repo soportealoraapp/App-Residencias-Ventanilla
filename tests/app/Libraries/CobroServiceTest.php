@@ -132,6 +132,26 @@ class CobroServiceTest extends DatabaseTestCase
         $this->assertSame('Concluido', (new SolicitudModel())->find($id)->estatus);
     }
 
+    public function testConcesionYDespintadoTienenPasoDePagoComoEnSusFichas(): void
+    {
+        // UR-TT-T-01: el seleccionado cubre los derechos y recibe el título-concesión.
+        $concesion = $this->solicitud('UR-TT-T-01', 'Seleccionado', 9055.20);
+        $this->assertTrue($this->estados->cambiarEstatus($concesion, 'Pago pendiente', $this->operadorId));
+        $this->cobros->marcarCobrado((int) $this->cobroDeSolicitud($concesion)->id, 'tesoreria', null, $this->operadorId);
+        $this->assertSame('Pagado', (new SolicitudModel())->find($concesion)->estatus);
+        $this->assertTrue($this->estados->cambiarEstatus($concesion, 'Título emitido', $this->operadorId));
+
+        // UR-TT-T-02: con el vehículo verificado se paga al juez y se entrega la constancia.
+        $despintado = $this->solicitud('UR-TT-T-02', 'Verificado', 64.90);
+        $this->assertTrue($this->estados->cambiarEstatus($despintado, 'Pago pendiente', $this->operadorId));
+        $this->assertEqualsWithDelta(64.90, (float) $this->cobroDeSolicitud($despintado)->total, 0.001);
+        $this->cobros->marcarCobrado((int) $this->cobroDeSolicitud($despintado)->id, 'juez_calificador', null, $this->operadorId);
+        $this->assertTrue($this->estados->cambiarEstatus($despintado, 'Constancia emitida', $this->operadorId));
+
+        // La orden de plaqueo (UR-TT-T-03) no tiene costo ni paso de pago.
+        $this->assertNotContains('Pago pendiente', array_merge(...array_values(EstadoSolicitudService::TRANSICIONES_VALIDAS['UR-TT-T-03'])));
+    }
+
     public function testRechazarLaSolicitudCancelaElCobroPendiente(): void
     {
         $id = $this->solicitud();

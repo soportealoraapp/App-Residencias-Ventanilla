@@ -244,7 +244,7 @@ $oldNumSerie = old('vehiculo_num_serie', '');
                 <div class="small text-muted mb-1 text-uppercase fw-semibold">Tarifa Oficial Vigente</div>
                 <div class="mb-3">
                     <span class="badge bg-primary rounded-pill d-inline-block shadow-sm tramite-cost-badge">
-                        $ <?= number_format((float) $tarifaMonto, 2) ?>
+                        <?= (float) $tarifaMonto > 0 ? '$ ' . number_format((float) $tarifaMonto, 2) : 'Sin costo' ?>
                     </span>
                 </div>
                 <div class="alert alert-info small mb-3 text-start py-2" role="alert">
@@ -271,7 +271,7 @@ $oldNumSerie = old('vehiculo_num_serie', '');
         <div class="card shadow-sm border-0 mt-4">
             <div class="card-body p-3 small">
                 <div class="fw-bold mb-2 text-dark"><i class="bi bi-clock-history me-1 text-primary"></i>Tiempos de Respuesta</div>
-                <p class="text-muted mb-0">El personal de ventanilla revisará tu expediente en un plazo estimado de 2 a 3 días hábiles. Podrás consultar el avance con tu <strong>folio único</strong> en cualquier momento.</p>
+                <p class="text-muted mb-0">La respuesta es inmediata una vez que la Dirección de Movilidad y Transporte revisa tu documentación completa y la revista físico-mecánica; recibirás el oficio con la orden de plaqueo. Podrás consultar el avance con tu <strong>folio único</strong> en cualquier momento.</p>
             </div>
         </div>
     </div>

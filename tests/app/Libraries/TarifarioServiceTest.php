@@ -17,6 +17,8 @@ class TarifarioServiceTest extends DatabaseTestCase
         parent::setUp();
         $this->service = new TarifarioService();
         $this->tarifaModel = new TarifaModel();
+        // Las migraciones cargan las tarifas oficiales; cada prueba arma las suyas.
+        $this->db->table('tarifas')->emptyTable();
     }
 
     protected function crearTarifa(
@@ -43,22 +45,31 @@ class TarifarioServiceTest extends DatabaseTestCase
 
     public function testCalcularMontoUrTtT07_Particular_Dia(): void
     {
-        $this->crearTarifa('UR-TT-T-07', 'particular_dia', 50.00, 1);
+        $this->crearTarifa('UR-TT-T-07', 'particular_dia', 191.00, 0);
 
         $resultado = $this->service->calcularMontoUrTtT07('particular', 'dia');
 
         $this->assertNotNull($resultado);
-        $this->assertEqualsWithDelta(50.00, $resultado, 0.001);
+        $this->assertEqualsWithDelta(191.00, $resultado, 0.001);
     }
 
-    public function testCalcularMontoUrTtT07_Empresa_Mes_TresCamiones(): void
+    public function testCalcularMontoUrTtT07_ParticularSeCobraPorCamion(): void
     {
-        $this->crearTarifa('UR-TT-T-07', 'empresa_mes', 1000.00, 1);
+        // Ficha UR-TT-T-07: $1,151.00 por mes y por 1 camión.
+        $this->crearTarifa('UR-TT-T-07', 'particular_mes', 1151.00, 0);
 
-        $resultado = $this->service->calcularMontoUrTtT07('empresa', 'mes', 3);
+        $this->assertEqualsWithDelta(1151.00, $this->service->calcularMontoUrTtT07('particular', 'mes'), 0.001);
+        $this->assertEqualsWithDelta(3453.00, $this->service->calcularMontoUrTtT07('particular', 'mes', 3), 0.001);
+        $this->assertEqualsWithDelta(1151.00, $this->service->calcularMontoUrTtT07('particular', 'mes', 0), 0.001);
+    }
 
-        $this->assertNotNull($resultado);
-        $this->assertEqualsWithDelta(3000.00, $resultado, 0.001);
+    public function testCalcularMontoUrTtT07_Empresa_EsCuotaFijaHasta15Camiones(): void
+    {
+        // Ficha UR-TT-T-07: empresa establecida en el municipio, hasta 15 camiones por mes $5,732.00.
+        $this->crearTarifa('UR-TT-T-07', 'empresa_mes', 5732.00, 0);
+
+        $this->assertEqualsWithDelta(5732.00, $this->service->calcularMontoUrTtT07('empresa', 'mes', 3), 0.001);
+        $this->assertEqualsWithDelta(5732.00, $this->service->calcularMontoUrTtT07('empresa', 'mes', 15), 0.001);
     }
 
     public function testCalcularMontoUrTtT07_SinTarifaExistente(): void
@@ -96,25 +107,26 @@ class TarifarioServiceTest extends DatabaseTestCase
         $this->assertFalse($resultado);
     }
 
-    public function testCalcularMontoUrTtT07_Empresa_CamionesExcede15_ReturnsSame15Max(): void
+    public function testCalcularMontoUrTtT07_Empresa_NoSeMultiplicaPorCamion(): void
     {
-        $this->crearTarifa('UR-TT-T-07', 'empresa_mes', 1000.00, 1);
+        $this->crearTarifa('UR-TT-T-07', 'empresa_mes', 5732.00, 0);
 
         $resultado = $this->service->calcularMontoUrTtT07('empresa', 'mes', 20);
 
         $this->assertNotNull($resultado);
-        $this->assertEqualsWithDelta(15000.00, $resultado, 0.001);
+        $this->assertEqualsWithDelta(5732.00, $resultado, 0.001);
     }
 
     public function testCalcularMonto_Ur01Ur02Ur03DesdeCatalogo(): void
     {
         $this->crearTarifa('UR-TT-T-01', 'base', 9055.20, 1);
         $this->crearTarifa('UR-TT-T-02', 'base', 64.90, 1);
-        $this->crearTarifa('UR-TT-T-03', 'base', 50.00, 1);
+        $this->crearTarifa('UR-TT-T-03', 'base', 0.00, 0);
 
         $this->assertEqualsWithDelta(9055.20, $this->service->calcularMonto('UR-TT-T-01'), 0.001);
         $this->assertEqualsWithDelta(64.90, $this->service->calcularMonto('UR-TT-T-02'), 0.001);
-        $this->assertEqualsWithDelta(50.00, $this->service->calcularMonto('UR-TT-T-03'), 0.001);
+        // Ficha UR-TT-T-03: la orden de plaqueo no tiene costo.
+        $this->assertEqualsWithDelta(0.00, $this->service->calcularMonto('UR-TT-T-03'), 0.001);
     }
 
     public function testCalcularMonto_Ur04_ValorProvisional(): void

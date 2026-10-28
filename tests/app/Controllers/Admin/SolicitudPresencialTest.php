@@ -188,7 +188,8 @@ class SolicitudPresencialTest extends DatabaseTestCase
         $this->assertNotNull($solicitud);
         $this->assertEquals('Recibido', $solicitud->estatus);
         $this->assertEquals($this->ciudadanoId, (int) $solicitud->ciudadano_id);
-        $this->assertEquals(50.00, (float) $solicitud->monto);
+        // Ficha UR-TT-T-03: sin costo (migración 2026-10-27-000033).
+        $this->assertEquals(0.00, (float) $solicitud->monto);
 
         // Verificar datos
         $datos = (new SolicitudDatoModel())->porSolicitudAgrupado((int) $solicitud->id);
@@ -245,8 +246,8 @@ class SolicitudPresencialTest extends DatabaseTestCase
 
         $solicitud = (new SolicitudModel())->where('tramite', 'UR-TT-T-07')->orderBy('id', 'DESC')->first();
         $this->assertNotNull($solicitud);
-        // 100 * 3 camiones = 300
-        $this->assertEquals(300.00, (float) $solicitud->monto);
+        // Ficha UR-TT-T-07: empresa establecida, hasta 15 camiones por mes = $5,732 fijo.
+        $this->assertEquals(5732.00, (float) $solicitud->monto);
     }
 
     public function testFallaValidacionCamposRequeridos(): void
@@ -472,15 +473,20 @@ class SolicitudPresencialTest extends DatabaseTestCase
 
     public function testMigracionSiembraTarifasBaseDeLosTramites(): void
     {
-        // Las migraciones de la base de pruebas incluyen 2026-10-21-000025 (tarifas base faltantes).
+        // 2026-10-21-000025 siembra las tarifas base y 2026-10-27-000033 las deja
+        // con los montos de las fichas oficiales.
         $sembradas = $this->db->table('tarifas')
             ->where('criterio', 'base')
-            ->like('descripcion', 'Tarifa provisional del prototipo', 'after')
+            ->like('descripcion', 'Ficha oficial', 'after')
+            ->where('vigente_hasta', null)
             ->get()->getResult();
         $this->assertEqualsCanonicalizing(
             ['UR-TT-T-01', 'UR-TT-T-02', 'UR-TT-T-03', 'UR-TT-T-04', 'UR-TT-T-05'],
             array_map(static fn ($t) => $t->tramite, $sembradas)
         );
+        foreach ($sembradas as $tarifa) {
+            $this->assertSame(0, (int) $tarifa->placeholder_oficial);
+        }
     }
 
     // ─── BUSQUEDA AJAX ──────────────────────────────────────────────

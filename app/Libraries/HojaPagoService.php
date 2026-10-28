@@ -224,7 +224,9 @@ class HojaPagoService
     public function lugaresDePago(): array
     {
         $detalles = [
-            'juez_calificador' => 'Ventanilla de Tránsito Municipal, de lunes a viernes en horario de oficina.',
+            // Domicilio y horario de las fichas oficiales del Registro de Trámites (29-ene-26).
+            'juez_calificador' => 'Área de Jueces Calificadores de la Dirección de Movilidad y Transporte Municipal, Blvd. Juan Pablo II núm. 40, col. Lázaro Cárdenas. Lunes a viernes de 8:00 a 15:00 y de 16:00 a 19:00; sábado de 8:00 a 15:00.',
+            'tesoreria'        => 'Tesorería Municipal de Uriangato, en su horario de atención.',
             'banbajio'         => 'Ventanilla bancaria o transferencia con la referencia del convenio.',
         ];
 

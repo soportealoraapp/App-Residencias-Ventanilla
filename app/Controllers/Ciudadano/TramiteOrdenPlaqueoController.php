@@ -35,7 +35,7 @@ class TramiteOrdenPlaqueoController extends Controller
 
     public function formulario()
     {
-        $tarifaMonto = $this->tarifarioService->calcularMonto('UR-TT-T-03', 'base') ?? 50.00;
+        $tarifaMonto = $this->tarifarioService->calcularMonto('UR-TT-T-03', 'base') ?? 0.00;
         $esPlaceholder = $this->tarifarioService->esPlaceholder('UR-TT-T-03', 'base');
 
         return view('portal/tramites/orden_plaqueo_form', [
@@ -118,7 +118,7 @@ class TramiteOrdenPlaqueoController extends Controller
         $concesion = $this->concesionModel->findByNumeroTitulo($numTitulo);
         $concesionId = $concesion ? (int) $concesion->id : null;
 
-        $monto = $this->tarifarioService->calcularMonto('UR-TT-T-03', 'base') ?? 50.00;
+        $monto = $this->tarifarioService->calcularMonto('UR-TT-T-03', 'base') ?? 0.00;
         $folio = FolioGenerator::generar();
 
         $solicitudId = $this->solicitudModel->insert([

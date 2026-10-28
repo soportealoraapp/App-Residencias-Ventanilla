@@ -164,7 +164,7 @@ class TramiteCargaDescargaController extends Controller
             ];
         } else {
             $rules['num_camiones'] = [
-                'rules' => 'permit_empty',
+                'rules' => 'permit_empty|is_natural_no_zero|less_than_equal_to[15]',
                 'label' => 'Número de camiones',
             ];
         }
@@ -186,7 +186,8 @@ class TramiteCargaDescargaController extends Controller
         }
 
         $folio = FolioGenerator::generar();
-        $numCamionesFinal = $tipoSolicitante === 'empresa' ? (int)$numCamiones : 1;
+        // Particular paga por camión; empresa establecida, cuota fija hasta 15 (ficha UR-TT-T-07).
+        $numCamionesFinal = max(1, (int) $numCamiones);
         $monto = $this->tarifarioService->calcularMontoUrTtT07($tipoSolicitante, $request->getPost('periodo'), $numCamionesFinal);
 
         if ($monto === null) {

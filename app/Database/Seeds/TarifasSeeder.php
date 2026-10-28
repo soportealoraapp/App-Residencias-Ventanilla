@@ -8,120 +8,33 @@ class TarifasSeeder extends Seeder
 {
     public function run(): void
     {
-        $data = [
-            [
-                'tramite'          => 'UR-TT-T-04',
-                'criterio'         => 'base',
-                'monto'            => 156.94,
-                'vigente_desde'    => date('Y-m-d'),
-                'placeholder_oficial' => 1,
-                'descripcion'      => 'Tarifa provisional del prototipo: Permiso Eventual de Transporte',
-            ],
-            [
-                'tramite'          => 'UR-TT-T-05',
-                'criterio'         => 'base',
-                'monto'            => 287.00,
-                'vigente_desde'    => date('Y-m-d'),
-                'placeholder_oficial' => 1,
-                'descripcion'      => 'Tarifa provisional del prototipo: Cierre de Calle',
-            ],
-            [
-                'tramite'          => 'UR-TT-T-07',
-                'criterio'         => 'particular_dia',
-                'monto'            => 50.00,
-                'vigente_desde'    => date('Y-m-d'),
-                'placeholder_oficial' => 1,
-                'descripcion'      => 'TODO: valor no verificado - Tarifa particular por día',
-            ],
-            [
-                'tramite'          => 'UR-TT-T-07',
-                'criterio'         => 'particular_mes',
-                'monto'            => 400.00,
-                'vigente_desde'    => date('Y-m-d'),
-                'placeholder_oficial' => 1,
-                'descripcion'      => 'TODO: valor no verificado - Tarifa particular por mes',
-            ],
-            [
-                'tramite'          => 'UR-TT-T-07',
-                'criterio'         => 'particular_semestre',
-                'monto'            => 2200.00,
-                'vigente_desde'    => date('Y-m-d'),
-                'placeholder_oficial' => 1,
-                'descripcion'      => 'TODO: valor no verificado - Tarifa particular por semestre',
-            ],
-            [
-                'tramite'          => 'UR-TT-T-07',
-                'criterio'         => 'particular_anio',
-                'monto'            => 4000.00,
-                'vigente_desde'    => date('Y-m-d'),
-                'placeholder_oficial' => 1,
-                'descripcion'      => 'TODO: valor no verificado - Tarifa particular por año',
-            ],
-            [
-                'tramite'          => 'UR-TT-T-07',
-                'criterio'         => 'empresa_dia',
-                'monto'            => 120.00,
-                'vigente_desde'    => date('Y-m-d'),
-                'placeholder_oficial' => 1,
-                'descripcion'      => 'TODO: valor no verificado - Tarifa empresa por día',
-            ],
-            [
-                'tramite'          => 'UR-TT-T-07',
-                'criterio'         => 'empresa_mes',
-                'monto'            => 1000.00,
-                'vigente_desde'    => date('Y-m-d'),
-                'placeholder_oficial' => 1,
-                'descripcion'      => 'TODO: valor no verificado - Tarifa empresa por mes',
-            ],
-            [
-                'tramite'          => 'UR-TT-T-07',
-                'criterio'         => 'empresa_semestre',
-                'monto'            => 5500.00,
-                'vigente_desde'    => date('Y-m-d'),
-                'placeholder_oficial' => 1,
-                'descripcion'      => 'TODO: valor no verificado - Tarifa empresa por semestre',
-            ],
-            [
-                'tramite'          => 'UR-TT-T-07',
-                'criterio'         => 'empresa_anio',
-                'monto'            => 10000.00,
-                'vigente_desde'    => date('Y-m-d'),
-                'placeholder_oficial' => 1,
-                'descripcion'      => 'TODO: valor no verificado - Tarifa empresa por año',
-            ],
-            [
-                'tramite'          => 'UR-TT-T-06',
-                'criterio'         => 'cesion_concesion_base',
-                'monto'            => 9055.20,
-                'vigente_desde'    => date('Y-m-d'),
-                'placeholder_oficial' => 1,
-                'descripcion'      => 'TODO: valor dudoso, revisar con Movilidad',
-            ],
-            [
-                'tramite'          => 'UR-TT-T-01',
-                'criterio'         => 'base',
-                'monto'            => 9055.20,
-                'vigente_desde'    => date('Y-m-d'),
-                'placeholder_oficial' => 1,
-                'descripcion'      => 'Valor de prueba editable: revisar con Movilidad',
-            ],
-            [
-                'tramite'          => 'UR-TT-T-02',
-                'criterio'         => 'base',
-                'monto'            => 64.90,
-                'vigente_desde'    => date('Y-m-d'),
-                'placeholder_oficial' => 1,
-                'descripcion'      => 'Valor de prueba editable: revisar con Movilidad',
-            ],
-            [
-                'tramite'          => 'UR-TT-T-03',
-                'criterio'         => 'base',
-                'monto'            => 50.00,
-                'vigente_desde'    => date('Y-m-d'),
-                'placeholder_oficial' => 1,
-                'descripcion'      => 'Valor de prueba editable: revisar con Movilidad',
-            ],
+        // Montos de las fichas oficiales del Registro de Trámites y Servicios de
+        // Uriangato (actualización 29-ene-26). T-07 particular es por 1 camión;
+        // T-07 empresa es cuota fija para empresas establecidas, hasta 15 camiones.
+        $tarifas = [
+            ['UR-TT-T-01', 'base', 9055.20, 'Concesión de transporte público de ruta fija'],
+            ['UR-TT-T-02', 'base', 64.90, 'Constancia de despintado'],
+            ['UR-TT-T-03', 'base', 0.00, 'Orden de plaqueo para cambio de unidad (sin costo)'],
+            ['UR-TT-T-04', 'base', 156.94, 'Permiso eventual de transporte'],
+            ['UR-TT-T-05', 'base', 287.00, 'Permiso para cierre parcial o total de calle'],
+            ['UR-TT-T-06', 'cesion_concesion_base', 9055.20, 'Cesión de concesión'],
+            ['UR-TT-T-07', 'particular_dia', 191.00, 'Carga y descarga: por día y por 1 camión'],
+            ['UR-TT-T-07', 'particular_mes', 1151.00, 'Carga y descarga: por mes y por 1 camión'],
+            ['UR-TT-T-07', 'particular_semestre', 5752.00, 'Carga y descarga: por semestre y por 1 camión'],
+            ['UR-TT-T-07', 'particular_anio', 11503.00, 'Carga y descarga: por año y por 1 camión'],
+            ['UR-TT-T-07', 'empresa_dia', 573.00, 'Carga y descarga: empresa establecida, hasta 15 camiones por día'],
+            ['UR-TT-T-07', 'empresa_mes', 5732.00, 'Carga y descarga: empresa establecida, hasta 15 camiones por mes'],
+            ['UR-TT-T-07', 'empresa_semestre', 28662.00, 'Carga y descarga: empresa establecida, hasta 15 camiones por semestre'],
+            ['UR-TT-T-07', 'empresa_anio', 57325.00, 'Carga y descarga: empresa establecida, hasta 15 camiones por año'],
         ];
+        $data = array_map(static fn (array $t) => [
+            'tramite'             => $t[0],
+            'criterio'            => $t[1],
+            'monto'               => $t[2],
+            'vigente_desde'       => date('Y-m-d'),
+            'placeholder_oficial' => 0,
+            'descripcion'         => 'Ficha oficial ' . $t[0] . ' (29-ene-26): ' . $t[3],
+        ], $tarifas);
 
         foreach ($data as $row) {
             $exists = $this->db->table('tarifas')

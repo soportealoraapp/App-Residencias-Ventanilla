@@ -32,6 +32,6 @@ class Solicitud extends Entity
      */
     public function estaCompletada(): bool
     {
-        return in_array($this->attributes['estatus'] ?? '', ['Pagado', 'Permiso emitido', 'Concluido', 'Vigente'], true);
+        return in_array($this->attributes['estatus'] ?? '', ['Pagado', 'Permiso emitido', 'Título emitido', 'Constancia emitida', 'Concluido', 'Vigente'], true);
     }
 }

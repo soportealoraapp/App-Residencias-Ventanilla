@@ -141,7 +141,7 @@ $metricas = [
                             <h3 class="h6 card-title mb-0 fw-bold text-dark">Orden de Plaqueo</h3>
                         </div>
                     </div>
-                    <p class="card-text small text-muted mb-3">Orden oficial para asignación y alta de placas de servicio público ($50.00).</p>
+                    <p class="card-text small text-muted mb-3">Orden oficial para asignación y alta de placas de servicio público (sin costo).</p>
                 </div>
                 <div>
                     <a href="<?= site_url('/portal/tramites/orden-plaqueo') ?>" class="btn btn-primary btn-sm w-100 shadow-sm fw-semibold stretched-link">

@@ -18,14 +18,14 @@ class TarifarioService
             return null;
         }
 
-        $montoBase = $tarifa->monto;
-
-        if (strtolower($tipoSolicitante) === 'empresa') {
-            $numCamiones = max(1, min(15, $numCamiones));
-            $montoBase = $montoBase * $numCamiones;
+        // Ficha UR-TT-T-07 (29-ene-26): la tarifa particular es "por 1 camión",
+        // así que se multiplica por los camiones; la de empresa establecida en el
+        // municipio es una cuota fija que cubre hasta 15 camiones.
+        if (strtolower($tipoSolicitante) === 'particular') {
+            return floatval($tarifa->monto) * max(1, $numCamiones);
         }
 
-        return floatval($montoBase);
+        return floatval($tarifa->monto);
     }
 
     public function calcularMontoUrTtT06(): ?float

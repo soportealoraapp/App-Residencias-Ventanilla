@@ -179,6 +179,8 @@ if (!function_exists('estatus_badge')) {
             'Dictaminado aprobado'           => 'bg-success',
             'Pagado'                         => 'bg-success',
             'Permiso emitido'                => 'bg-success',
+            'Título emitido'                 => 'bg-success',
+            'Constancia emitida'             => 'bg-success',
             'Vigente'                        => 'bg-success',
             'Verificado'                     => 'bg-success',
             'Aprobado'                       => 'bg-success',

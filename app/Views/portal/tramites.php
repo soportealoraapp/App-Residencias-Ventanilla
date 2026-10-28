@@ -194,7 +194,7 @@ $habilitaT06 = $__view['habilitaT06'] ?? false;
                     <p class="card-text text-muted small mb-3">Expedición de orden oficial para asignación y alta de placas de servicio público de transporte.</p>
                     <ul class="small text-muted mb-4 ps-3">
                         <li>Personas Físicas y Morales</li>
-                        <li>Costo de derechos: <strong>$50.00</strong></li>
+                        <li>Costo de derechos: <strong>sin costo</strong></li>
                         <li>Validación de revista físico-mecánica</li>
                         <li>Generación de folio y expediente digital</li>
                     </ul>

@@ -61,7 +61,7 @@ $oldMudanza = old('es_mudanza') !== null;
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="tipo_solicitante" id="ts_empresa" value="empresa" <?= $oldTipo === 'empresa' ? 'checked' : '' ?>>
-                                    <label class="form-check-label" for="ts_empresa">Empresa</label>
+                                    <label class="form-check-label" for="ts_empresa">Empresa establecida en el municipio (hasta 15 camiones)</label>
                                 </div>
                             </div>
                             <?php if ($validation->getError('tipo_solicitante')): ?>
@@ -96,9 +96,10 @@ $oldMudanza = old('es_mudanza') !== null;
                             <?php endif; ?>
                         </div>
 
-                        <div class="mt-3" id="div_num_camiones" style="display: <?= $oldTipo === 'empresa' ? 'block' : 'none' ?>">
-                            <label for="num_camiones" class="form-label fw-semibold">Número de camiones <span class="text-danger">*</span></label>
+                        <div class="mt-3" id="div_num_camiones">
+                            <label for="num_camiones" class="form-label fw-semibold">Número de camiones <span class="text-danger" id="num_camiones_obligatorio" <?= $oldTipo === 'empresa' ? '' : 'hidden' ?>>*</span></label>
                             <input type="number" class="form-control" id="num_camiones" name="num_camiones" min="1" max="15" value="<?= esc($oldNumCam) ?>" placeholder="1 a 15" inputmode="numeric">
+                            <div class="form-text" id="num_camiones_ayuda"><?= $oldTipo === 'empresa' ? 'Empresa establecida: cuota fija que cubre hasta 15 camiones.' : 'Particular: la tarifa es por camión. Si lo dejas vacío se cobra 1 camión.' ?></div>
                             <?php if ($validation->getError('num_camiones')): ?>
                                 <div class="text-danger small mt-1"><?= $validation->getError('num_camiones') ?></div>
                             <?php endif; ?>
@@ -283,16 +284,14 @@ $oldMudanza = old('es_mudanza') !== null;
 
     function actualizarTipoSolicitanteUI() {
         const valor = document.querySelector('input[name="tipo_solicitante"]:checked').value;
-        if (valor === 'empresa') {
-            divNumCam.style.display = 'block';
-            numCamInput.required = true;
-            lblNombre.textContent = 'Razón social';
-        } else {
-            divNumCam.style.display = 'none';
-            numCamInput.required = false;
-            numCamInput.value = '';
-            lblNombre.textContent = 'Nombre completo';
-        }
+        // Ficha UR-TT-T-07: particular paga por camión; empresa establecida, cuota fija hasta 15.
+        const empresa = valor === 'empresa';
+        numCamInput.required = empresa;
+        document.getElementById('num_camiones_obligatorio').hidden = !empresa;
+        document.getElementById('num_camiones_ayuda').textContent = empresa
+            ? 'Empresa establecida: cuota fija que cubre hasta 15 camiones.'
+            : 'Particular: la tarifa es por camión. Si lo dejas vacío se cobra 1 camión.';
+        lblNombre.textContent = empresa ? 'Razón social' : 'Nombre completo';
         recalcularMonto();
     }
 

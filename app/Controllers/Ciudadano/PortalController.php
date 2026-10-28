@@ -39,7 +39,7 @@ class PortalController extends Controller
         $stats = [
             'total'      => (new SolicitudModel())->where('ciudadano_id', $userId)->countAllResults(),
             'en_proceso' => (new SolicitudModel())->where('ciudadano_id', $userId)->whereIn('estatus', ['Recibido', 'En revisión', 'En revisión documental', 'Cita agendada', 'Evaluación comparativa'])->countAllResults(),
-            'concluidos' => (new SolicitudModel())->where('ciudadano_id', $userId)->whereIn('estatus', ['Verificado', 'Permiso emitido', 'Vigente', 'Seleccionado', 'Concluido', 'Pagado'])->countAllResults(),
+            'concluidos' => (new SolicitudModel())->where('ciudadano_id', $userId)->whereIn('estatus', ['Verificado', 'Permiso emitido', 'Título emitido', 'Constancia emitida', 'Vigente', 'Seleccionado', 'Concluido', 'Pagado'])->countAllResults(),
             'pendientes' => (new SolicitudModel())->where('ciudadano_id', $userId)->where('estatus', 'Pago pendiente')->countAllResults(),
         ];
 

@@ -39,6 +39,8 @@ class CobroService
 
     public const LUGARES_PAGO = [
         'juez_calificador' => 'Juez calificador',
+        // Las fichas oficiales indican pagar en la Tesorería Municipal o con los jueces calificadores.
+        'tesoreria'        => 'Tesorería Municipal',
         'banbajio'         => 'BanBajío',
         'ventanilla'       => 'Ventanilla',
         'en_linea'         => 'Pago en línea',

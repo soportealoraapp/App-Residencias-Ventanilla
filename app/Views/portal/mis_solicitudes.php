@@ -12,7 +12,7 @@
  */
 $estatusPorGrupo = [
     'pago'        => ['Pago pendiente'],
-    'aprobado'    => ['Aprobado', 'Dictaminado aprobado', 'Dictamen favorable', 'Verificado', 'Permiso emitido', 'Vigente', 'Seleccionado', 'Documentos completos', 'Pagado', 'Concluido'],
+    'aprobado'    => ['Aprobado', 'Dictaminado aprobado', 'Dictamen favorable', 'Verificado', 'Permiso emitido', 'Título emitido', 'Constancia emitida', 'Vigente', 'Seleccionado', 'Documentos completos', 'Pagado', 'Concluido'],
     'observacion' => ['Prevención', 'Rechazado', 'Vencido', 'No seleccionado'],
 ];
 

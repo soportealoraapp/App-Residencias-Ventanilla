@@ -159,7 +159,7 @@ class HojaPagoServiceTest extends DatabaseTestCase
     {
         $lugares = $this->hoja->lugaresDePago();
 
-        $this->assertSame(['juez_calificador', 'banbajio'], array_column($lugares, 'clave'));
+        $this->assertSame(['juez_calificador', 'tesoreria', 'banbajio'], array_column($lugares, 'clave'));
         foreach ($lugares as $lugar) {
             $this->assertSame(CobroService::LUGARES_PAGO[$lugar['clave']], $lugar['titulo']);
             $this->assertNotSame('', $lugar['detalle']);

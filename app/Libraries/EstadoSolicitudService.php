@@ -68,6 +68,9 @@ class EstadoSolicitudService
         'EVALUACION_COMPARATIVA' => 'Evaluación comparativa',
         'SELECCIONADO' => 'Seleccionado',
         'NO_SELECCIONADO' => 'No seleccionado',
+        'PAGO_PENDIENTE' => 'Pago pendiente',
+        'PAGADO' => 'Pagado',
+        'TITULO_EMITIDO' => 'Título emitido',
         'RECHAZADO' => 'Rechazado',
     ];
 
@@ -75,6 +78,9 @@ class EstadoSolicitudService
         'RECIBIDO' => 'Recibido',
         'CITA_AGENDADA' => 'Cita agendada',
         'VERIFICADO' => 'Verificado',
+        'PAGO_PENDIENTE' => 'Pago pendiente',
+        'PAGADO' => 'Pagado',
+        'CONSTANCIA_EMITIDA' => 'Constancia emitida',
         'RECHAZADO' => 'Rechazado',
     ];
 
@@ -108,6 +114,8 @@ class EstadoSolicitudService
         'Pago pendiente',
         'Pagado',
         'Permiso emitido',
+        'Título emitido',
+        'Constancia emitida',
         'Vigente',
         'Vencido',
         'Concluido',
@@ -119,14 +127,22 @@ class EstadoSolicitudService
             'Recibido' => ['En revisión', 'Evaluación comparativa', 'Seleccionado', 'No seleccionado', 'Rechazado'],
             'En revisión' => ['Evaluación comparativa', 'Seleccionado', 'No seleccionado', 'Rechazado'],
             'Evaluación comparativa' => ['Seleccionado', 'No seleccionado', 'Rechazado'],
-            'Seleccionado' => [],
+            // Ficha UR-TT-T-01: el ganador cubre los derechos y recibe su título-concesión.
+            'Seleccionado' => ['Pago pendiente'],
+            'Pago pendiente' => ['Pagado', 'Rechazado'],
+            'Pagado' => ['Título emitido'],
+            'Título emitido' => [],
             'No seleccionado' => [],
             'Rechazado' => [],
         ],
         'UR-TT-T-02' => [
             'Recibido' => ['Cita agendada', 'Rechazado'],
             'Cita agendada' => ['Verificado', 'Rechazado'],
-            'Verificado' => [],
+            // Ficha UR-TT-T-02: con el vehículo verificado se paga al juez y se entrega la constancia.
+            'Verificado' => ['Pago pendiente'],
+            'Pago pendiente' => ['Pagado', 'Rechazado'],
+            'Pagado' => ['Constancia emitida'],
+            'Constancia emitida' => [],
             'Rechazado' => [],
         ],
         'UR-TT-T-03' => [

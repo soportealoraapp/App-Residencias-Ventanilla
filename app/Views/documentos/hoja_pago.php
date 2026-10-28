@@ -243,7 +243,8 @@ $estatusTexto = match ($estatus) {
 
     <h2>Consulta tu estatus</h2>
     <p style="margin:0; font-size:12px;">
-        Presenta este folio en la ventanilla de Tránsito Municipal o consúltalo en el portal de la Ventanilla Digital.
+        Presenta este folio en la Dirección de Movilidad y Transporte Municipal o consúltalo en el portal de la Ventanilla Digital.
+        Dudas: 445 457 8000 · movilidaduriangato@gmail.com.
         <?php if ($referencia !== '' && $origen === 'boleta'): ?>
             Referencia de pago: <span class="mono"><?= esc($referencia) ?></span>.
         <?php endif ?>

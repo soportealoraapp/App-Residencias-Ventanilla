@@ -33,6 +33,8 @@ final class AccionesSeguimientoSolicitud
         'Pagado' => ['etiqueta' => 'Registrar pago', 'icono' => 'bi-cash-stack', 'clase' => 'btn-success', 'motivo' => false, 'confirmacion' => null],
         'Concluido' => ['etiqueta' => 'Registrar pago y concluir', 'icono' => 'bi-cash-stack', 'clase' => 'btn-success', 'motivo' => false, 'confirmacion' => null],
         'Permiso emitido' => ['etiqueta' => 'Emitir permiso', 'icono' => 'bi-file-earmark-check', 'clase' => 'btn-success', 'motivo' => false, 'confirmacion' => '¿Emitir el permiso de esta solicitud?'],
+        'Título emitido' => ['etiqueta' => 'Entregar título-concesión', 'icono' => 'bi-award', 'clase' => 'btn-success', 'motivo' => false, 'confirmacion' => '¿Registrar la entrega del título-concesión?'],
+        'Constancia emitida' => ['etiqueta' => 'Entregar constancia de despintado', 'icono' => 'bi-file-earmark-check', 'clase' => 'btn-success', 'motivo' => false, 'confirmacion' => '¿Registrar la entrega de la constancia de despintado?'],
         'Vigente' => ['etiqueta' => 'Activar vigencia', 'icono' => 'bi-calendar-check', 'clase' => 'btn-success', 'motivo' => false, 'confirmacion' => '¿Marcar este permiso como vigente?'],
         'Vencido' => ['etiqueta' => 'Marcar permiso vencido', 'icono' => 'bi-calendar-x', 'clase' => 'btn-outline-secondary', 'motivo' => false, 'confirmacion' => '¿Marcar este permiso como vencido?'],
         'Rechazado' => ['etiqueta' => 'Rechazar solicitud', 'icono' => 'bi-x-circle', 'clase' => 'btn-outline-danger', 'motivo' => true, 'confirmacion' => '¿Rechazar esta solicitud? Esta acción no se puede deshacer.'],
