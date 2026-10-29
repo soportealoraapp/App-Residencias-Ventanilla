@@ -168,7 +168,7 @@ graph TD
     └── portal/                     # Portal ciudadano y los formularios de los 7 trámites
 ```
 
-> La otra mitad del esquema vive en `supabase/migrations/` (16 archivos SQL que se aplican a mano en el **SQL Editor**). Ese doble camino es la causa del *drift* documentado en `DOC_METODOLOGIA_PORTAL_PANEL.md` §11.3.4: `php spark migrate` no los ve, así que hay que cotejarlos con `scripts/verificar_esquema_bd.php`.
+> La otra mitad del esquema vive en `supabase/migrations/` (16 archivos SQL que se aplican a mano en el **SQL Editor**). Ese doble camino es la causa del *drift* documentado en `DOC_METODOLOGIA.md` §3: `php spark migrate` no los ve, así que hay que cotejarlos con `scripts/verificar_esquema_bd.php`.
 
 ---
 
@@ -414,7 +414,7 @@ Eso mantuvo muertos `/login`, `/register` y `/logout` **desde el commit inicial*
 **Cómo se comprueba y cómo se evita:**
 * `php spark routes` es la única autoridad: si el atajo no aparece en la tabla, no existe aunque esté escrito en `Routes.php`.
 * Todo atajo necesita su propio `as` (`acceso`, `registro`, `salida`), y el comentario de `app/Config/Routes.php` líneas 129-132 explica la razón para que nadie la quite.
-* La cobertura durable es `tests/app/Controllers/Views/EnlacesEstaticosTest.php`: recolecta los `href` literales de todas las vistas y exige que cada uno coincida con una ruta del mapa real o con un archivo físico bajo `public/`. El mapa se obtiene con `service('routes')->loadRoutes()` y `getRoutes('GET')` — **las claves de verbo van en mayúsculas** y el servicio llega sin leer `app/Config/Routes.php`; con `'get'` o sin `loadRoutes()` el mapa sale vacío y la prueba pasa en falso, por eso hay una salvaguarda que falla si el mapa viniera vacío. Método completo en `DOC_METODOLOGIA_PORTAL_PANEL.md` §10.7.
+* La cobertura durable es `tests/app/Controllers/Views/EnlacesEstaticosTest.php`: recolecta los `href` literales de todas las vistas y exige que cada uno coincida con una ruta del mapa real o con un archivo físico bajo `public/`. El mapa se obtiene con `service('routes')->loadRoutes()` y `getRoutes('GET')` — **las claves de verbo van en mayúsculas** y el servicio llega sin leer `app/Config/Routes.php`; con `'get'` o sin `loadRoutes()` el mapa sale vacío y la prueba pasa en falso, por eso hay una salvaguarda que falla si el mapa viniera vacío. Método completo en `DOC_PORTAL_PANEL.md` §12.4.
 
 ---
 

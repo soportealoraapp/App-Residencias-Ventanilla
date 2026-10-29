@@ -275,13 +275,13 @@ Ambas interfaces son *mobile-first* y operan desde teléfono sin perder funciona
 * **Objetivos táctiles de 44 px** (`--touch-target`) y campos a 16 px, que evita el zoom automático de iOS al enfocar un formulario.
 * **Portal:** navegación inferior fija tipo app en móvil; menú colapsable con fondo sólido; montos con `clamp()` y quiebre de palabra para que no desborden.
 * **Panel:** la barra lateral se convierte en gaveta deslizante (`min(300px, 86vw)`) con fondo oscurecido y barra superior pegajosa; respeta áreas seguras en dispositivos con muesca (`viewport-fit=cover` + `env(safe-area-inset-*)`).
-* **Sin desbordes horizontales, comprobado y no supuesto:** el título de la barra del panel, los encabezados de tarjeta con insignia y las hileras de botones se corrigieron tras una **auditoría instrumental de 55 páginas medidas a 360/320/290 px**. La causa raíz fue de modelo de caja (*flexbox* no permite que un hijo se comprima por debajo de su contenido) y quedó enmascarada porque el contenedor declara `overflow-x: hidden`: el texto se recortaba **sin dejar barra de desplazamiento**. Detalle en `DOC_METODOLOGIA_PORTAL_PANEL.md` §9.8.
+* **Sin desbordes horizontales, comprobado y no supuesto:** el título de la barra del panel, los encabezados de tarjeta con insignia y las hileras de botones se corrigieron tras una **auditoría instrumental de 55 páginas medidas a 360/320/290 px**. La causa raíz fue de modelo de caja (*flexbox* no permite que un hijo se comprima por debajo de su contenido) y quedó enmascarada porque el contenedor declara `overflow-x: hidden`: el texto se recortaba **sin dejar barra de desplazamiento**. Detalle en `DOC_PORTAL_PANEL.md` §11.9.
 * **Portada:** la fotografía institucional se ancla y se reduce el desenfoque en pantallas verticales, para conservar el sujeto y el contraste del texto sin sacrificar rendimiento.
 * **Accesibilidad:** `prefers-reduced-motion`, foco visible por teclado, `lang="es"`, `aria-label` en controles de acordeón y modo de impresión que oculta la interfaz para imprimir expedientes. Páginas de error propias en español (400, 404, excepción y producción) en lugar de las del marco.
 
 > ⚠️ **Restricción de despliegue:** en Vercel solo se sirve lo declarado en el arreglo `routes` de `vercel.json`; cualquier otra petición cae en el comodín que la entrega a PHP y responde 404. **Al agregar una imagen o archivo estático a `public/`, hay que declarar su ruta** y verificarla contra la URL desplegada, porque en local `spark serve` sí sirve todo el directorio.
 
-> ⚠️ **Restricción de enrutamiento (CodeIgniter 4):** una ruta cuyo `from` coincida con el **nombre** ya asignado con `['as' => …]` a otra ruta se descarta **en silencio** — no hay error ni en arranque ni en logs. Es lo que tenía muertos los atajos `/login`, `/register` y `/logout` desde el commit inicial: su `from` era idéntico al nombre `login`/`register`/`logout` de `auth/login`. Cada atajo necesita su propio `as` (`acceso`, `registro`, `salida`). Antes de sospechar del despliegue, compruébalo con `php spark routes`: **declarada no es lo mismo que registrada**. Cobertura duradera: `tests/app/Controllers/Views/EnlacesEstaticosTest.php` coteja los `href` literales de las vistas contra el mapa real de rutas y contra `public/` (método en `DOC_METODOLOGIA_PORTAL_PANEL.md` §10.7).
+> ⚠️ **Restricción de enrutamiento (CodeIgniter 4):** una ruta cuyo `from` coincida con el **nombre** ya asignado con `['as' => …]` a otra ruta se descarta **en silencio** — no hay error ni en arranque ni en logs. Es lo que tenía muertos los atajos `/login`, `/register` y `/logout` desde el commit inicial: su `from` era idéntico al nombre `login`/`register`/`logout` de `auth/login`. Cada atajo necesita su propio `as` (`acceso`, `registro`, `salida`). Antes de sospechar del despliegue, compruébalo con `php spark routes`: **declarada no es lo mismo que registrada**. Cobertura duradera: `tests/app/Controllers/Views/EnlacesEstaticosTest.php` coteja los `href` literales de las vistas contra el mapa real de rutas y contra `public/` (método en `DOC_PORTAL_PANEL.md` §12.4).
 
 ---
 
@@ -344,7 +344,7 @@ node tests/auth-flow.test.cjs     # 18 casos: login, caducidad de token, cola of
 npx tsc --noEmit                  # tipos del cliente; debe salir limpio
 ```
 
-El procedimiento completo para comprobar que la app móvil sigue sincronizada con el backend (contrato de API, ausencia de rupturas, versión y haz exportado) está documentado en `DOC_METODOLOGIA_PORTAL_PANEL.md` §10.6.
+El procedimiento completo para comprobar que la app móvil sigue sincronizada con el backend (contrato de API, ausencia de rupturas, versión y haz exportado) está documentado en `DOC_PORTAL_PANEL.md` §12.5.
 
 ---
 
@@ -357,10 +357,10 @@ El proyecto se desarrolló con una **metodología iterativa e incremental**: pri
 | Rama | Superficie del repositorio | Cómo se verifica |
 |---|---|---|
 | **Backend** | `app/Config`, `app/Models`, `app/Libraries`, `app/Filters`, `app/Database/Migrations`, `api/` | PHPUnit (§4) y `php spark migrate` |
-| **Portal y Panel Web** | `app/Controllers/{Admin,Ciudadano}`, `app/Views/{portal,admin,layouts,auth}`, `public/css`, `public/js` | PHPUnit, barrido de vistas (§10.5 del doc de metodología) y auditoría de desbordes (§9.8) |
+| **Portal y Panel Web** | `app/Controllers/{Admin,Ciudadano}`, `app/Views/{portal,admin,layouts,auth}`, `public/css`, `public/js` | PHPUnit, barrido de vistas (§12.3 de `DOC_PORTAL_PANEL.md`) y auditoría de desbordes (§11.9) |
 | **App Móvil de Agentes** | `mobile/agentes-transito/` y su exportación servida en `public/agentes/` | `node tests/auth-flow.test.cjs`, `npx tsc --noEmit` y cotejo de endpoints contra `app/Config/Routes.php` |
 
-Recorrido completo por fases, con las tablas de evidencia listas para desplegar en el documento final: `DOC_METODOLOGIA_PORTAL_PANEL.md` §11.
+Recorrido completo por fases, con las tablas de evidencia listas para desplegar en el documento final: `DOC_METODOLOGIA.md` §3.
 
 **Fase de cobros: tablero COB (12 tickets).** La fase se organizó en tres carriles con un tablero de doce tickets. Estado real al cierre de este corte:
 
@@ -385,4 +385,5 @@ La regla de carriles que hizo posible el avance en paralelo: **cada carril agreg
 Para una inmersión técnica profunda en cada componente, consulta los manuales especializados:
 * [DOCUMENTACION_BACKEND.md](./DOCUMENTACION_BACKEND.md): Arquitectura completa del Backend CodeIgniter 4, controladores, modelos, servicios, filtros de seguridad y API REST.
 * [DOCUMENTACION_APP_TRANSITO.md](./DOCUMENTACION_APP_TRANSITO.md): Manual técnico exhaustivo de la App Móvil en React Native/Expo, modo offline-first, cámara, GPS y sincronización con Supabase.
-* [DOC_METODOLOGIA_PORTAL_PANEL.md](./DOC_METODOLOGIA_PORTAL_PANEL.md): Metodología de desarrollo (incluida la gestión del equipo y el recorrido por fases para el documento final), arquitectura de software, especificación de los 7 formularios, radicación presencial, permisología del operador, diseño responsivo móvil con su auditoría de desbordes y aseguramiento de la calidad del Portal y Panel Web.
+* [DOC_PORTAL_PANEL.md](./DOC_PORTAL_PANEL.md): Documentación funcional y técnica del Portal Ciudadano y del Panel Administrativo Web, pantalla por pantalla: inventario y mapa de rutas, fichas de cada pantalla de los tres paneles, los 7 formularios de trámite, el módulo de cobros y pagos (COB-01 a COB-12), los CRUD de catálogos, las reglas de negocio y estados, la seguridad de la superficie web, el diseño responsivo móvil con su auditoría de desbordes, la estrategia de pruebas y los anexos de diccionario de datos, almacenamiento documental y despliegue serverless.
+* [DOC_METODOLOGIA.md](./DOC_METODOLOGIA.md): Metodología de desarrollo del proyecto: delimitación del alcance, coordinación del equipo, recorrido procesal por fases con su evidencia y conclusiones técnicas.
