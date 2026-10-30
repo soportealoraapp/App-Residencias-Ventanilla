@@ -1,389 +1,652 @@
 # Sistema Integral de Ventanilla Única de Movilidad y Transporte de Uriangato
-## Documentación Técnica y Operativa General
 
-**Gobierno Municipal de Uriangato, Guanajuato**  
-**Dirección de Movilidad y Transporte**  
-**Versión del Sistema:** 2.6.0 (Producción / Vercel Serverless + Supabase PostgreSQL)  
-**Clasificación:** Documento Maestro de Arquitectura, División de Módulos y Operación  
-**Fecha de Actualización:** Octubre 2026  
+## Documentación técnica y operativa general
 
----
+> **Estado del documento:** actualizado al 29 de octubre de 2026
+> **Alcance:** visión macro del sistema: propósito, actores, glosario, las tres ramas funcionales, catálogo de trámites, ciclo de vida del expediente, esquema de datos en resumen, instalación y despliegue.
+> **Fuente de verdad:** código del repositorio (`app/`, `mobile/agentes-transito/`), cifras medidas el 29-oct-2026.
+> **Documentos relacionados:** [README.md](./README.md) · [DOCUMENTACION_BACKEND.md](./DOCUMENTACION_BACKEND.md) · [DOC_PORTAL_PANEL.md](./DOC_PORTAL_PANEL.md) · [DOCUMENTACION_APP_TRANSITO.md](./DOCUMENTACION_APP_TRANSITO.md) · [DOC_METODOLOGIA.md](./DOC_METODOLOGIA.md)
 
-## 1. Identificación y Propósito del Proyecto
-
-El **Sistema Integral de Ventanilla Única de Movilidad y Transporte de Uriangato** es una plataforma gubernamental de nivel municipal diseñada para modernizar, digitalizar y transparentar la gestión de la movilidad urbana.
-
-El sistema unifica en una sola solución tecnológica:
-1. **La atención ciudadana y transportista (Portal Web):** Radicación digital de solicitudes con **autorregistro libre del ciudadano**, carga de expedientes, cálculo automatizado de tarifas y pago en línea.
-2. **La dictaminación municipal (Panel Administrativo Web):** Ventanilla única de revisión documental, **radicación presencial para el ciudadano que acude físicamente y no usa el portal**, agenda de inspecciones físicas vehiculares, prevención, requerimientos y expedición de resoluciones oficiales con validez jurídica.
-3. **La operatividad en vía pública (App Móvil para Agentes de Tránsito):** Levantamiento digital de boletas de infracción, captura georreferenciada de evidencia fotográfica con cámara y GPS, cálculo automático en UMAs y sincronización offline-first hacia la base de datos municipal.
+Este documento explica **qué hace el sistema y por qué**. El detalle técnico de clases, rutas y tablas vive en [DOCUMENTACION_BACKEND.md](./DOCUMENTACION_BACKEND.md); el detalle pantalla por pantalla de la web, en [DOC_PORTAL_PANEL.md](./DOC_PORTAL_PANEL.md); el de la app de campo, en [DOCUMENTACION_APP_TRANSITO.md](./DOCUMENTACION_APP_TRANSITO.md).
 
 ---
 
-## 2. Visión Integral y Arquitectura de las Tres Ramas
+## Índice
 
-El ecosistema está concebido bajo una arquitectura desacoplada y escalable, comunicada a través de un núcleo de datos de alta disponibilidad en **PostgreSQL (Supabase)** y almacenamiento seguro en la nube.
-
-```mermaid
-graph TB
-    subgraph RAMA_WEB [RAMA 1 & 2: PORTAL Y PANEL WEB]
-        CZ[Ciudadano / Concesionario\nNavegador Web Desktop o Móvil] -->|HTTPS| PW[Portal Ciudadano Web\n/portal/*]
-        CZF[Ciudadano que acude\nfísicamente a ventanilla] -.->|Atención presencial| ADM
-        ADM[Personal de Movilidad\nRevisores / Directores] -->|HTTPS + RBAC| PA[Panel Administrativo\n/admin/*]
-        PW --> CI4[Backend Monolítico MVC\nCodeIgniter 4.7.4 - PHP 8.2]
-        PA --> CI4
-    end
-
-    subgraph RAMA_MOVIL [RAMA 3: APP MÓVIL DE TRÁNSITOS]
-        AGT[Agente Vial en Vía Pública\nSmartphone Android / iOS] --> RN[App Tránsitos Uriangato\nReact Native / Expo SDK 57]
-        RN -->|Cache Local| AS[(AsyncStorage\nOffline-First Queue)]
-        RN -->|Expo Camera & GPS| HW[Cámara + Geolocalización]
-    end
-
-    subgraph NUCLEO_PERSISTENCIA [NÚCLEO CENTRAL DE PERSISTENCIA Y SERVICIOS]
-        CI4 -->|PgBouncer Pooler :6543\nPDO PostgreSQL| PG[(PostgreSQL Supabase\n15+ ACID)]
-        CI4 -->|cURL / Storage API REST| STG[(Supabase Storage\nBuckets: documentos, evidencias)]
-        CI4 -->|Sessions Handler| SESS[(Tabla ci_sessions)]
-        RN -->|Supabase JS Client\nUpsert Boletas| PG
-        RN -->|Upload Multipart| STG
-        RN -->|HTTP REST\n/api/agentes/login + sincronización| CI4
-    end
-```
+1. [Identificación y propósito del proyecto](#1-identificación-y-propósito-del-proyecto)
+   - [Glosario canónico](#glosario-canónico)
+   - [Actores del sistema](#actores-del-sistema)
+2. [Visión integral y arquitectura de las tres ramas](#2-visión-integral-y-arquitectura-de-las-tres-ramas)
+3. [PARTE I: Portal ciudadano y panel administrativo web](#parte-i-portal-ciudadano-y-panel-administrativo-web)
+4. [PARTE II: App móvil para agentes de tránsito](#parte-ii-app-móvil-para-agentes-de-tránsito)
+5. [PARTE III: Base de datos unificada y esquema de seguridad](#parte-iii-base-de-datos-unificada-y-esquema-de-seguridad)
+6. [PARTE IV: Guía de instalación, configuración y despliegue](#parte-iv-guía-de-instalación-configuración-y-despliegue)
+7. [Metodología de trabajo y división del equipo](#5-metodología-de-trabajo-y-división-del-equipo)
+8. [Documentos complementarios](#6-documentos-complementarios)
 
 ---
 
-## PARTE I: PORTAL CIUDADANO Y PANEL ADMINISTRATIVO WEB
+## 1. Identificación y propósito del proyecto
 
-### 1. Arquitectura y Tecnologías Web
-* **Framework Backend:** CodeIgniter 4.7.4 (línea `^4.5` en `composer.json`) sobre PHP 8.2, con arquitectura Modelo-Vista-Controlador (MVC).
-* **Motor de Plantillas:** Vistas PHP nativas con layouts desacoplados (`layouts/portal.php`, `layouts/admin.php`, `layouts/auth.php`).
-* **Frontend:** Bootstrap 5.3.2, Bootstrap Icons 1.11.1, CSS modular (`custom.css`) con variables personalizadas y JavaScript modular nativo (sin dependencias pesadas).
-* **Autenticación y Sesiones:** Sesiones persistentes basadas en base de datos (`ci_sessions`) que garantizan tolerancia a fallos en la infraestructura serverless de Vercel.
-* **Seguridad:** Control de Acceso Basado en Roles (**RBAC** con filtros `AuthFilter`, `RoleFilter`, `AdminRedirectFilter`), **autorización de grano fino por sección** (`PermisoOperadorFilter`), protección estricta contra CSRF con tokens regenerados, sanitización XSS y consultas preparadas con PDO.
+**Proyecto:** Sistema Integral de Ventanilla Única de Movilidad y Transporte del municipio de Uriangato, Guanajuato.
+**Proyecto de origen:** Residencia profesional.
+**Estado:** en operación. La fase de cobros está cerrada (COB-01 a COB-12).
 
----
+### 1.1 El problema que resuelve
 
-### 2. Catálogo Oficial de Trámites Digitalizados
+Antes del sistema, un trámite de movilidad exigía que la persona acudiera físicamente a la Dirección de Movilidad y Transporte, entregara documentación en papel, esperara una revisión manual y volviera a pagar en otra ventanilla. El expediente se seguía en carpetas físicas y el ciudadano dependía de una llamada o de una visita para saber en qué iba su trámite. Las boletas de infracción se levantaban a mano y su cobro se registraba en libros de caja distintos según el lugar de pago.
 
-El Portal Ciudadano implementa el flujo normativo para los 7 trámites oficiales de la Dirección de Movilidad:
+El sistema resuelve tres cosas a la vez:
 
-| Clave | Trámite Oficial | Fundamento / Descripción | Documentación Requerida | Costo / Tarifa |
-|---|---|---|---|---|
-| **UR-TT-T-01** | **Concesión de Transporte Público** | Alta o renovación de concesión para modalidades taxi, colectivo y mixto. | Identificación oficial, RFC, acreditación de concesión, póliza de seguro y tarjeta de circulación. | Conforme a Ley de Ingresos del ejercicio vigente. |
-| **UR-TT-T-02** | **Constancia de Despintado** | Desincorporación y baja de unidad del servicio público; requiere inspección física en patio municipal. | Baja de placas del Estado, factura de la unidad, identificación oficial y tarjeta anterior. | Gratuito / Derechos de inspección. |
-| **UR-TT-T-03** | **Orden de Plaqueo** | Emisión de oficio municipal para gestión de placas de servicio público ante SATEG Guanajuato. | Título de concesión, pago de refrendo, revista mecánica aprobada e identificación. | Cuota fija de derechos municipales. |
-| **UR-TT-T-04** | **Permiso Eventual de Transporte** | Autorización temporal de viaje fuera de ruta o servicio especial fuera de itinerario ordinario. | Póliza de seguro vigente, datos de itinerario, fecha de salida/regreso y lista de pasajeros. | Calculado según días de vigencia y tipo de vehículo. |
-| **UR-TT-T-05** | **Permiso para Cierre de Calle** | Cierre temporal de vialidad por eventos sociales, religiosos, cívicos o de obra civil. | Croquis de ubicación, anuencia vecinal, plan de vías alternas y Vo.Bo. de Tránsito. | Tarifa tabulada por horas/días y categoría vial. |
-| **UR-TT-T-06** | **Cesión de Concesión** | Traspaso legal de derechos concesionados (regulado por FeatureFlag de administración). | Comparecencia de cedente y cesionario, anuencia del H. Ayuntamiento y constancia de no adeudo. | Dictamen especial y derechos de transferencia. |
-| **UR-TT-T-07** | **Permiso de Carga y Descarga** | Maniobras de carga pesada en zonas comerciales y primer cuadro urbano en horarios restringidos. | Tarjeta de circulación, póliza vehicular, comprobante de domicilio de entrega y horarios. | Tarifa calculada según toneladas y periodo (evento/semanal/mensual). |
+1. **El ciudadano inicia y sigue su trámite en línea**, con documentos digitales, folio único y estado visible en todo momento.
+2. **La Dirección opera desde un solo panel**: revisa expedientes, dictamina, cobra, condona, cierra caja y audita.
+3. **El agente de tránsito levanta boletas en campo, sin conexión**, y las sincroniza cuando recupera señal; el juez calificador las evalúa y genera el cobro correspondiente.
 
----
+### 1.2 Alcance funcional
 
-### 3. Flujo Operativo y Ciclo de Vida de las Solicitudes
+| Función | Dónde se ejecuta |
+|---|---|
+| Inicio, seguimiento y pago de siete trámites de movilidad | Portal del ciudadano |
+| Revisión documental, dictamen, evaluación técnica y validación | Panel administrativo |
+| Cobro de trámites y multas, condonación y corte de caja | Panel administrativo y panel del juez |
+| Calificación de boletas de infracción | Panel del juez |
+| Levantamiento de boletas en campo, con evidencia fotográfica y funcionamiento sin conexión | App móvil de agentes |
+| Administración de catálogos, tarifas, concesiones, convocatorias, usuarios y agentes | Panel administrativo |
+| Bitácora de todas las acciones sensibles | Panel administrativo |
 
-El ciclo de dictamen sigue una máquina de estados determinista gobernada por la clase `EstadoSolicitudService`:
+### Glosario canónico
 
-```mermaid
-stateDiagram-v2
-    [*] --> Recibido: Ciudadano radica por el portal<br/>o el operador la registra en ventanilla
-    Recibido --> PagoPendiente: Sistema determina tarifa por derechos
-    Recibido --> EnRevision: Trámite exento de pago
-    PagoPendiente --> EnRevision: Ciudadano liquida derechos (en línea o ventanilla)
-    EnRevision --> CitaInspeccion: Trámite requiere validación física (ej. T-02)
-    CitaInspeccion --> EnRevision: Inspector emite dictamen físico
-    EnRevision --> Prevencion: Documento ilegible o requisito faltante (Observación obligatoria)
-    Prevencion --> EnRevision: Ciudadano subsana requerimiento
-    EnRevision --> Aprobado: Dictamen técnico favorable
-    EnRevision --> Rechazado: Causal jurídica o incumplimiento normativo
-    Aprobado --> Concluido: Firma y emisión de resolución digitalizada con hash SHA-256
-    Rechazado --> [*]
-    Concluido --> [*]
-```
+Se define aquí una sola vez y se enlaza desde el resto de los documentos.
 
-#### Reglas de Validación y Dictamen en el Panel Administrativo:
-1. **Observaciones Obligatorias:** Ningún revisor puede cambiar un estatus a `Prevención` o `Rechazado` sin registrar formalmente el motivo legal o deficiencia técnica detectada.
-2. **Historial Inmutable:** Cada cambio de estado queda asentado en la tabla `historial_estatus` con usuario responsable, fecha y comentario.
-3. **Generación de Expediente Oficial:** Al concluirse un trámite, el sistema genera automáticamente un documento con código de validación, firma del director y hash SHA-256 del expediente, almacenado en el bucket `documentos`.
-4. **Doble Canal de Radicación:** Una solicitud puede nacer del portal web (el ciudadano la captura y paga en línea) o de la ventanilla física (el operador la radica presencialmente). Ambos canales escriben en las mismas tablas y comparten la misma máquina de estados; el origen se registra como `origen = 'presencial'` en `solicitud_datos`.
+| Término | Definición precisa |
+|---|---|
+| **Solicitud** / **expediente** | El registro de un trámite iniciado por un ciudadano. Tiene folio, trámite, estatus, monto y fechas. «Solicitud» y «expediente» se usan como sinónimos en todo el corpus. |
+| **Folio de solicitud** | Identificador público del expediente. Es el número que el ciudadano cita al preguntar por su trámite. |
+| **Trámite** | Cada uno de los siete procedimientos oficiales, identificados como `UR-TT-T-01` a `UR-TT-T-07`. La clave combina la Unidad Responsable (UR) con el tipo de trámite (TT). |
+| **Boleta** | La infracción levantada por un agente de tránsito en campo. Tiene folio propio y datos del infractor, del vehículo, de las faltas y de las evidencias fotográficas. |
+| **Calificación** | El acto del juez calificador de determinar el monto de una boleta, asignando UMA a cada falta. Genera el cobro. |
+| **Cobro** | El documento de pago que puede originarse en una solicitud (derechos de trámite) o en una boleta (multa). Tiene folio `COB-AAAA-NNNNNN`. |
+| **Movimiento de cobro** | Cada acción registrada sobre un cobro: creación, cobro, envío a completar, cancelación o condonación. Forma el historial del cobro. |
+| **Folio de recibo** | El identificador del pago, con formato `REC-AAAA-NNNNNN`. Se entrega al pagador. |
+| **UMA** | Unidad de Medida y Actualización. Es la base de cálculo de las multas: cada falta tiene un mínimo y un máximo en UMA, y el valor vigente de la UMA los convierte a pesos. |
+| **Pronto pago** | Descuento del **40 %** aplicable cuando la multa se paga dentro de los primeros **10 días hábiles** y antes de un mes desde la infracción. |
+| **Recargo por mora** | Cargo del **5 %** mensual acumulado cuando la multa se paga después de un mes desde la infracción. |
+| **Condonación** | Renuncia total o parcial al recargo por mora. Requiere autorización de un usuario facultado y queda registrada. |
+| **Permiso de operador** | Cada una de las **14** secciones del panel administrativo que el administrador puede habilitar o retirar al rol de operador de ventanilla. |
+| **Convocatoria** | Publicación oficial de la UR-01 por la que se abre un periodo de postulación y se selecciona al ganador de una concesión de transporte. |
+| **Concesión** | El título que autoriza a una persona física o moral a prestar servicio de transporte público. Se identifica por `numero_titulo`. |
+| **Corte de caja** | El resumen de todos los cobros de un periodo, agrupados por lugar de pago, cobrador y concepto, con sus condonaciones. |
+| **ORIGEN PRESENCIAL** | Expediente iniciado en ventanilla para una persona que no usa el portal. Se registra con la misma estructura que un trámite en línea. |
 
----
+### Actores del sistema
 
-### 4. Módulos del Panel Administrativo Web
-
-1. **Dashboard General de Métricas:** KPIs en tiempo real de solicitudes recibidas, en revisión, prevenidas, concluidas y montos recaudados.
-2. **Bandeja Maestra de Solicitudes:** Búsqueda avanzada por folio, RFC, solicitante y filtros rápidos por estatus ("Recibidos", "Pago pendiente", "En revisión", "Concluidos", "Prevención").
-3. **Radicación Presencial de Solicitudes (`/admin/solicitudes/nueva`):** Registro de trámites por el funcionario cuando el ciudadano **acude físicamente a ventanilla** y no usa el portal web. Cubre los 7 trámites con asistente en dos pasos (buscar/seleccionar ciudadano → formulario dinámico del trámite). Genera el mismo folio, aplica el mismo tarifario y produce el mismo expediente que el portal; los documentos son opcionales porque pueden entregarse después. El expediente queda marcado con `origen = 'presencial'` y el ciudadano puede seguirlo en línea.
-4. **Detalle del Expediente y Dictamen:** Visor de documentos PDF e imágenes, formulario de cambio de estado con validaciones y registro de observaciones.
-5. **Módulo de Inspección de Despintado (T-02):** Agenda de citas para revisión en patio y dictamen técnico de despintado con cotejo vehicular.
-6. **Monitoreo de Infracciones de Tránsito:** Visor centralizado de boletas levantadas en campo por los agentes viales, con consulta de infractor, placas, coordenadas y fotografías de evidencia.
-7. **Administración de Catálogos y Parámetros:** Gestión de valor de la UMA, tarifas municipales, convocatorias, concesiones y formatos oficiales.
-   * **Convocatorias (`/admin/convocatorias`)**: CRUD completo — listado, alta (`/nueva`), edición, borrado, carga de bases, evaluación y selección de ganadores. **No se puede eliminar una convocatoria que ya tenga solicitudes ligadas**: el sistema lo impide y manda al operador a desligar los expedientes primero.
-   * **Concesiones (`/admin/concesiones`)**: el borrado está **guardado por la misma base de datos** — la llave foránea `solicitudes.concesion_id` es `ON DELETE RESTRICT`, así que intentar eliminar un título con historial arriba produce un error visible en vez de borrar solicitudes en cascada.
-8. **Usuarios y Ciudadanos (`/admin/usuarios`):** Alta, edición y desactivación de cuentas de ciudadanos desde la ventanilla. La baja definitiva es exclusiva del administrador.
-9. **Permisos del Operador (`/admin/permisos-operador`, solo administrador):** El administrador enciende o apaga secciones del panel para el rol `operador_ventanilla` (solicitudes, usuarios, tarifas, concesiones, formatos, auditoría, convocatorias y los tres módulos de App Tránsito) **sin programar ni crear roles nuevos**. Se persiste como JSON en `parametros_app` y lo hace cumplir `PermisoOperadorFilter` en todo el prefijo `admin`.
-10. **Bitácora de Auditoría Municipal:** Registro de todas las operaciones administrativas críticas (altas, modificaciones, cancelaciones) con IP y usuario.
-11. **Panel del Juez Calificador (`/juez`):** Superficie de solo lectura para el rol `juez_calificador`. Reúne la bandeja de boletas de infracción recibidas desde la app de campo, su detalle con evidencia fotográfica, la calificación con vista previa y una **mesa de cobros pendientes** con folio de recibo, monto exigible, descuento o recargo aplicado y lugar de pago. El juez **califica pero no cobra**: registrar el pago es acto de ventanilla o del módulo de cobros, y el panel lo refleja separando ambas columnas.
-12. **Módulo de cobros y hoja de pago (COB-05):** Cada solicitud aprobada o boleta calificada exige un **cobro** con folio propio (`COB-AAAA-NNNNNN`); cada pago efectivo deja su recibo (`REC-AAAA-NNNNNN`) como movimiento, sin sobrescribir el cobro original. Desde la solicitud, la boleta y el portal se imprime la **hoja de ayuda para el pago** (`/documentos/hoja-pago/solicitud/{folio o id}` y `/documentos/hoja-pago/boleta/{id}`), que concentra folio, concepto, desglose de multas por fundamento legal, descuento por pronto pago o recargo mensual, condonaciones y lugares de pago habilitados. La ruta solo exige sesión y el permiso fino vive en el controlador: **el personal de ventanilla imprime cualquier documento; el ciudadano únicamente los de sus propios trámites y nunca las multas**. La hoja es de apoyo: no sustituye el recibo oficial ni la referencia bancaria, que dependen de los datos pendientes de la Dirección de Finanzas (COB-04 y COB-07).
-
----
-
-## PARTE II: APP MÓVIL PARA AGENTES DE TRÁNSITO
-
-### 1. Arquitectura y Tecnologías Móviles
-* **Framework:** React Native 0.86 / Expo SDK 57 con tipado estricto en TypeScript.
-* **Enrutamiento:** Expo Router (File-based routing en carpeta `/app`).
-* **Estado y Contextos:**
-  * `AuthContext`: Gestión de credenciales del agente, placa, rol y persistencia de sesión en dispositivo.
-  * `InfraccionesContext`: Motor de persistencia local, cálculo de multas, cola de sincronización y catálogo.
-  * `ThemeContext`: Conmutación de tema Claro / Oscuro de alto contraste optimizado para uso nocturno o bajo luz solar intensa.
-* **Almacenamiento Local (Offline-First):** `AsyncStorage` como base de datos embebida en el dispositivo móvil.
-* **Conectividad:** Sincronización REST prioritaria con el **Backend Municipal en CodeIgniter 4** (`/api/agentes/login`, `/api/parametros`, `/api/checklist-infracciones`, `/api/infracciones/sincronizar`, `/api/infracciones/evidencias`), con compatibilidad de respaldo directa a Supabase. Las escrituras van protegidas por el filtro `agenteToken`.
-
----
-
-### 2. Flujo Operativo del Agente Vial en Campo
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Agente as Agente de Tránsito
-    participant App as App Móvil (Expo)
-    participant Local as AsyncStorage (Offline)
-    participant GPS as Hardware GPS
-    participant Cam as Hardware Cámara
-    participant Backend as Backend Municipal CI4
-    participant Supa as Respaldo Nube (Supabase)
-
-    Agente->>App: Inicia turno con Placa y PIN
-    App->>Backend: POST /api/agentes/login (Valida credenciales y obtiene Bearer)
-    App->>Local: Guarda sesión / Carga catálogo de 80 infracciones
-    Note over Agente,App: Detecta falta al reglamento en vía pública
-    Agente->>App: Clic en "Nueva Infracción"
-    App->>GPS: Obtiene coordenadas (lat, lng) y geocodificación
-    App->>App: Asigna folio único (BOLETA-URI-YYYY-PLACA-TS)
-    Agente->>Cam: Captura Foto 1 (Placa vehicular)
-    Agente->>Cam: Captura Foto 2 (Contexto / Hechos)
-    Agente->>Cam: Captura Foto 3 (Documento / Garantía)
-    Agente->>App: Selecciona faltas del catálogo normativo
-    App->>App: Calcula montos mínimo y máximo en UMA
-    Agente->>App: Registra garantías retenidas (placa, licencia, grúa)
-    Agente->>App: Presiona "Guardar Boleta"
-    App->>Local: Guarda boleta con estado 'pendiente'
-    alt Dispositivo con conexión activa al Backend
-        App->>Backend: POST /api/infracciones/evidencias (Sube fotos multipart)
-        App->>Backend: POST /api/infracciones/sincronizar (Inserta en boletas_infracciones)
-        App->>Local: Actualiza estado a 'sincronizada'
-        App-->>Agente: Notifica "Infracción guardada y sincronizada"
-    else Sin conexión (Offline en campo)
-        App-->>Agente: Notifica "Guardada localmente (pendiente de sincronización)"
-        Note over App,Backend: Al detectar red, la cola sincroniza automáticamente
-    end
-```
-
----
-
-### 3. Características Clave de la App Móvil
-
-1. **Autonomía Fuera de Línea (Offline-First):**
-   * El agente puede trabajar sin señal en carreteras o colonias sin cobertura.
-   * Las infracciones quedan en cola local (`@infracciones_pendientes_v1`).
-   * Al regresar a base o tener cobertura 4G/WiFi, el botón de sincronización o el proceso en segundo plano sube todas las boletas pendientes.
-
-2. **Captura Georreferenciada con Cámara y GPS:**
-   * Uso de `expo-camera` (`CameraView`) para captura instantánea sin depender de apps externas.
-   * Geoposicionamiento de alta precisión (`expo-location`) que registra latitud, longitud y dirección aproximada, blindando legalmente la infracción contra impugnaciones.
-
-3. **Cálculo Automático de Sanciones en UMA:**
-   * La app utiliza el valor vigente de la Unidad de Medida y Actualización (UMA) configurado centralmente.
-   * Permite seleccionar múltiples faltas simultáneas, calculando la sumatoria total del rango mínimo y máximo en pesos mexicanos ($ MXN).
-
-4. **Gestión de Garantías Retenidas:**
-   * Selección de garantías: Licencia de conducir, tarjeta de circulación, placa vehicular o vehículo remitido al corralón.
-   * En caso de arrastre con grúa, solicita el número de inventario de grúa y corralón correspondiente.
-
-5. **Historial y Detalle de Boletas:**
-   * Pestaña de historial con filtros por estado: Sincronizadas, Pendientes y Errores.
-   * Modal de detalle completo con visualización de evidencias fotográficas, desglose de faltas y estatus de sincronización.
-
----
-
-## PARTE III: BASE DE DATOS UNIFICADA Y ESQUEMA DE SEGURIDAD
-
-### 1. Modelo de Entidad-Relación y Tablas Principales
-
-La persistencia unificada reside en PostgreSQL alojado en Supabase:
-
-| Tabla | Módulo Principal | Propósito / Contenido |
-|---|---|---|
-| `users` | Portal / Admin | Cuentas de ciudadanos y funcionarios con perfil civil (nombre, CURP, RFC, domicilio, teléfono, INE). `password_hash` es **nullable**: una cuenta puede existir sin acceso mientras el ciudadano no reclame el expediente que ventanilla le radicó. |
-| `roles` / `user_roles` | Portal / Admin | Catálogo de los cuatro roles del sistema (`administrador`, `operador_ventanilla`, `ciudadano`, `juez_calificador`) y su asignación por cuenta. |
-| `ci_sessions` | Backend CI4 | Manejador de sesiones persistentes en base de datos para entornos serverless en Vercel. |
-| `solicitudes` | Portal / Admin | Registro maestro de trámites con folio único, estatus, monto, fechas de radicación y pago, y ligas **opcionales** a `concesion_id` y `convocatoria_id`. Ambas llaves son `ON DELETE RESTRICT` (con `ON UPDATE SET NULL`): el expediente sobrevive si el catálogo de arriba se va. |
-| `solicitud_datos` | Portal / Admin | Almacenamiento tipo EAV (Entity-Attribute-Value) de campos específicos según el tipo de trámite (vehículos, rutas, placas, motivos) y el marcador de canal `origen` (`portal` o `presencial`). |
-| `documentos` | Portal / Admin | Metadatos de archivos adjuntos: nombre original, tipo, tamaño en bytes, ruta en el almacén y hash SHA-256 de integridad. |
-| `historial_estatus` | Portal / Admin | Trazabilidad inmutable de cambios de estado, funcionario que autorizó, fecha y observaciones técnicas. |
-| `verificaciones_fisicas` | Admin (T-02) | Agenda de citas de inspección física en patio municipal, dictamen de despintado y observaciones del perito. |
-| `concesiones` | Admin | Padrón municipal de títulos de concesión: número de título, titular, ruta, placas, vigencia y estatus. Su eliminación está restringida mientras exista alguna solicitud que los mencione. |
-| `tarifas` | Admin | Conceptos de cobro con monto, factores UMA y periodo de vigencia (`vigente_desde` / `vigente_hasta`). |
-| `convocatorias` | Admin (T-01) | Convocatorias públicas de licitación de concesiones: título, periodo de registro (`periodo_registro_inicio` / `periodo_registro_fin`), bases publicadas, estatus `vigente` y selección de ganadores. El panel lleva el CRUD completo; el borrado está restringido si hay solicitudes ligadas. Cuando hay varias convocatorias abiertas, **el ciudadano elige cuál** en el formulario UR-TT-T-01. |
-| `formatos_tramite` | Portal / Admin | Repositorio de formatos oficiales descargables desde el portal. |
-| `parametros_app` | Global | Parámetros dinámicos en formato clave-valor: valor de la UMA, reglas fotográficas de la app y **permisos del operador como JSON**. |
-| `parametros_sistema` | Global | Configuración general del sistema web. |
-| `agentes_transito` | Móvil / Admin | Padrón de oficiales de tránsito dados de alta por el administrador: placa/credencial, nombre completo, contraseña encriptada, rol operativo, sector y activo. |
-| `agentes_transito_tokens` | Móvil / API | Tokens de portador emitidos en el inicio de sesión de la app móvil, con caducidad, para proteger los endpoints de sincronización. |
-| `boletas_infracciones` | Móvil / Admin | Boletas levantadas en campo: folio, agente, conductor, vehículo, coordenadas GPS, faltas, garantías y URLs de fotos. |
-| `boleta_checklist_item` | Móvil | Items de verificación asociados a cada boleta de infracción. |
-| `catalogo_infracciones` / `catalogo_infracciones_app` | Móvil / Admin | Tipificación del reglamento municipal: fundamento legal, descripción, categoría de actor y rangos de UMA mínimo/máximo. |
-| `auditoria` | Admin | Registro de eventos sensibles: inicios de sesión, cambios de permisos, resoluciones de trámites, intentos de registro y IP de origen. |
-| `cobros` | Admin / Juez | Obligación de pago derivada de una solicitud o de una boleta: folio `COB-AAAA-NNNNNN`, concepto, monto base, descuento o recargo aplicado, total, estado (`pendiente`, `aprobado`, `cancelado`), lugar de pago y marca de cobro efectivo con fecha y funcionario. Una solicitud o boleta tiene **un solo cobro vigente**. |
-| `cobro_movimientos` | Admin | Bitácora de cada movimiento de un cobro (alta, condonación, pago), con folio de recibo `REC-AAAA-NNNNNN`, importe, usuario responsable y notas. Es la fuente de verdad del historial: el cobro no se edita hacia atrás. |
-| `boleta_calificaciones` | Juez | Calificación formal de una boleta por el juez: nombre del infractor, valor de la UMA aplicado, total en UMA, monto base, si procede descuento por pronto pago o recargo, y juez responsable. |
-| `boleta_calificacion_detalles` | Juez | Desglose por falta calificada: fundamento legal, descripción, UMA mínima y máxima y valor asignado, en el orden en que se imprimen. |
-
-**Migraciones del corte de cobros.** Del lado de la aplicación, `2026-10-23-000028_AddJuezCalificadorRole` (rol del juez), `2026-10-24-000027_CreateCobrosTables` (`cobros` y `cobro_movimientos`), `2026-10-24-000030_CreateBoletaCalificaciones` (calificación y su detalle) y `2026-10-25-000029_PermitirCiudadanoSinAcceso` (`users.password_hash` nullable), junto con `2026-10-21-000025_SeedTarifasBaseFaltantes` y `2026-10-22-000026_ResyncSecuenciasPostgres`. Para la base hosteada existen sus espejos SQL en `supabase/migrations/`: `0010_tarifas_base_faltantes`, `0011_resincronizar_secuencias`, `0012_cobros`, `0013_juez_calificador_role`, `0014_ciudadano_sin_acceso` y `0015_boleta_calificaciones`. **Los dos caminos deben aplicarse juntos**: el archivo PHP corre en la suite de pruebas y en instalaciones locales, y el `.sql` en el SQL Editor de Supabase.
-
-> **Nota de operación (SQLite):** cambiar la nulabilidad de una columna obliga al Forge de CI4 a reconstruir la tabla renombrando `users` a `temp_users`. Desde SQLite 3.25 ese renombre reescribe las claves foráneas de otras tablas, así que `user_roles.user_id` terminaría apuntando a una tabla que se borra al final. La migración `000029` activa `PRAGMA legacy_alter_table` alrededor del cambio para evitarlo; está verificado con `PRAGMA foreign_key_check` e `integrity_check` en limpio.
-
----
-
-### 2. Infraestructura de Archivos y Almacenamiento
-
-El sistema usa una **fachada única** (`App\Libraries\SupabaseStorage`) con dos backends intercambiables, elegidos automáticamente según la configuración del `.env`:
-
-| Modo | Requisito | Ubicación | Entrega |
+| Actor | Rol técnico | Qué puede hacer | Superficie |
 |---|---|---|---|
-| **Nube** | `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` | Buckets privados `documentos` y `evidencias` en Supabase Storage | URL firmada emitida por Supabase |
-| **Local** | Sin credenciales (desarrollo, demostración, pruebas) | `writable/uploads/storage/{bucket}/` (o `STORAGE_LOCAL_PATH`) | URL propia firmada con **HMAC-SHA256** que sirve `ArchivosLocalesController` |
+| **Ciudadano** | `ciudadano` | Registrarse, iniciar los siete trámites, subir documentos, pagar, consultar el estado de sus expedientes y descargar sus documentos. Solo ve lo propio. | Portal |
+| **Operador de ventanilla** | `operador_ventanilla` | Todo lo operativo del panel que el administrador le haya habilitado: expedientes, cobros, usuarios, catálogos, formatos, auditoría. **No** puede eliminar registros ni cambiar permisos. | Panel administrativo |
+| **Administrador** | `administrador` | Acceso total: lo del operador más las bajas definitivas, los permisos del operador y el desglose global. Nunca se le filtra por permiso. | Panel administrativo |
+| **Juez calificador** | `juez_calificador` | Revisar boletas, calificarlas, cobrar multas, condonar recargos y cerrar su propia caja. No administra catálogos ni usuarios. | Panel del juez |
+| **Agente de tránsito** | `agente` (tabla aparte) | Iniciar sesión con placa y contraseña, levantar boletas sin conexión, fotografiar evidencias y sincronizar. | App móvil |
+| **Jefe de turno** | `jefe_turno` (tabla aparte) | Las mismas funciones del agente con visibilidad de su sector. | App móvil |
 
-**Garantía de Inmutabilidad con SHA-256:**
-Cada vez que un ciudadano o funcionario sube un documento, el backend calcula su hash criptográfico SHA-256 (`hash('sha256', $contenido)`). Este hash se almacena en la columna `documentos.hash_sha256` y previene cualquier alteración o sustitución indebida del archivo en el expediente. El nombre físico en el almacén es un **UUID v4**, nunca el nombre original, que se conserva solo como metadato.
-
-**Seguridad del modo local:** el enlace firmado caduca en 1 hora, se compara en tiempo constante (`hash_equals`) y la ruta se valida contra travesía de directorios (`..`, rutas absolutas, bytes nulos). La carpeta `writable/` no es alcanzable por URL directa.
-
-### 3. Control de Acceso: Roles y Permisos Configurables
-
-* **RBAC por rol** (`AuthFilter`, `RoleFilter`, `AdminRedirectFilter`): cuatro roles — `ciudadano` usa el portal; `administrador` y `operador_ventanilla` usan el panel; `juez_calificador` entra solo a `/juez` y no puede cobrar; los funcionarios son redirigidos automáticamente si intentan entrar al portal.
-* **Cobrar no es administrar:** la calificación de una boleta (juez) y el registro de su pago (ventanilla o módulo de cobros) son permisos distintos y quedan en tablas distintas (`boleta_calificaciones` frente a `cobro_movimientos`), de modo que ninguna cuenta puede cerrar sola el ciclo completo de una multa.
-* **Autorización de grano fino** (`PermisoOperadorFilter`): dentro del rol `operador_ventanilla`, el administrador habilita o bloquea secciones concretas del panel desde `/admin/permisos-operador`. El mapa se guarda como JSON en `parametros_app`, sin migraciones y sin crear roles nuevos. La coincidencia se hace por **prefijo de URI más largo**, así que una ruta nueva bajo un prefijo ya catalogado queda protegada automáticamente.
-* **Invariantes:** el administrador nunca se filtra; las bajas definitivas no son configurables (grupo de ruta exclusivo `role:administrador`); sin configuración guardada todo está permitido.
-* **Agentes de tránsito:** no se autorregistran ni por el portal ni desde la app; no existe un endpoint público de registro de agentes. Solo el administrador los da de alta en `/admin/app-transito`, por ser personal con capacidad de sanción.
-
-### 4. Interfaz Web Responsiva (Portal y Panel)
-
-Ambas interfaces son *mobile-first* y operan desde teléfono sin perder funcionalidad:
-
-* **Objetivos táctiles de 44 px** (`--touch-target`) y campos a 16 px, que evita el zoom automático de iOS al enfocar un formulario.
-* **Portal:** navegación inferior fija tipo app en móvil; menú colapsable con fondo sólido; montos con `clamp()` y quiebre de palabra para que no desborden.
-* **Panel:** la barra lateral se convierte en gaveta deslizante (`min(300px, 86vw)`) con fondo oscurecido y barra superior pegajosa; respeta áreas seguras en dispositivos con muesca (`viewport-fit=cover` + `env(safe-area-inset-*)`).
-* **Sin desbordes horizontales, comprobado y no supuesto:** el título de la barra del panel, los encabezados de tarjeta con insignia y las hileras de botones se corrigieron tras una **auditoría instrumental de 55 páginas medidas a 360/320/290 px**. La causa raíz fue de modelo de caja (*flexbox* no permite que un hijo se comprima por debajo de su contenido) y quedó enmascarada porque el contenedor declara `overflow-x: hidden`: el texto se recortaba **sin dejar barra de desplazamiento**. Detalle en `DOC_PORTAL_PANEL.md` §11.9.
-* **Portada:** la fotografía institucional se ancla y se reduce el desenfoque en pantallas verticales, para conservar el sujeto y el contraste del texto sin sacrificar rendimiento.
-* **Accesibilidad:** `prefers-reduced-motion`, foco visible por teclado, `lang="es"`, `aria-label` en controles de acordeón y modo de impresión que oculta la interfaz para imprimir expedientes. Páginas de error propias en español (400, 404, excepción y producción) en lugar de las del marco.
-
-> ⚠️ **Restricción de despliegue:** en Vercel solo se sirve lo declarado en el arreglo `routes` de `vercel.json`; cualquier otra petición cae en el comodín que la entrega a PHP y responde 404. **Al agregar una imagen o archivo estático a `public/`, hay que declarar su ruta** y verificarla contra la URL desplegada, porque en local `spark serve` sí sirve todo el directorio.
-
-> ⚠️ **Restricción de enrutamiento (CodeIgniter 4):** una ruta cuyo `from` coincida con el **nombre** ya asignado con `['as' => …]` a otra ruta se descarta **en silencio** — no hay error ni en arranque ni en logs. Es lo que tenía muertos los atajos `/login`, `/register` y `/logout` desde el commit inicial: su `from` era idéntico al nombre `login`/`register`/`logout` de `auth/login`. Cada atajo necesita su propio `as` (`acceso`, `registro`, `salida`). Antes de sospechar del despliegue, compruébalo con `php spark routes`: **declarada no es lo mismo que registrada**. Cobertura duradera: `tests/app/Controllers/Views/EnlacesEstaticosTest.php` coteja los `href` literales de las vistas contra el mapa real de rutas y contra `public/` (método en `DOC_PORTAL_PANEL.md` §12.4).
+Nota de diseño: los agentes de tránsito **no** son usuarios del portal. Viven en la tabla `agentes_transito`, con su propio mecanismo de autenticación por placa y token Bearer, porque su operación es de campo y no requiere acceso al portal ni al panel.
 
 ---
 
-## PARTE IV: GUÍA DE INSTALACIÓN, CONFIGURACIÓN Y DESPLIEGUE
+## 2. Visión integral y arquitectura de las tres ramas
 
-### 1. Requisitos Previos del Sistema
-* **PHP:** Versión 8.2 o superior con extensiones `pdo_pgsql`, `curl`, `mbstring`, `fileinfo`, `gd`, `intl`.
-* **Composer:** Versión 2.x para dependencias de PHP.
-* **Node.js:** Versión 18+ o 20 LTS con `npm`.
-* **Git:** Para control de versiones.
+El sistema tiene **una sola base de datos y tres superficies de acceso**. No son tres aplicaciones independientes: comparten el mismo esquema, el mismo catálogo de trámites y el mismo módulo de cobros.
 
-### 2. Instalación Local
+```
+                         ┌──────────────────────────┐
+                         │  PostgreSQL 15 (Supabase)│
+                         │  26 tablas · RLS activo  │
+                         └────────────┬─────────────┘
+                                      │
+                    ┌─────────────────┴─────────────────┐
+                    │     Backend CodeIgniter 4.7.4     │
+                    │   173 rutas · 30 controladores    │
+                    │  22 librerías · 24 modelos        │
+                    └──┬──────────┬──────────┬──────────┘
+                       │          │          │
+          ┌────────────┴──┐  ┌────┴─────┐  ┌─┴──────────────┐
+          │ Portal        │  │ Panel    │  │ API REST       │
+          │ ciudadano     │  │ admin +  │  │ /api           │
+          │ /portal       │  │ juez     │  │ (token Bearer) │
+          └───────────────┘  └──────────┘  └────────┬───────┘
+                                                   │
+                                          ┌────────┴────────┐
+                                          │ App móvil       │
+                                          │ Expo / RN       │
+                                          │ offline-first   │
+                                          └─────────────────┘
+```
 
-```bash
-# 1. Clonar el repositorio
+### 2.1 Las tres ramas
+
+| Rama | Qué resuelve | Superficie | Usuarios |
+|---|---|---|---|
+| **Rama ciudadana** | Trámites de movilidad de principio a fin | Portal web | Ciudadanos |
+| **Rama administrativa** | Operación, dictamen, cobro y control | Panel web | Administrador, operador, juez |
+| **Rama de campo** | Infracciones y evidencia | App móvil | Agentes y jefes de turno |
+
+### 2.2 Subsistemas, autenticación y persistencia
+
+| Subsistema | URL | Autenticación | Persistencia de sesión o credencial |
+|---|---|---|---|
+| Portal del ciudadano | `/portal`, `/auth` | Sesión con contraseña bcrypt | Sesión en base de datos (`ci_sessions`) |
+| Panel administrativo | `/admin` | Sesión + rol + permiso de sección | Sesión en base de datos |
+| Panel del juez | `/juez` | Sesión + rol `juez_calificador` | Sesión en base de datos |
+| API móvil | `/api` | Token Bearer de agente | Hash del token en `agentes_transito_tokens` |
+| Archivos locales firmados | `/archivos` | Firma HMAC-SHA256 con vigencia de 1 hora | No aplica |
+| Hojas de pago | `/documentos/hoja-pago` | Sesión + permiso de propiedad del expediente | Sesión en base de datos |
+
+### 2.3 Stack técnico
+
+| Capa | Tecnología | Versión |
+|---|---|---|
+| Servidor | PHP | 8.2.25 |
+| Framework | CodeIgniter | 4.7.4 |
+| Base de datos | PostgreSQL (Supabase) | 15+ |
+| Pruebas | PHPUnit | 10.5 |
+| Despliegue | Vercel serverless | `vercel-php@0.7.4` |
+| App móvil | React Native / Expo | 0.86.3 / 57.0.30 |
+| App móvil | React / TypeScript | 19.2.3 / 6.0.3 |
+| App móvil | expo-router | 57 |
+| App móvil | @supabase/supabase-js | 2.117.2 |
+| App móvil | netinfo | 12.0.1 |
+| Interfaz web | Bootstrap 5 + Bootstrap Icons | — |
+
+---
+
+## PARTE I: Portal ciudadano y panel administrativo web
+
+### 1. Arquitectura y tecnologías web
+
+El portal y el panel son **la misma aplicación CodeIgniter**, diferenciadas por el prefijo de ruta y el filtro de rol. Ambas comparten:
+
+- Los cinco layouts: `layouts/portal` (ciudadano), `layouts/admin` (panel), `layouts/juez` (juez), `auth/layout_auth` (formularios de acceso) y dos parciales reutilizables (`layouts/_ayuda`, `layouts/_estatus_badge`).
+- El paginador propio `pager_bootstrap_full.php`, para que la paginación respete el estilo institucional.
+- El helper `url_helper_custom.php`, que resuelve enlaces correctamente tanto en local como en Vercel.
+- El catálogo de estatus y las insignias de color de `_estatus_badge.php`, para que un estado se vea igual en el portal, en el panel y en el panel del juez.
+
+El panel administrativo tiene **barra lateral con jerarquía** y oculta las entradas que el operador no tiene habilitadas. El portal tiene **navegación inferior** en móvil, con `viewport-fit=cover` para pantallas con muesca.
+
+### 2. Catálogo oficial de trámites digitalizados
+
+Siete trámites, cada uno con su ficha oficial, su UR asociada y su controlador propio. Los montos provienen de las fichas oficiales actualizadas el 29-ene-2026 y aplicados por la migración `000033`; las tarifas del T-07 se multiplican por el número de camiones solicitado.
+
+| Clave | Trámite | UR | Monto oficial | Criterio de la tarifa | Formulario | Controlador |
+|---|---|---|---|---|---|---|
+| `UR-TT-T-01` | Concesión de transporte público de ruta fija | UR-01 | $9,055.20 | `base` | `concesion_transporte_form` | `TramiteConcesionTransporteController` |
+| `UR-TT-T-02` | Constancia de despintado | UR-02 | $64.90 | `base` | `constancia_despintado_form` | `TramiteDespintadoController` |
+| `UR-TT-T-03` | Orden de plaqueo para cambio de unidad | UR-03 | $0.00 (sin costo) | `base` | `orden_plaqueo_form` | `TramiteOrdenPlaqueoController` |
+| `UR-TT-T-04` | Permiso eventual de transporte | UR-04 | $156.94 | `base` | `permiso_eventual_form` | `TramitePermisoEventualController` |
+| `UR-TT-T-05` | Permiso para cierre parcial o total de calle | UR-05 | $287.00 | `base` | `cierre_calle_form` | `TramiteCierreCalleController` |
+| `UR-TT-T-06` | Cesión de concesión | — | $9,055.20 | `cesion_concesion_base` | `cesion_concesion_form` | `TramiteCesionConcesionController` |
+| `UR-TT-T-07` | Permiso de carga y descarga | — | Desde $191.00 | `{tipo}_{periodo}` | `carga_descarga_form` | `TramiteCargaDescargaController` |
+
+**Tarifas detalladas del UR-TT-T-07** (por un camión salvo indicación)
+
+| Tipo de solicitante | Día | Mes | Semestre | Año |
+|---|---|---|---|---|
+| Particular | $191.00 | $1,151.00 | $5,752.00 | $11,503.00 |
+| Empresa establecida (hasta 15 camiones) | $573.00 | $5,732.00 | $28,662.00 | $57,325.00 |
+
+El monto final se obtiene multiplicando la tarifa del periodo por el número de camiones declarado (mínimo uno). Para empresa establecida, la tarifa ya cubre hasta 15 camiones y el factor se aplica sobre ese bloque.
+
+**Documentación que solicita cada trámite**
+
+| Trámite | Documentos obligatorios |
+|---|---|
+| UR-TT-T-01 | Acta de nacimiento o acta constitutiva; Constancia de Situación Fiscal; escritura; constancia de residencia municipal; constancia de no antecedentes penales; acta constitutiva y poder notarial cuando es persona moral |
+| UR-TT-T-02 | Identificación oficial del titular; factura o documento de propiedad del vehículo |
+| UR-TT-T-03 | Identificación oficial vigente; factura o carta factura del vehículo; comprobante de revista físico-mecánica; acta constitutiva y poder notarial cuando es persona moral |
+| UR-TT-T-04 | Fondo de garantía o póliza de seguro, más los documentos de la unidad |
+| UR-TT-T-05 | Identificación oficial del solicitante |
+| UR-TT-T-06 | Según el supuesto: identificación del cedente y del cesionario; acta de nacimiento de ambos; acta de defunción o sentencia cuando el supuesto es sucesión; identificación y acta de nacimiento del beneficiario o del interesado |
+| UR-TT-T-07 | Identificación oficial; tarjeta de circulación; comprobante de domicilio o documento de carga y descarga |
+
+Todos los documentos se aceptan en PDF, JPG o PNG y hasta 10 MB. El sistema determina el tipo real por el contenido del archivo, no por su extensión; un archivo renombrado se rechaza.
+
+**Bandera del UR-TT-T-06.** El trámite de cesión está condicionado por la variable `APP_ENABLE_UR_TT_T_06`. Mientras esté apagada, el portal no ofrece su acceso, aunque el panel conserva y muestra los expedientes históricos. La bandera existe porque el procedimiento de pago de los derechos de cesión depende de una confirmación de la Tesorería Municipal.
+
+### 3. Flujo operativo y ciclo de vida de las solicitudes
+
+Todos los expedientes siguen el mismo patrón: un estado de recepción, una etapa de revisión o dictamen, una autorización de pago, el pago y la emisión del documento final. Lo que cambia entre trámites es el número de estaciones intermedias.
+
+**Patrón general**
+
+```
+Recibido → revisión o dictamen → (prevención ⇄ revisión) → autorización
+        → Pago pendiente → Pagado → documento emitido → vigencia → vencimiento
+```
+
+**Etapas y quién las provoca**
+
+| Etapa | Quién la provoca | Efecto en el expediente | Efecto en cobros |
+|---|---|---|---|
+| Recepción | Ciudadano (portal) u operador (ventanilla) | Crea el expediente en estado inicial del trámite | Ninguno |
+| Revisión documental | Operador o administrador | Puede pedir prevención o avanzar | Ninguno |
+| Prevención | Operador | Devuelve al ciudadano para subsanar; es **regresable** | Ninguno |
+| Dictamen o evaluación técnica | Operador o administrador | Avanza a la siguiente estación o rechaza | Ninguno |
+| Autorización de pago | Operador o administrador | Deja el expediente en «Pago pendiente» | **Se crea el cobro pendiente** |
+| Pago | Ciudadano (en línea) o personal (ventanilla, tesorería, juez) | Pasa a «Pagado» | El cobro pasa a aprobado y se emite recibo |
+| Emisión | Operador o administrador | Emite constancia, permiso o título | Ninguno |
+| Vigencia y vencimiento | El sistema, por fecha | «Vigente» → «Vencido» | Ninguno |
+| Rechazo | Operador o administrador | Estado terminal, con comentario obligatorio | El cobro pendiente **se cancela** |
+
+**Máquina de estados por trámite**
+
+| Trámite | Estados por los que pasa |
+|---|---|
+| UR-TT-T-01 | Recibido → En revisión → Evaluación comparativa → Seleccionado → Pago pendiente → Pagado → Título emitido. También puede caer en No seleccionado. |
+| UR-TT-T-02 | Recibido → Cita agendada → Verificado → Pago pendiente → Pagado → Constancia emitida |
+| UR-TT-T-03 | Recibido → En revisión → Aprobado |
+| UR-TT-T-04 | Recibido → En revisión documental → Documentos completos → En estudio técnico → Dictamen favorable → Pendiente de inspección → Pendiente de revista mecánica → Seguro pendiente de validación → Autorizado para pago → Pago pendiente → Pagado → Permiso emitido |
+| UR-TT-T-05 | Recibido → En validación → Pago pendiente → Pagado → Permiso emitido |
+| UR-TT-T-06 | Recibido → En revisión documental → Dictaminado aprobado → Pago pendiente → Concluido |
+| UR-TT-T-07 | Recibido → Pago pendiente → Pagado → Permiso emitido → Vigente → Vencido |
+
+Reglas que valen para todos: **una transición no declarada es imposible** y el sistema la rechaza aunque llegue por un formulario manipulado; «Rechazado» es terminal y exige comentario; «No seleccionado» del T-01 es terminal y no genera cobro; la prevención del T-04 y del T-06 sí puede regresar a revisión documental, porque el ciudadano puede subsanar.
+
+**Flujo presencial.** Un expediente puede nacer en ventanilla en tres pasos: identificar al ciudadano por CURP, elegir el trámite y capturar el formulario con los datos precargados. Si el ciudadano no existe se crea una cuenta **sin acceso al portal**; si ya existe, el sistema vincula el expediente a su cuenta. Antes de crear una cuenta nueva, el sistema advierte de homonimia para evitar duplicados. El alta presencial recibe el mismo tratamiento que un trámite en línea: mismo folio, misma máquina de estados, mismo cobro.
+
+### 4. Módulos del panel administrativo web
+
+El panel se organiza en una barra lateral con **14 entradas principales**, algunas con subenlaces. El detalle de cada pantalla —qué muestra, qué campos tiene, qué botones ofrece y qué mensajes emite— está en [DOC_PORTAL_PANEL.md](./DOC_PORTAL_PANEL.md) §5.
+
+| # | Entrada del menú | Subenlaces | Qué se hace ahí | Permiso del operador |
+|---|---|---|---|---|
+| 1 | Panel | — | Indicadores, alertas y últimos movimientos | siempre disponible |
+| 2 | Solicitudes | Bandeja, Nueva en ventanilla | Revisar, dictaminar, evaluar, validar y cambiar estatus | `solicitudes` |
+| 3 | Cobros | Listado, Banco, Corte de caja, Condonaciones | Cobrar trámites y multas, registrar pagos bancarios, condonar y cerrar caja | `cobros` |
+| 4 | Usuarios | Listado, Nuevo | Alta y edición de cuentas de ciudadano | `usuarios` |
+| 5 | Tarifas | — | Catálogo de tarifas por trámite y criterio | `tarifas` |
+| 6 | Concesiones | — | Padrón de concesiones de transporte | `concesiones` |
+| 7 | Convocatorias | — | Publicar, evaluar y seleccionar ganadores de la UR-01 | `convocatorias` |
+| 8 | Formatos | — | Formatos descargables del portal | `formatos` |
+| 9 | Documentos | — | Almacén de archivos recibidos | `documentos` |
+| 10 | Verificaciones | — | Agenda de inspecciones físicas | `verificaciones` |
+| 11 | App Tránsito | Configuración, Boletas, Catálogo | Parámetros y UMA, agentes, boletas de campo y catálogo de faltas | `app_transito_config`, `app_transito_boletas`, `app_transito_catalogo` |
+| 12 | Sesiones App | — | Estado de los accesos de la app móvil | `app_transito_sesiones` |
+| 13 | Auditoría | — | Bitácora de acciones del sistema | `auditoria` |
+| 14 | *(solo administrador)* | Permisos del operador, Desglose global | Habilitar secciones al operador y ver todas las métricas del sistema | exclusivo del administrador |
+
+**El panel del juez** es una superficie distinta con su propio diseño y solo tres entradas: boletas pendientes, cobros y corte de caja. El juez **califica y cobra**; no administra catálogos, usuarios ni configuración. Su detalle está en [DOC_PORTAL_PANEL.md](./DOC_PORTAL_PANEL.md) §6.
+
+**El módulo de cobros**, presente en el panel administrativo y en el del juez con el mismo código, cubre doce capacidades funcionales: cobro de trámites y de multas desde un solo listado; folios correlativos de cobro y de recibo; historial de movimientos por cobro; envío a completar cuando falta documentación; cancelación con motivo; registro de pagos en BanBajío por referencia bancaria; búsqueda por referencia; condonación del recargo con autorización; bitácora de condonaciones; corte de caja por rango de fechas; exportación del corte en CSV; y hoja de pago imprimible con desglose y lugares de pago.
+
+**El desglose global** es exclusivo del administrador: reúne todas las métricas del sistema —expedientes por estatus y por trámite, origen del trámite, serie mensual, tiempos de atención, vigencias, documentos, cuentas, auditoría, actividad de la app de tránsito, verificaciones, estado de los catálogos y alertas operativas— con navegación directa a la lista ya filtrada de cada una.
+
+---
+
+## PARTE II: App móvil para agentes de tránsito
+
+La especificación completa de la app —siete pantallas, cinco componentes, tres contextos, cuatro servicios y los contratos de sincronización— está en [DOCUMENTACION_APP_TRANSITO.md](./DOCUMENTACION_APP_TRANSITO.md). Aquí se resume qué hace y por qué existe.
+
+### 1. Arquitectura y tecnologías móviles
+
+La app está construida con **Expo SDK 57.0.30** sobre **React Native 0.86.3**, **React 19.2.3** y **TypeScript 6.0.3**, con `expo-router 57` para la navegación por archivos. Se compila para Android mediante EAS y también se exporta a **web** para servirse bajo `/agentes`, de modo que un agente con navegador pero sin tienda de aplicaciones pueda usarla.
+
+### 2. Flujo operativo del agente en campo
+
+```
+Inicio de sesión (placa + contraseña) → token Bearer
+        │
+        ▼
+Descarga y cachea catálogo de faltas y parámetros
+        │
+        ▼
+Levanta la boleta: datos del vehículo, del infractor,
+selección de faltas del catálogo y hasta tres fotografías
+        │
+        ▼
+Guarda en el dispositivo (funciona sin red)
+        │
+        ▼
+Al recuperar señal: sube evidencias y sincroniza la boleta
+        │
+        ▼
+La boleta llega al panel como «recibida»
+        │
+        ▼
+El juez la califica y se genera el cobro
+```
+
+### 3. Características clave
+
+| Característica | Por qué importa |
+|---|---|
+| **Funciona sin conexión** | En calle la señal es intermitente. La app guarda la boleta en el dispositivo y la envía después; nunca se pierde una infracción por falta de red. |
+| **Catálogo local de respaldo** | El catálogo de faltas viaja compilado en la app además de descargarse del servidor, de modo que un primer arranque sin red sigue permitiendo levantar una boleta. |
+| **Fotografías obligatorias** | Cada boleta exige hasta tres evidencias: placa, contexto y documento. El parámetro `fotos_obligatorias` y el modo estricto deciden cuántas y si se puede guardar sin ellas. |
+| **Sondeo de conectividad** | La app pregunta `HEAD /` para saber si hay red. El backend respondió a ese sondeo con una ruta explícita porque CI4 no resuelve `HEAD` contra las rutas `GET`, y sin ella la app se declaraba sin conexión para siempre. |
+| **Sesión en almacenamiento seguro** | El token se guarda cifrado en el dispositivo (`expo-secure-store`), no en texto plano. |
+| **Almacenamiento en caché con versiones** | Catálogo y parámetros se cachean con claves versionadas, de modo que un cambio de estructura no lee datos del formato anterior. |
+| **Respaldo directo a Supabase** | Si la API no responde, la app intenta leer el catálogo y los parámetros directamente de Supabase. Esto depende por completo de que las políticas RLS estén activas: la clave pública de Supabase no protege nada por sí sola. |
+| **El servidor manda sobre el estado** | La app puede decir lo que quiera sobre el estado de una boleta; el backend siempre la deja en «recibida». |
+
+---
+
+## PARTE III: Base de datos unificada y esquema de seguridad
+
+El diccionario completo de las 26 tablas, con columnas, llaves y políticas, está en [DOCUMENTACION_BACKEND.md](./DOCUMENTACION_BACKEND.md) §11. Aquí se presenta el modelo por dominios y el resumen.
+
+### 1. Modelo de entidad-relación por dominios
+
+**Identidad** — quién es quién y qué puede hacer
+
+```
+roles ◄── user_roles ──► users
+                          ▲
+                          │ ciudadano_id, usuario_id, cobrado_por, created_by
+                          └──────────────┐
+agentes_transito ◄── agentes_transito_tokens
+```
+
+**Expediente** — el trámite y su historia
+
+```
+users ◄──── solicitudes ────► concesiones
+              │      └──────► convocatorias
+              ├── solicitud_datos        (formulario clave-valor)
+              ├── documentos             (archivos + hash)
+              ├── historial_estatus      (traza de cada cambio)
+              └── verificaciones_fisicas (agenda de inspección)
+```
+
+**Catálogos** — lo que se administra y no cambia todos los días
+
+```
+tarifas · concesiones · convocatorias · formatos_tramite
+catalogo_infracciones · catalogo_infracciones_app · boleta_checklist_item
+```
+
+**Cobros** — el dinero y su rastro
+
+```
+solicitudes ──┐
+              ├──► cobros ──► cobro_movimientos
+boletas_infracciones ─┘   │
+        │                 └──► boleta_calificaciones ──► boleta_calificacion_detalles
+        └──► agentes_transito
+```
+
+**Campo** — tránsito
+
+```
+agentes_transito ──► boletas_infracciones ──► boleta_calificaciones
+                          │
+                          └──► agentes_transito_tokens
+```
+
+**Plataforma** — configuración y fiscalización
+
+```
+parametros_app · parametros_sistema · auditoria · ci_sessions
+```
+
+### 2. Resumen de las 26 tablas
+
+| Tabla | Propósito en una línea | PK |
+|---|---|---|
+| `roles` | Catálogo de los cinco roles del sistema | `id` |
+| `users` | Cuentas de ciudadano y de personal interno | `id` |
+| `user_roles` | Asignación de roles por usuario | `id` |
+| `concesiones` | Padrón de títulos de concesión de transporte | `id` |
+| `solicitudes` | Expediente del trámite con folio, estatus y monto | `id` |
+| `solicitud_datos` | Respuestas del formulario de cada trámite | `id` |
+| `documentos` | Archivos del expediente con su huella SHA-256 | `id` |
+| `tarifas` | Catálogo de precios por trámite y criterio | `id` |
+| `historial_estatus` | Traza completa de cambios de estado | `id` |
+| `auditoria` | Bitácora de acciones sensibles del sistema | `id` |
+| `convocatorias` | Publicaciones de la UR-01 con sus bases | `id` |
+| `verificaciones_fisicas` | Agenda de inspecciones y sus resultados | `id` |
+| `formatos_tramite` | Formatos descargables del portal | `id` |
+| `catalogo_infracciones` | Catálogo normativo de faltas | `id` |
+| `parametros_sistema` | Parámetros técnicos no editables | `id` |
+| `boleta_checklist_item` | Casillas del checklist de la boleta física | `id` |
+| `agentes_transito` | Agentes y jefes de turno de la app móvil | `id` |
+| `parametros_app` | Parámetros operativos de la app y permisos del operador | `id` |
+| `catalogo_infracciones_app` | Catálogo de faltas que consume la app | `id` |
+| `boletas_infracciones` | Boletas levantadas en campo | `id` |
+| `agentes_transito_tokens` | Hashes de los tokens de acceso de la app | `id` |
+| `cobros` | Cobros de trámites y multas con su desglose | `id` |
+| `cobro_movimientos` | Historial de acciones sobre cada cobro | `id` |
+| `boleta_calificaciones` | Calificación judicial de una boleta | `id` |
+| `boleta_calificacion_detalles` | Cada falta calificada con su UMA asignada | `id` |
+| `ci_sessions` | Sesiones web, necesarias en serverless | `id` |
+
+Además existen tres tablas heredadas de una etapa anterior (`ciudadanos`, `administradores`) y la tabla de control de migraciones de Supabase (`migrations`). El código actual no las usa.
+
+### 3. Infraestructura de archivos y almacenamiento
+
+El sistema usa **almacenamiento dual**, decidido en tiempo de ejecución:
+
+| Modo | Cuándo se usa | Dónde guarda | Cómo se sirve |
+|---|---|---|---|
+| **Supabase Storage** | Producción con Supabase configurado | Buckets `documentos`, `formatos`, `ine` | URL firmada con vigencia de 1 hora |
+| **Disco local** | Desarrollo, o respaldo cuando Supabase falla | `writable/uploads/storage/{bucket}/` | `/archivos/{token}` con firma HMAC-SHA256 |
+
+Tres buckets cubren todos los archivos del sistema. Los documentos de expediente, los formatos descargables y las imágenes de INE van a Supabase Storage; solo las fotografías de evidencia de las boletas se guardan en `public/uploads/infracciones/{folio}/`, porque la app las referencia directamente y necesita una URL estable.
+
+**Reglas de seguridad de los archivos**
+
+- El tipo se determina por el contenido, nunca por la extensión del nombre.
+- Los documentos se almacenan con un nombre UUID; el nombre original solo se conserva para mostrarlo.
+- Cada documento guarda el hash SHA-256 de su contenido, lo que permite detectar si el archivo cambió después de subirse.
+- Una descarga nunca expone la ruta interna: el controlador genera la URL firmada y redirige.
+- La URL local caduca en una hora y la firma cubre bucket, ruta y vencimiento; no se puede adivinar ni reutilizar en otro archivo.
+
+### 4. Control de acceso: roles y permisos configurables
+
+El control de acceso ocurre en **cinco filtros** encadenados, no en la vista:
+
+| Filtro | Decide |
+|---|---|
+| `auth` | Si hay sesión iniciada |
+| `role` | Si el usuario tiene alguno de los roles exigidos por la ruta |
+| `permisoOperador` | Si el operador de ventanilla tiene habilitada esa sección |
+| `adminRedirect` | Si el personal interno debe ser devuelto a su propia superficie |
+| `agenteToken` | Si el token de la app móvil es válido |
+
+**Los 14 permisos configurables del operador** se agrupan en cuatro bloques funcionales:
+
+| Bloque | Permisos |
+|---|---|
+| Operación de expedientes | `solicitudes`, `documentos`, `verificaciones` |
+| Dinero | `cobros` |
+| Administración | `usuarios`, `tarifas`, `concesiones`, `convocatorias`, `formatos`, `auditoria` |
+| App de tránsito | `app_transito_config`, `app_transito_boletas`, `app_transito_catalogo`, `app_transito_sesiones` |
+
+**Cuatro invariantes que definen el modelo de autorización**
+
+1. **El administrador nunca se filtra.** Tiene acceso total por rol, sin excepción.
+2. **Las bajas definitivas no son configurables.** Eliminar usuarios, agentes, boletas, faltas o convocatorias es exclusivo del administrador, al margen de los permisos.
+3. **Cobrar no es administrar.** La ventanilla puede cobrar, completar y cancelar un cobro, pero condonar un recargo exige además una autorización verificada en el servicio.
+4. **Sin configuración guardada, todo está permitido.** Es el comportamiento inicial: un despliegue nuevo no deja al operador sin acceso.
+
+El efecto de retirar un permiso es doble: la entrada desaparece del menú **y** el filtro devuelve al operador a su panel si escribe la dirección a mano. Nunca es solo cosmético.
+
+### 5. Interfaz web responsiva
+
+El portal y el panel están construidos sobre Bootstrap 5 con un sistema de tokens propio (colores institucionales, tipografía, espaciados). El portal incorpora **navegación inferior en móvil** y `viewport-fit=cover` para pantallas con muesca; el panel usa una **gaveta lateral** que se colapsa en pantallas pequeñas.
+
+Se respetan las preferencias de accesibilidad del sistema operativo: `prefers-reduced-motion` desactiva animaciones, y las hojas de pago tienen una hoja de estilo de impresión que oculta la navegación y respeta los saltos de página.
+
+---
+
+## PARTE IV: Guía de instalación, configuración y despliegue
+
+### 1. Requisitos previos
+
+| Requisito | Versión mínima | Nota |
+|---|---|---|
+| PHP | 8.1 (probado con 8.2.25) | El repositorio incluye `php82/` para Windows, de modo que no hace falta instalar PHP en el sistema |
+| Extensiones PHP | `pdo_pgsql`, `pgsql`, `mbstring`, `intl`, `json`, `curl` | Imprescindibles para Supabase y para los acentos |
+| Composer | 2.x | Instalación de dependencias del backend |
+| Node.js | 20 LTS | Compilación de la app móvil |
+| PostgreSQL | 15+ | Provisto por Supabase; no requiere instalación local |
+| Git | 2.x | Control de versiones |
+
+### 2. Instalación local
+
+**Paso 1 — Clonar el repositorio**
+
+```
 git clone https://github.com/soportealoraapp/App-Residencias-Ventanilla.git
 cd App-Residencias-Ventanilla
+```
 
-# 2. Instalar dependencias del backend PHP
-composer install --no-interaction --prefer-dist
+**Paso 2 — Instalar dependencias del backend**
 
-# 3. Configurar variables de entorno
-cp .env.example .env
-# Configurar POSTGRES_URL, SUPABASE_URL, SUPABASE_ANON_KEY en .env
-# El diccionario de variables está en el propio .env.example, agrupado por sección.
+```
+./php82/php.exe composer.phar install
+```
 
-# 4. Instalar y compilar la App Móvil (versión Web para /agentes/)
-cd mobile/agentes-transito
-npm install --legacy-peer-deps
-# Usar el script, no `expo export` suelto: además de exportar vuelve a copiar
-# los .ttf y localiza el shell HTML a español (falla si queda texto en inglés).
-cd ../..
+En un entorno con PHP y Composer en el `PATH`, basta `composer install`.
+
+**Paso 3 — Configurar variables de entorno**
+
+Copiar `.env.example` a `.env` y completar las secciones `DATABASE`, `SUPABASE PROJECT` y `ENCRYPTION`. El archivo de ejemplo está comentado por sección y acepta tres formatos de variable de base de datos, de modo que el mismo archivo sirve en local y en Vercel.
+
+Dos advertencias:
+
+- **Nunca versionar `.env`.** Las claves de servicio de Supabase omiten las políticas RLS.
+- **La clave de cifrado debe generarse localmente** con `./php82/php.exe spark key:generate` y conservarse: si cambia, los valores cifrados previamente dejan de descifrarse.
+
+**Paso 4 — Aplicar migraciones y datos base**
+
+```
+./php82/php.exe spark migrate
+./php82/php.exe spark db:seed DatabaseSeeder
+./php82/php.exe scripts/verificar_esquema_bd.php
+```
+
+El tercer comando compara el esquema real con el del repositorio. Si reporta tablas faltantes, no se debe continuar: un esquema divergente es la causa más común de fallos intermitentes.
+
+**Paso 5 — Compilar la app móvil para `/agentes` (opcional)**
+
+```
 powershell -File scripts/exportar_agentes_web.ps1
-
-# 5. Iniciar servidor de desarrollo
-php spark serve --port 8080
 ```
 
-* **Portal Ciudadano:** `http://localhost:8080/portal/dashboard`
-* **Panel Administrativo:** `http://localhost:8080/admin/dashboard`
-* **App de Tránsito Web:** `http://localhost:8080/agentes/`
+Usar el script, no `expo export` suelto: además de exportar, vuelve a copiar las tipografías `.ttf` y traduce el shell HTML al español. Si queda texto en inglés, el script falla a propósito.
 
-### 3. Despliegue en Producción (Vercel CI/CD)
-El proyecto está configurado para despliegue continuo en Vercel Serverless mediante `vercel.json` y `scripts/vercel-install.sh`:
-* Cualquier push a la rama `main` dispara automáticamente la instalación de Composer, la compilación de la app móvil en Expo y el despliegue del runtime PHP sin intervención manual.
-* El arreglo `routes` de `vercel.json` es la única puerta de entrada de los recursos estáticos; todo lo no declarado se delega a la función PHP.
+**Paso 6 — Levantar el servidor de desarrollo**
 
-### 4. Verificación con Pruebas Automatizadas
-```bash
-./vendor/bin/phpunit                       # Linux / macOS
-./php82/php.exe vendor/bin/phpunit         # Windows con el PHP del repositorio
 ```
-La suite consta de **347 casos de prueba y 1358 aserciones** repartidas en 37 clases (control de acceso, permisos del operador, los 7 trámites, tarifario dinámico, máquina de estados, radicación presencial, API REST de agentes, almacenamiento local, renderizado de vistas, desglose del tablero, **CRUD de convocatorias, protección del catálogo de concesiones, cotejo de los enlaces estáticos de las vistas, alta de ciudadano sin acceso con aviso de homónimos, reclamo de cuenta desde el autorregistro y hoja de pago con su permiso fino**). Corre contra SQLite en memoria con prefijo `db_`, de modo que **jamás toca la base institucional**. Requiere migraciones aplicadas. Duración de referencia: ~2 min 20 s con 30 MB de memoria.
-
-La app móvil tiene su propio verificador, independiente de PHPUnit:
-
-```bash
-cd mobile/agentes-transito
-node tests/auth-flow.test.cjs     # 18 casos: login, caducidad de token, cola offline, manejo de 401
-npx tsc --noEmit                  # tipos del cliente; debe salir limpio
+./php82/php.exe spark serve
 ```
 
-El procedimiento completo para comprobar que la app móvil sigue sincronizada con el backend (contrato de API, ausencia de rupturas, versión y haz exportado) está documentado en `DOC_PORTAL_PANEL.md` §12.5.
+El sistema queda disponible en `http://localhost:8080`.
+
+### 3. Despliegue en producción (Vercel)
+
+El despliegue es serverless. Tres archivos gobiernan el comportamiento:
+
+| Archivo | Papel |
+|---|---|
+| `vercel.json` | Tabla de reescritura de rutas y cabeceras de seguridad |
+| `api/index.php` | Punto de entrada de la función serverless; equivalente a `public/index.php` |
+| `scripts/vercel-install.sh` | Instalación de dependencias en el entorno de compilación |
+
+**Tres diferencias obligadas respecto de un servidor tradicional**
+
+1. **Puerto de base de datos 6543, no 5432.** Vercel bloquea las conexiones salientes al puerto directo de PostgreSQL. La variable `POSTGRES_URL` debe apuntar al *connection pooler* de Supabase (PgBouncer). Un puerto equivocado no produce un error de credenciales: produce un tiempo de espera agotado.
+2. **Sesiones en base de datos.** El contenedor serverless no conserva el sistema de archivos entre invocaciones, así que la sesión se guarda en la tabla `ci_sessions`.
+3. **Lista blanca de archivos estáticos.** Cualquier recurso nuevo que no esté contemplado en la tabla de reescritura de `vercel.json` no se sirve desde el sistema de archivos: lo recibe CodeIgniter y responde 404. Cuando una imagen o una tipografía «desaparece» en producción pero se ve en local, el problema está en esa tabla, no en el HTML.
+
+Además, `api/index.php` corrige `SCRIPT_NAME` y `PHP_SELF` antes de arrancar el framework: Vercel los entrega como `/api/index.php` y CodeIgniter recortaría ese prefijo de todas las direcciones, rompiendo el enrutado.
+
+**Advertencia sobre escritura en disco.** En serverless el disco es efímero. Cualquier archivo escrito en `writable/` o en `public/uploads/` desde el contenedor puede perderse en el siguiente despliegue. Por eso los documentos de expediente van a Supabase Storage y solo las evidencias de boleta usan la ruta pública local.
+
+### 4. Datos de demostración
+
+| Cuenta | Usuario | Contraseña | Superficie |
+|---|---|---|---|
+| Administrador | `admin` | `12345678` | Panel administrativo |
+| Operador de ventanilla | `operador1` | `12345678` | Panel administrativo |
+| Ciudadano | `ciudadano` | `12345678` | Portal |
+| Juez calificador | `juez1` | `12345678` | Panel del juez |
+| Agente de tránsito | `AGT-204` | `transito2026` | App móvil |
+| Agente de tránsito | `AGT-107` | `transito2026` | App móvil |
+| Jefe de turno | `JEF-001` | `transito2026` | App móvil |
+| Ciudadanos de demostración | los genera `DemoFuncionamientoSeeder` | `Demo2026` | Portal |
+
+**Estas cuentas existen solo para demostración.** Antes de un despliegue real deben eliminarse o rotarse sus contraseñas.
+
+El seeder del juez calificador adicional (`JuezCalificadorDemoSeeder`) no crea nada si no se le proporcionan las variables `JUEZ_DEMO_USERNAME`, `JUEZ_DEMO_EMAIL` y `JUEZ_DEMO_PASSWORD`; la contraseña debe tener al menos ocho caracteres con letra y dígito.
+
+### 5. Verificación con pruebas automatizadas
+
+| Bloque | Comando | Resultado medido el 29-oct-2026 |
+|---|---|---|
+| Backend PHP | `./php82/php.exe vendor/bin/phpunit` | **438 casos, 1 876 aserciones, 43 clases**: OK |
+| Catálogo de rutas | `./php82/php.exe spark routes` | **173 rutas** registradas |
+| Esquema de base | `./php82/php.exe scripts/verificar_esquema_bd.php` | 26 tablas definidas, 29 existentes, resultado correcto |
+| App móvil, flujo de autenticación | `node tests/auth-flow.test.cjs` | **18 de 18** correctos |
+| App móvil, tipos | `npx tsc --noEmit` | sin errores |
+| Verificación integral local | `scripts/test_local.ps1` | ejecuta los bloques anteriores en orden |
+
+La suite del backend cubre cobros, condonación, corte de caja, calificación de boletas, hoja de pago, máquina de estados de los siete trámites, cálculo de montos con UMA, tarifario, permisos del operador, alta presencial, validación UR-05, panel del juez, API móvil, renderizado de vistas y dos pruebas de infraestructura: que todo enlace estático de las vistas resuelva contra el mapa de rutas, y que el enrutado serverless funcione.
+
+El desglose por clase está en [DOCUMENTACION_BACKEND.md](./DOCUMENTACION_BACKEND.md) §13.3.
+
+### 6. Estado conocido y pendientes
+
+| Tema | Estado | Acción prevista |
+|---|---|---|
+| Desfase de migraciones | CI4 en `000033`, Supabase SQL en `0018` | Documentado con procedimiento de sincronización; no se corrige en esta actualización porque el esquema coincide |
+| Pago en línea | `BanbajioMockGateway` es un simulador | Se sustituirá cuando la Tesorería Municipal formalice la integración; los controladores no cambiarán |
+| Trámite de cesión (UR-TT-T-06) | Deshabilitado por bandera | Se habilita cuando se confirme el procedimiento de pago de derechos |
+| Tablas heredadas | `ciudadanos`, `administradores` sin uso | Se conservan por sus datos históricos |
+| Mediciones responsivas | Registradas con su fecha de medición | Deben repetirse con capturas nuevas si se exige evidencia actualizada |
 
 ---
 
-## 5. Metodología de Trabajo y División del Equipo
+## 5. Metodología de trabajo y división del equipo
 
-El proyecto se desarrolló con una **metodología iterativa e incremental**: primero el andamiaje común (autenticación, roles, expediente maestro, enrutamiento, sesiones, almacenamiento) y después iteraciones que se construyeron, probaron y validaron por separado (un trámite, luego el canal presencial, luego la permisología, luego la adaptación móvil y su auditoría). Cada iteración cerró con evidencia reproducible —una corrida de PHPUnit, una prueba de humo contra la URL desplegada o una medición en el navegador— y no con una revisión visual.
+El proyecto se desarrolló por fases con entregables verificables: análisis del marco normativo, diseño del modelo de datos, construcción del backend, construcción de las tres superficies, módulo de cobros y documentación. Cada fase cerró con pruebas automatizadas y evidencia de ejecución.
 
-**Tres responsables de módulo, un solo repositorio.** Se evaluaron tableros virtuales de gestión, pero la dinámica real del equipo (tres personas, bloqueos técnicos que se resolvían en minutos y no en días) pedía coordinación directa, así que la división de módulos, la asignación de responsabilidades y el desbloqueo técnico se llevaron mediante **comunicación síncrona en un grupo de mensajería instantánea (WhatsApp)**. El compromiso metodológico que hace defendible esa elección es que **todo acuerdo de conversación se materializó en un commit, una prueba o una línea de documentación**, que es la parte auditable.
+La metodología completa —fases, criterios de aceptación por entrega, evidencia por commit y trazabilidad con el informe de residencia— está en [DOC_METODOLOGIA.md](./DOC_METODOLOGIA.md). Ese documento es la referencia para cualquier evaluación que requiera reconstruir qué se hizo, cuándo y con qué comprobación.
 
-| Rama | Superficie del repositorio | Cómo se verifica |
+Resumen del estado por fase:
+
+| Fase | Estado | Evidencia |
 |---|---|---|
-| **Backend** | `app/Config`, `app/Models`, `app/Libraries`, `app/Filters`, `app/Database/Migrations`, `api/` | PHPUnit (§4) y `php spark migrate` |
-| **Portal y Panel Web** | `app/Controllers/{Admin,Ciudadano}`, `app/Views/{portal,admin,layouts,auth}`, `public/css`, `public/js` | PHPUnit, barrido de vistas (§12.3 de `DOC_PORTAL_PANEL.md`) y auditoría de desbordes (§11.9) |
-| **App Móvil de Agentes** | `mobile/agentes-transito/` y su exportación servida en `public/agentes/` | `node tests/auth-flow.test.cjs`, `npx tsc --noEmit` y cotejo de endpoints contra `app/Config/Routes.php` |
+| Análisis y diseño | cerrada | Modelo de datos y catálogo de trámites |
+| Backend y base de datos | cerrada | 26 tablas, 173 rutas, suite de 438 casos |
+| Portal ciudadano | cerrada | Siete trámites operables de principio a fin |
+| Panel administrativo | cerrada | 14 módulos con permisos configurables |
+| Panel del juez | cerrada | Calificación y cobro de multas |
+| App móvil de tránsito | cerrada | Offline-first, sincronización y respaldo local |
+| Módulo de cobros (COB-01 a COB-12) | cerrada | Matriz de doce capacidades con evidencia de ruta |
+| Documentación integral | cerrada | Seis documentos con cabecera de estado y cifras medidas |
 
-Recorrido completo por fases, con las tablas de evidencia listas para desplegar en el documento final: `DOC_METODOLOGIA.md` §3.
-
-**Fase de cobros: tablero COB (12 tickets).** La fase se organizó en tres carriles con un tablero de doce tickets. Estado real al cierre de este corte:
-
-| Ticket | Estado | Alcance entregado o motivo de espera |
-|---|---|---|
-| **COB-01** | Entregado | `CobroService`, `CobroModel` y las tablas `cobros` / `cobro_movimientos` con sus folios `COB-` y `REC-` (migraciones `000027` y `0012`). |
-| **COB-09** | Entregado | Rol `juez_calificador`, migraciones `000028` y `0013`, panel `/juez` de solo consulta. |
-| **COB-10** | Entregado | `CalificarBoletaService` y el desglose de la calificación (migraciones `000030` y `0015`). |
-| **COB-08** | Entregado en este corte | Ciudadano registrado con solo su nombre: CURP opcional, cuenta sin contraseña, aviso de homónimos y reclamo posterior desde el autorregistro (migración `000029` y espejo `0014`). |
-| **COB-05** | Entregado en este corte | Hoja de ayuda para el pago, imprimible en tamaño carta, para trámites y multas, con su permiso fino y sus accesos desde panel, portal y panel del juez. |
-| **COB-02**, **COB-03** | Pendiente | Inciden en `CobroService`; no se intervinieron para respetar la regla de carriles y evitar choques con la hoja de pago, que solo consume ese servicio. |
-| **COB-04** | Pendiente por datos | Referencia de pago del convenio con BanBajío. Mientras no exista, la hoja imprime «Se entrega al formalizar el convenio» en lugar de una referencia inventada. |
-| **COB-06**, **COB-07** | Pendiente por datos | Requieren el tope de condonación autorizado, el formato del recibo y del oficio reales y la fecha de la sesión con el juez. La hoja de pago ya contempla la consulta por folio, pero la imprime **sin enlace** para no publicar una ruta muerta. |
-| **COB-11**, **COB-12** | Pendiente | Cierre de la fase: faltan por asignar en el tablero del equipo. |
-
-La regla de carriles que hizo posible el avance en paralelo: **cada carril agrega métodos y archivos nuevos, pero no modifica lo que otro ya entregó**. La hoja de pago lo ejemplifica: `HojaPagoService` consume `CobroService` y `ResolverMontoInfraccionService` sin tocar una línea de ambos.
+**División del trabajo.** El proyecto se organizó en cuatro frentes: base de datos y backend, portal y panel web, app móvil de tránsito, y documentación y pruebas. Los frentes compartieron un único contrato: el catálogo de trámites y la máquina de estados, definidos una sola vez en el backend para que las tres superficies no pudieran divergir.
 
 ---
 
-## 6. Documentos Complementarios Específicos
+## 6. Documentos complementarios
 
-Para una inmersión técnica profunda en cada componente, consulta los manuales especializados:
-* [DOCUMENTACION_BACKEND.md](./DOCUMENTACION_BACKEND.md): Arquitectura completa del Backend CodeIgniter 4, controladores, modelos, servicios, filtros de seguridad y API REST.
-* [DOCUMENTACION_APP_TRANSITO.md](./DOCUMENTACION_APP_TRANSITO.md): Manual técnico exhaustivo de la App Móvil en React Native/Expo, modo offline-first, cámara, GPS y sincronización con Supabase.
-* [DOC_PORTAL_PANEL.md](./DOC_PORTAL_PANEL.md): Documentación funcional y técnica del Portal Ciudadano y del Panel Administrativo Web, pantalla por pantalla: inventario y mapa de rutas, fichas de cada pantalla de los tres paneles, los 7 formularios de trámite, el módulo de cobros y pagos (COB-01 a COB-12), los CRUD de catálogos, las reglas de negocio y estados, la seguridad de la superficie web, el diseño responsivo móvil con su auditoría de desbordes, la estrategia de pruebas y los anexos de diccionario de datos, almacenamiento documental y despliegue serverless.
-* [DOC_METODOLOGIA.md](./DOC_METODOLOGIA.md): Metodología de desarrollo del proyecto: delimitación del alcance, coordinación del equipo, recorrido procesal por fases con su evidencia y conclusiones técnicas.
+| Documento | Qué responde | A quién sirve |
+|---|---|---|
+| [README.md](./README.md) | Qué es el sistema, cómo arrancarlo, cuentas de demostración, pruebas e índice documental | Todo el equipo y el evaluador |
+| [DOCUMENTACION_GENERAL.md](./DOCUMENTACION_GENERAL.md) | Este documento: visión macro, actores, glosario, trámites, ciclo de vida e instalación | Dirección, jurado, nuevo desarrollador |
+| [DOCUMENTACION_BACKEND.md](./DOCUMENTACION_BACKEND.md) | Única fuente de verdad técnica: configuración, controladores, modelos, librerías, filtros, API, rutas, migraciones y diccionario de datos | Backend y mantenimiento |
+| [DOC_PORTAL_PANEL.md](./DOC_PORTAL_PANEL.md) | Ficha funcional de cada pantalla web: qué muestra, campos, acciones, validaciones, estados, mensajes y casos límite | Operación, experiencia de usuario y control de calidad |
+| [DOCUMENTACION_APP_TRANSITO.md](./DOCUMENTACION_APP_TRANSITO.md) | App móvil: pantallas, componentes, contextos, offline-first, contratos de sincronización y compilación | Móvil y operación en campo |
+| [DOC_METODOLOGIA.md](./DOC_METODOLOGIA.md) | Metodología, fases, evidencia y trazabilidad con el informe de residencia | Residencia profesional |
+| [REPORTE_COB-10_2026-10-24.md](./REPORTE_COB-10_2026-10-24.md) | Reporte técnico de la fase COB-10 | Referencia histórica de la fase de cobros |
+
+### Cómo leer esta documentación
+
+Si busca **entender el sistema**, lea este documento en orden.
+Si busca **modificar el backend**, vaya directo a [DOCUMENTACION_BACKEND.md](./DOCUMENTACION_BACKEND.md).
+Si busca **operar una pantalla**, consulte la ficha correspondiente en [DOC_PORTAL_PANEL.md](./DOC_PORTAL_PANEL.md).
+Si busca **levantar el sistema**, vaya a la PARTE IV de este documento y luego al [README.md](./README.md).
+Si busca **reconstruir la historia del proyecto**, consulte [DOC_METODOLOGIA.md](./DOC_METODOLOGIA.md).
+
+En todo el corpus se aplica la misma regla: **el código es la fuente de verdad**, y toda cifra lleva su método de medición y su fecha.

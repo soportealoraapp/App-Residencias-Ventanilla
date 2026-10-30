@@ -1,16 +1,21 @@
 # Metodología de Desarrollo y Coordinación del Proyecto
 ## Sistema Integral de Ventanilla Única de Movilidad y Transporte de Uriangato
 
+> **Estado del documento:** actualizado al 29 de octubre de 2026
+> **Alcance:** el proceso del proyecto: delimitación, coordinación del equipo, recorrido por fases con su evidencia, cierre de la fase de cobros, la fase de documentación y el mantenimiento documental
+> **Fuente de verdad:** código del repositorio (`app/`, `mobile/agentes-transito/`) y su historial de `git`
+> **Documentos relacionados:** [General](./DOCUMENTACION_GENERAL.md) · [Backend](./DOCUMENTACION_BACKEND.md) · [Portal y Panel](./DOC_PORTAL_PANEL.md) · [App Tránsito](./DOCUMENTACION_APP_TRANSITO.md) · [README](./README.md)
+
 **Documento Académico y Técnico de Residencia Profesional**
 **Carrera:** Ingeniería en Sistemas Computacionales / Ingeniería en Software
 **Institución Receptora:** Dirección de Movilidad y Transporte — H. Ayuntamiento de Uriangato, Gto.
 **Autor:** Residente Profesional
-**Versión del Documento:** 1.0
+**Versión del Documento:** 2.0
 **Fecha:** Octubre 2026
 
-> **Alcance de este documento.** Aquí vive el proceso: cómo se delimitó el trabajo, cómo se coordinó el equipo y en qué orden se construyó el sistema. El detalle funcional y técnico del Portal Ciudadano y del Panel Administrativo Web está en [`DOC_PORTAL_PANEL.md`](./DOC_PORTAL_PANEL.md), y el del backend completo en [`DOCUMENTACION_BACKEND.md`](./DOCUMENTACION_BACKEND.md).
+> **Alcance de este documento.** Aquí vive el proceso: cómo se delimitó el trabajo, cómo se coordinó el equipo, en qué orden se construyó el sistema, cómo se cerró la fase de cobros y cómo se produjo y se mantiene este corpus documental. El detalle funcional y técnico del Portal Ciudadano y del Panel Administrativo Web está en [`DOC_PORTAL_PANEL.md`](./DOC_PORTAL_PANEL.md), el del backend completo en [`DOCUMENTACION_BACKEND.md`](./DOCUMENTACION_BACKEND.md) y el de la app de campo en [`DOCUMENTACION_APP_TRANSITO.md`](./DOCUMENTACION_APP_TRANSITO.md).
 >
-> **Convención de referencias.** Las referencias del tipo `§x.y` remiten a `DOC_PORTAL_PANEL.md`; las secciones de este documento se citan por nombre.
+> **Convención de referencias.** Las referencias del tipo `§x.y` remiten a `DOC_PORTAL_PANEL.md`; las secciones de este documento se citan por nombre. Las cifras de este documento se copiaron de una ejecución verificable con corte al 29-oct-2026; si alguna discrepa del código, gana el código.
 
 ---
 
@@ -30,6 +35,9 @@
    * 3.6. Correspondencia con las Figuras del Documento Final
    * 3.7. Referencias Tecnológicas Utilizadas
    * 3.8. Fase de Cobros (COB-01 a COB-12): Del Folio de Campo al Recibo de Pago
+     * 3.8.6. Cierre de la Fase: Evidencia por Commit
+   * 3.9. Fase de Documentación y Cierre
+   * 3.10. Mantenimiento Documental
 4. [Conclusiones Técnicas](#4-conclusiones-técnicas)
 5. [Cómo Usar Este Documento en el Informe Final](#5-cómo-usar-este-documento-en-el-informe-final)
 
@@ -86,10 +94,11 @@ El resto de la documentación de este repositorio está organizada **por tema t�
 | Fase | Qué se hizo | Evidencia verificable en el repositorio | Detalle temático |
 |---|---|---|---|
 | **1. Análisis y levantamiento en campo** | Reuniones en Presidencia (área de TI) y entrevista en Tránsito y Seguridad | Directiva de framework (§3.1.1), catálogos y módulos derivados del proceso de ventanilla (§3.1.2) | §§1, 4, 5 |
-| **2. Diseño y validación de interfaces** | Portal ciudadano y panel; iteración sobre los 7 trámites; *mobile-first* | `app/Views/` (76 archivos de vista), 4 *layouts*, `public/css/custom.css` (2 140 líneas), auditoría de desbordes (§11.9) | §11 |
+| **2. Diseño y validación de interfaces** | Portal ciudadano y panel; iteración sobre los 7 trámites; *mobile-first* | `app/Views/` (76 archivos de vista), 4 *layouts* y 2 parciales compartidos, `public/css/custom.css` (2 140 líneas), auditoría de desbordes del 19-oct-2026 (§11.9) | §11 |
 | **3. Diseño e implementación de la base de datos** | Modelado relacional, su construcción automatizada y la corrección de la deriva con la base instalada | 33 migraciones PHP en `app/Database/Migrations/`, 19 migraciones SQL en `supabase/migrations/`, verificador `scripts/verificar_esquema_bd.php` | Anexo A, §3.3.4 |
 | **4. Programación del backend y reglas de negocio** | MVC, gestión documental, seguridad por roles, tarifario, máquina de estados, cobros y calificación judicial | 30 controladores, 24 modelos, 22 archivos en `app/Libraries/` (20 servicios + 2 excepciones de dominio), 5 filtros propios | §§1, 9, 10, Anexo B |
-| **5. Frontend y despliegue en producción** | Vistas conectadas al controlador, pruebas end-to-end, publicación serverless | `vercel.json`, `scripts/vercel-install.sh`, tabla `ci_sessions`, 43 clases de prueba con 410 métodos | §11, §12, Anexo C |
+| **5. Frontend y despliegue en producción** | Vistas conectadas al controlador, pruebas de extremo a extremo, publicación serverless | `vercel.json`, `scripts/vercel-install.sh`, tabla `ci_sessions`, 43 clases de prueba con 410 métodos declarados (438 casos ejecutados y 1 876 aserciones en la corrida del 29-oct-2026) | §11, §12, Anexo C |
+| **6. Documentación y cierre** | Actualización integral del corpus documental contra el código y auditoría de rutas, clases, cifras y prosa | Los seis documentos de la raíz con cabecera de estado, `php spark routes` (173 rutas), `scripts/verificar_esquema_bd.php`, corrida completa de PHPUnit | §3.9, §3.10 |
 
 ---
 
@@ -484,11 +493,139 @@ A eso se suma **un pendiente de programación con requisito ya definido**: COB-0
 * **Migraciones:** `000027` (cobros), `000028` (rol del juez), `000029` (ciudadano sin acceso), `000030` (calificación judicial), `000031` (cobros de solicitudes pendientes), `000032` (referencia bancaria) y `000033` (fichas oficiales de tarifas), con sus espejos `supabase/migrations/0012` a `0018`.
 * **Rutas nuevas:** `/juez`, `/juez/boletas`, `/juez/boletas/(:num)`, `/juez/boletas/(:num)/vista-previa`, `/juez/boletas/(:num)/calificar`, `/juez/cobros` (reuso del listado de cobros), `/documentos/hoja-pago/solicitud/{folio o id}`, `/documentos/hoja-pago/boleta/(:num)` y el grupo completo `/admin/cobros` (§2.2).
 * **Pruebas nuevas:** `CobroServiceTest`, `CalificarBoletaServiceTest`, `HojaPagoServiceTest`, `CorteCajaServiceTest`, `CondonacionRecargoTest`, `CondonacionControllerTest`, `CuentaCiudadanoServiceTest`, `ReferenciaBancariaProvisionalTest`, `DocumentosPagoTest`, `CobrosControllerTest`, `RegistroCurpOpcionalTest`, `JuezCalificadorAccessTest`, más las ampliaciones de `SolicitudPresencialTest` y `AuthFormsRenderTest` (§12.2).
-* **Suite completa:** 43 clases y 410 métodos de prueba en el repositorio (§12.1). La cifra vigente se cita desde la corrida del día, no desde este documento.
+* **Suite completa:** 43 clases y 410 métodos declarados en el repositorio (§12.1), que en la corrida del 29-oct-2026 se ejecutaron como 438 casos con 1 876 aserciones. La cifra vigente se cita desde la corrida del día, no desde este documento.
 * **Verificación de migraciones:** el esquema completo se aplicó sobre una base SQLite en archivo y se comprobó además el alta de un usuario **sin contraseña** con rol de ciudadano, que es el corazón de COB-08.
 * **Prueba de humo local:** `/`, `/auth/login`, `/auth/register`, `/agentes` responden 200; `/portal`, `/juez` y la hoja de pago sin sesión redirigen al acceso (302) en lugar de fallar.
 
 > **Error de proceso que conviene dejar registrado:** al intentar verificar las migraciones con `php spark migrate -g tests` se descubrió que `MigrationRunner::setGroup()` **no reconecta** la base —el constructor ya se conectó al grupo por omisión—, de modo que el comando corrió contra la base institucional. El daño se midió (filas de historial insertadas, todas de migraciones idempotentes `CREATE TABLE IF NOT EXISTS`, sin cambio de esquema real), se revirtió con un script transaccional que verificó primero que el lote tuviera **exactamente** los registros esperados y se comprobó después que el historial volviera a su número original de filas. La verificación definitiva se hizo con un grupo de base registrado en tiempo de ejecución contra un archivo SQLite temporal. **Lección: una bandera de comando no es una garantía de aislamiento; hay que comprobarlo contra la base que se está tocando.**
+
+#### 3.8.6. Cierre de la Fase: Evidencia por Commit
+
+La fase se declara **cerrada el 26-oct-2026**, y no por acuerdo verbal sino porque cada ticket entregado tiene un commit identificable y una prueba automatizada que lo sostiene. La tabla siguiente es la matriz de cierre: se puede recorrer en el historial de `git` y verificar ticket por ticket.
+
+| Ticket | Commit | Fecha | Qué quedó verificado |
+|---|---|---|---|
+| **COB-09** | `987ddfe` | 23-oct-2026 | Rol `juez_calificador`, grupo `/juez` y acceso rápido desde el login |
+| **COB-01** | `462230c` | 24-oct-2026 | Tablas `cobros` y `cobro_movimientos`, folios `COB-`/`REC-`, alta, cobro y cancelación |
+| **COB-10** | `b9a1e1f` + `a5f6b13` | 24 y 25-oct-2026 | Calificación de boletas con vista previa, generación del cobro y separación de validaciones para PostgreSQL |
+| **COB-08** | `d8534ce` | 24-oct-2026 | Alta de ciudadano sin acceso, CURP opcional y reclamo de cuenta |
+| **COB-05** | `0b27102` | 24-oct-2026 | Hoja de ayuda para el pago imprimible de trámites y multas |
+| **COB-02** | `00ec709` | 25-oct-2026 | Listado de cobros con botones por estatus |
+| **COB-03** | `ea15976` | 25-oct-2026 | Corte de caja por día, semana, mes o rango, con CSV |
+| **COB-04** | `fec0a29` | 25-oct-2026 | Referencia bancaria provisional y registro de pagos de BanBajío |
+| **COB-12** | `c109066` · `2b1a84e` · `c1f226e` | 26-oct-2026 | Protección de acciones de cierre de calle, acciones de seguimiento por trámite y listado de boletas |
+| **COB-11** | `0b6ff29` | 26-oct-2026 | Condonación de recargos con motivo escrito, autorización por rol y trazabilidad |
+| **COB-06** | — | — | **Parcial:** el folio `REC-…` existe; falta el formato del talonario oficial que solo la dependencia puede entregar |
+| **COB-07** | — | — | **Pendiente:** consulta pública del adeudo por folio sin sesión; citada en el código y deliberadamente sin enlace para no publicar un enlace muerto |
+
+**Lectura honesta del cierre:** diez de doce tickets están entregados y probados; los dos restantes **no son deuda técnica del equipo**, sino alcances que dependen de un dato, un formato o una autorización externos (§3.8.4). La fase se cierra porque lo pendiente no bloquea la operación: hoy se cobra en ventanilla, se condona con traza, se corta caja y se imprime la hoja de pago.
+
+A eso se suman los commits documentales del mismo corte —`d23dff3` (24-oct, «estado actual de la fase de cobros en los cinco documentos») y `afa0d38` (28-oct, documentación del subsistema web pantalla por pantalla)—, que son el antecedente inmediato de la fase descrita en §3.9.
+
+---
+
+### 3.9. Fase de Documentación y Cierre
+
+#### 3.9.1. El problema que abrió la fase
+
+Al cerrar cobros se descubrió que el corpus documental había derivado del código. No era un problema de redacción sino de **verdad**: un documento que describe clases inexistentes es peor que no tener documento, porque el desarrollador nuevo confía en él y pierde el día buscando un archivo que nunca existió. Los hallazgos se midieron, no se intuyeron:
+
+| # | Hallazgo | Evidencia de la discrepancia |
+|---|---|---|
+| 1 | El backend describía clases **inexistentes** (`StorageService`, `PdfGeneratorService`, `AuditService`) | `app/Libraries/` contiene `SupabaseStorage`, `HojaPagoService` y `AuditoriaModel`; esas tres clases no existen en ningún punto del repositorio |
+| 2 | Modelos citados con nombres que no existen | `DocumentoModel` y `HistorialEstatusModel` frente a `SolicitudDocumentoModel` e `SolicitudHistorialModel` del documento |
+| 3 | El backend documentaba **8 controladores**; el repositorio tiene **30** | `app/Controllers/` |
+| 4 | Documentaba **8 librerías**; existen **22** | `app/Libraries/` |
+| 5 | Métricas de prueba obsoletas (**347 casos / 1 358 aserciones / 37 clases**) | La corrida real da 43 clases, 410 métodos, 438 casos y 1 876 aserciones |
+| 6 | Se afirmaba que el panel del juez era **«de solo lectura»** | `app/Config/Routes.php` tiene `vista-previa`, `calificar` y el grupo completo de cobros del juez: **el juez califica y cobra** |
+| 7 | El número de permisos del operador no aparecía o estaba desfasado | `PermisosOperador::CATALOGO` define **14** claves |
+| 8 | El diccionario de datos omitía más de una docena de tablas | `tarifas`, `concesiones`, `convocatorias`, `verificaciones_fisicas`, `formatos_tramite`, `parametros_app`, `catalogo_infracciones_app`, `boletas_infracciones`, `agentes_transito`, `boleta_calificaciones`, `cobro_movimientos` y otras |
+| 9 | El desfase de migraciones no estaba documentado | 33 migraciones PHP (hasta `000033`) frente a 19 SQL en Supabase (hasta `0018`) |
+| 10 | La app móvil describía un catálogo, unas llaves de almacenamiento y un respaldo en la nube que **no existen** | El catálogo real tiene 78 casillas en 15 categorías, las llaves son `@agentes_transito_*` y el código dice expresamente que **no hay respaldo directo a Supabase** de las boletas |
+| 11 | No se documentaban las rutas de infraestructura | `/archivos/(:segment)`, `HEAD /` y `/agentes/(:any)` |
+| 12 | No se documentaban los seeders operativos ni el seeder del juez por variables de entorno | 11 seeders en `app/Database/Seeds/` y `JuezCalificadorDemoSeeder` |
+| 13 | Mediciones responsivas citadas sin fecha ni método | «55 páginas» sin fecha de corte |
+
+#### 3.9.2. El método: de la medición a la auditoría
+
+La actualización no se redactó «de memoria»: se ejecutó en cuatro pasos, cada uno con su salida verificable.
+
+| Paso | Qué se hizo | Salida verificable |
+|---|---|---|
+| **1. Medir** | Correr los gates antes de escribir una línea: pruebas, mapa de rutas, esquema y verificación de la app | `438 casos / 1 876 aserciones` en 2 min 07 s; `173 rutas` registradas; verificador de esquema sin faltantes; 18 casos y `tsc` limpio en móvil |
+| **2. Inventariar** | Fijar **una sola cifra canónica** por concepto (rutas, controladores, vistas, librerías, modelos, filtros, tablas, migraciones, seeders, permisos, pantallas) | Tabla de inventario que todos los documentos citan igual |
+| **3. Redactar por dependencias** | Primero el backend (fuente de verdad técnica), luego general, portal y app; al final `README` y esta metodología | Seis documentos con responsabilidad única y punteros cruzados en lugar de duplicación |
+| **4. Auditar** | Gates de rutas, clases, cifras, prosa y enlaces sobre el corpus completo | Cero clases fantasma, una cifra por concepto, cero caracteres fuera de rango, cierres de bloque en número par |
+
+#### 3.9.3. Reglas de redacción adoptadas
+
+1. **El código es la fuente de verdad.** Todo dato numérico o de comportamiento se obtiene del repositorio o de una ejecución; ningún dato se hereda de un documento anterior sin verificar.
+2. **Cada cifra lleva su método y su fecha.** Se escribe «medido con `php spark routes`, 29-oct-2026», no «hay muchas rutas».
+3. **Una cifra por concepto en todo el corpus.** Si un documento dice 43 clases, los cinco restantes dicen 43 o no dicen nada.
+4. **Responsabilidad única por documento.** El diccionario completo de datos vive solo en el backend; las fichas de pantalla solo en el documento del portal y el panel; los contratos de la app solo en el documento móvil. Duplicar es la forma más rápida de generar deriva.
+5. **Sin código embebido.** El nivel de detalle acordado es funcional exhaustivo: ruta, rol, qué muestra, campos, acciones, validaciones, estados, mensajes y casos límite, más fragmentos de consola inevitables (instalación, migración, pruebas).
+6. **Lo no verificable se fecha o se reformula.** Una medición responsiva, una captura o una impresión visual se conserva con su fecha y su método; nunca se presenta como un hecho atemporal.
+
+#### 3.9.4. Los tres desacuerdos que hubo que resolver
+
+| Desacuerdo | Cómo se resolvió |
+|---|---|
+| **410 métodos contra 438 casos** | No era un error: 410 es el conteo estático de métodos `test*` en 43 clases y 438 es lo que la corrida ejecuta, porque los proveedores de datos expanden varios métodos. Se publican ambos con su explicación en lugar de elegir uno y romper la trazabilidad |
+| **14 permisos contra 15** | Ganó el código: `PermisosOperador::CATALOGO` tiene **14** claves. Se corrigió la cifra en los seis documentos |
+| **«55 páginas» sin fecha** | Se fechó la medición (19-oct-2026) y se advirtió que las pantallas de cobros y del panel del juez son **posteriores** a ella y deben volver a medirse si se exige evidencia actualizada |
+
+#### 3.9.5. Resultado: el corpus al cierre
+
+| Documento | Responsabilidad única | Estado |
+|---|---|---|
+| `README.md` | Puerta de entrada: qué es, estado, arranque, cuentas demo, pruebas, mapa del repositorio e índice documental | Actualizado |
+| `DOCUMENTACION_GENERAL.md` | Visión macro, glosario, catálogo de trámites, ciclo de vida, esquema de datos en resumen, instalación y despliegue | Actualizado |
+| `DOCUMENTACION_BACKEND.md` | Única fuente de verdad técnica: configuración, controladores, modelos, librerías, filtros, API, rutas, migraciones y diccionario de las 26 tablas | Reescrito |
+| `DOC_PORTAL_PANEL.md` | Fichas de las 64 pantallas web, cobros, catálogos, seguridad de superficie, diseño responsivo y pruebas | Ampliado |
+| `DOCUMENTACION_APP_TRANSITO.md` | App de campo: pantallas, componentes, contextos, *offline-first*, contratos de sincronización y compilación | Reescrito |
+| `DOC_METODOLOGIA.md` | Proceso, fases, evidencia, cierre y mantenimiento documental | Actualizado |
+
+**El criterio de aceptación no fue «que se vea completo» sino que resista la auditoría:** ningún nombre de clase citado puede faltar en `app/` ni en `mobile/`, ninguna de las 173 rutas puede quedar fuera del mapa, ninguna cifra puede aparecer con dos valores y ningún enlace interno puede quedar roto.
+
+---
+
+### 3.10. Mantenimiento Documental
+
+La documentación se actualizó una vez; el riesgo real es que vuelva a derivar. Esta sección existe para que eso no dependa de la memoria de nadie.
+
+#### 3.10.1. Jerarquía de la verdad
+
+1. **La petición del usuario o de la dependencia**, cuando cambia el alcance acordado.
+2. **El código y la base de datos del repositorio**, que es la fuente de verdad operativa.
+3. **La salida de los comandos del proyecto** (`php spark routes`, `phpunit`, `verificar_esquema_bd.php`), que es la evidencia de que el código hace lo que dice.
+4. **Los documentos**, que describen lo anterior y nunca lo sustituyen. Un documento desactualizado no es autoridad: es una tarea pendiente.
+
+#### 3.10.2. Qué se actualiza y cuándo
+
+| Si cambia… | Se actualiza |
+|---|---|
+| Una ruta, un controlador, un modelo, una librería o un filtro | `DOCUMENTACION_BACKEND.md` (y el inventario del `README` si cambia el total) |
+| Una pantalla, un botón, un mensaje o un permiso del operador | `DOC_PORTAL_PANEL.md` (ficha y, si aplica, §1.7 y §9.5) |
+| Una pantalla, un servicio, una llave de almacenamiento o un endpoint de la app | `DOCUMENTACION_APP_TRANSITO.md` |
+| Una migración o una tabla | `DOCUMENTACION_BACKEND.md` §11 y el estado de desfase de migraciones |
+| Una regla de negocio de dinero, estados o trámites | `DOCUMENTACION_GENERAL.md` y el documento del subsistema que la ejecuta |
+| Un comando, una cuenta demo o una cifra de pruebas | `README.md` |
+| Una fase, un ticket o una lección de proceso | Este documento |
+
+#### 3.10.3. Los gates que deben pasar antes de publicar
+
+Se ejecutan sobre el corpus completo, no sobre el documento que se tocó:
+
+1. **Rutas:** las 173 literales de `app/Config/Routes.php` aparecen textualmente en el mapa del backend y están referenciadas en el índice de pantallas.
+2. **Clases:** ningún nombre citado falta en el repositorio y ningún archivo de `app/Libraries`, `app/Models`, `app/Controllers` o `app/Filters` queda sin mención.
+3. **Cifras:** una sola cifra por concepto en todo el corpus, y siempre copiada de una ejecución, no de un documento previo.
+4. **Prosa:** sin caracteres de escrituras no latinas, sin palabras pegadas, con los cierres de bloque en número par y correspondencia exacta entre índice y encabezados.
+5. **Enlaces:** todos los `./DOC_*.md` y las anclas resuelven.
+6. **Coherencia funcional:** el juez califica y cobra en los cuatro documentos donde aparece; los permisos son 14; las boletas no se respaldan en Supabase; «cobrar no es administrar» se mantiene como invariante.
+
+#### 3.10.4. La disciplina que hace que esto funcione
+
+El mantenimiento documental no se sostiene con una promesa de «actualizar después». Se sostiene con una regla de trabajo: **un cambio que altera el comportamiento observable no se considera terminado hasta que su documento dice lo mismo que el código**, y la verificación se hace con el mismo comando que usa la suite, no con una relectura. La lección de §3.8.5 y de la presente fase es la misma en dos terrenos distintos: *una bandera de comando no garantiza aislamiento, y un documento completo no garantiza veracidad.* Ambas cosas se comprueban contra la fuente, no contra la apariencia.
 
 ---
 
@@ -501,16 +638,19 @@ La arquitectura construida para el **Portal Ciudadano y Panel Administrativo Web
 3. **Mantenibilidad y Escalabilidad:** El desacoplamiento mediante patrones de diseño (EAV para trámites heterogéneos, *feature flags* para control de versiones y *gateway* para pagos) proporciona al H. Ayuntamiento una base tecnológica sólida. El catálogo declarativo de campos (§5.5.2) demostró su valor concreto: agregar un trámite nuevo al canal presencial es **añadir una entrada al arreglo**, no escribir un controlador y una vista nuevos.
 4. **Cobertura del Mundo Real (Canal Híbrido):** El sistema no asume un ciudadano digitalmente competente. La coexistencia del portal de autogestión (§4) y la radicación presencial con validez idéntica (§5.5), ambas escribiendo en el mismo expediente y compartiendo folio, tarifario y máquina de estados, es la decisión que convierte la plataforma en una herramienta **usable por la totalidad de la población** y no solo por su segmento conectado.
 5. **Usabilidad Multidispositiva como Requisito, no como Adorno:** El diseño *mobile-first* con objetivos táctiles de 44 px, navegación inferior en el portal, gaveta lateral con áreas seguras en el panel y una portada que degrada el desenfoque para priorizar contraste (§11) responde al dispositivo real con el que la gente tramita. La corrección del servidor de borde para recursos estáticos (§11.7) dejó registrada una restricción de arquitectura que de otra forma se manifestaría como fallos silenciosos en producción.
-6. **Calidad Comprobable:** La verificación no es una afirmación sino un resultado reproducible: **43 clases y 410 métodos de prueba**, sobre un harness SQLite aislado de los datos institucionales (§12), con cobertura de permisos, estados, montos dinámicos, validaciones por trámite, renderizado de vistas, candados de integridad del padrón, cotejo estático de enlaces, blindajes de almacenamiento y, desde la fase de cobros, de la creación y cobro de adeudos, la calificación judicial de boletas, el alta de ciudadano sin acceso, la condonación de recargos, el corte de caja y la hoja de pago.
+6. **Calidad Comprobable:** La verificación no es una afirmación sino un resultado reproducible: **43 clases y 410 métodos declarados**, que en la corrida del **29-oct-2026** se ejecutaron como **438 casos** con **1 876 aserciones** en 2 min 07 s sobre un harness SQLite aislado de los datos institucionales (§12), con cobertura de permisos, estados, montos dinámicos, validaciones por trámite, renderizado de vistas, candados de integridad del padrón, cotejo estático de enlaces (155 enlaces literales de las vistas contra el mapa real de rutas), blindajes de almacenamiento y, desde la fase de cobros, de la creación y cobro de adeudos, la calificación judicial de boletas, el alta de ciudadano sin acceso, la condonación de recargos, el corte de caja y la hoja de pago.
 7. **Medir en Lugar de Suponer:** Tres hallazgos del cierre del proyecto no habrían aparecido con una revisión visual: el título de todas las páginas administrativas se pintaba vacío (§12.3), el texto largo del panel se recortaba en silencio por debajo del *overflow-x: hidden* (§11.9) y el botón "Iniciar sesión" de la página 404 propia llevaba a otro 404 porque CI4 descartaba el atajo por colisión de nombre con la ruta (§2.3, §12.4). El cuarto caso es inverso y también vale: la queja de que el haz publicado de la app móvil seguía en inglés se descartó con evidencia —reexportar produjo salida **idéntica byte a byte** y el bundle servido en producción no contenía esa cadena—, lo que demuestra que medir también sirve para no "arreglar" algo que no está roto. Los tres defectos reales se detectaron con instrumentación —barrido de HTML producido, medición a 360/320/290 px con página de control y sondeo de la URL desplegada— y los tres se convirtieron en candados automatizados para que no puedan regresar.
 8. **El Proceso También Es Resultado:** La secuencia iterativa e incremental (§2) y el levantamiento presencial en dos vertientes (§3.1) no son un preámbulo del trabajo sino parte de él: explican por qué el andamiaje soportó siete trámites sin reescribirse, por qué el esquema de datos es portable entre PostgreSQL y SQLite y por qué el panel habla el vocabulario operativo de la dependencia en lugar de imponer otro.
+9. **La Documentación También Se Mide:** El cierre del proyecto incluyó una fase de documentación (§3.9) que no consistió en «escribir más» sino en **verificar lo ya escrito contra el código**. Encontró tres clases inexistentes, ocho controladores documentados frente a treinta reales, cifras de prueba obsoletas en tres documentos y una contradicción funcional grave —un panel judicial descrito como de solo lectura que en el código califica y cobra—. La lección es la misma que dejó la verificación de migraciones (§3.8.5): **un corpus documental completo no es un corpus veraz**; la única forma de saberlo es correr los comandos y contar.
 
 ---
 
 ## 5. Cómo Usar Este Documento en el Informe Final
 
-* **Capítulo de metodología (proceso por fases):** copiar y desplegar desde el **capítulo 3**, que ya está redactado en orden temporal y con sus tablas de evidencia.
-* **Capítulos de arquitectura, base de datos y seguridad:** remitirse a `DOC_PORTAL_PANEL.md` §1, §10 y a los anexos A, B y C, que son el detalle técnico.
-* **Capítulos de pantallas, cobros y CRUDs:** remitirse a `DOC_PORTAL_PANEL.md` §3 a §9; cada pantalla tiene su ficha con URL, controlador, vista, datos que inyecta y acciones.
-* **Capítulo de resultados y análisis (datos cuantitativos):** la tabla de antes/después de la auditoría móvil (§11.9 de `DOC_PORTAL_PANEL.md`), la cifra de la suite (§12.1), la verificación de sincronía entre ramas (§12.5) y el número de migraciones y tablas (§3.3 de este documento, Anexo A del otro).
-* **Antes de entregar:** volver a ejecutar `vendor/bin/phpunit --no-coverage` y citar la cifra obtenida en ese momento, no la de este documento.
+* **Capítulo de metodología (proceso por fases):** copiar y desplegar desde el **capítulo 3**, que ya está redactado en orden temporal y con sus tablas de evidencia. La fase de cobros se cierra con su matriz ticket → commit (§3.8.6), que es la evidencia más fácil de defender ante un sínodo porque se verifica en el historial de `git`.
+* **Capítulo de arquitectura, base de datos y seguridad:** remitirse a `DOCUMENTACION_BACKEND.md` (controladores, modelos, librerías, filtros, API y diccionario completo de las 26 tablas) y a `DOC_PORTAL_PANEL.md` §1 y §10 con los anexos A, B y C.
+* **Capítulos de pantallas, cobros y CRUDs:** remitirse a `DOC_PORTAL_PANEL.md` §3 a §9; cada una de las **64 pantallas web** tiene su ficha con URL, controlador, vista, datos que inyecta y acciones, y el índice de §1.7 permite localizarlas sin recorrer el documento.
+* **Capítulo de la aplicación de campo:** `DOCUMENTACION_APP_TRANSITO.md` contiene las **7 pantallas móviles** con su ficha, los cinco contratos de sincronización y el catálogo de 78 casillas; es el documento que sostiene la parte del informe dedicada a la operación en vía pública.
+* **Capítulo de resultados y análisis (datos cuantitativos):** la tabla de antes/después de la auditoría móvil (§11.9 de `DOC_PORTAL_PANEL.md`, medición del 19-oct-2026 sobre 55 pantallas), la cifra de la suite (§12.1: 43 clases, 410 métodos, 438 casos y 1 876 aserciones), la verificación de sincronía entre ramas (§12.5) y el número de rutas, migraciones y tablas (§3.3 de este documento, §11 de `DOCUMENTACION_BACKEND.md`).
+* **Capítulo de mantenimiento y trabajo futuro:** `DOC_METODOLOGIA.md` §3.8.4 y §3.10 describen, respectivamente, lo que queda pendiente por dependencia externa y cómo se conserva la documentación cuando el equipo cambie.
+* **Antes de entregar:** volver a ejecutar `./php82/php.exe vendor/bin/phpunit --no-coverage` y citar la cifra obtenida en ese momento, no la de este documento; y si se agregó o cambió una pantalla, correr los gates de §3.10.3 antes de imprimir.

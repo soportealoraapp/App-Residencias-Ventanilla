@@ -5,10 +5,15 @@
 **Carrera:** Ingeniería en Sistemas Computacionales / Ingeniería en Software
 **Institución Receptora:** Dirección de Movilidad y Transporte — H. Ayuntamiento de Uriangato, Gto.
 **Autor:** Residente Profesional
-**Versión del Documento:** 5.0
+**Versión del Documento:** 6.0
 **Fecha:** Octubre 2026
 
-> **Alcance de este documento.** Aquí está el subsistema web completo, pantalla por pantalla: el Portal Ciudadano, el Panel Administrativo, el Panel del Juez Calificador, el módulo de cobros, los CRUD de catálogos, la seguridad de la superficie web, el frontend responsivo y las pruebas. El **proceso** de desarrollo (levantamiento, metodología, fases y conclusiones) vive en [`DOC_METODOLOGIA.md`](./DOC_METODOLOGIA.md); el **backend profundo** (API, migraciones, servicios, máquina de estados desde el servidor) en [`DOCUMENTACION_BACKEND.md`](./DOCUMENTACION_BACKEND.md); la **visión integral del proyecto** en [`DOCUMENTACION_GENERAL.md`](./DOCUMENTACION_GENERAL.md).
+> **Estado del documento:** actualizado al 29 de octubre de 2026
+> **Alcance:** fichas funcionales de todas las pantallas web (portal ciudadano, panel administrativo y panel del juez calificador), módulo de cobros, CRUD de catálogos, seguridad de superficie, frontend responsivo y pruebas del subsistema web
+> **Fuente de verdad:** código del repositorio — `app/Config/Routes.php`, `app/Controllers/`, `app/Views/`; la contraparte móvil en `mobile/agentes-transito/`
+> **Documentos relacionados:** [README.md](./README.md) · [DOCUMENTACION_GENERAL.md](./DOCUMENTACION_GENERAL.md) · [DOCUMENTACION_BACKEND.md](./DOCUMENTACION_BACKEND.md) · [DOCUMENTACION_APP_TRANSITO.md](./DOCUMENTACION_APP_TRANSITO.md) · [DOC_METODOLOGIA.md](./DOC_METODOLOGIA.md)
+
+> **Alcance de este documento.** Aquí está el subsistema web completo, pantalla por pantalla: el Portal Ciudadano, el Panel Administrativo, el Panel del Juez Calificador, el módulo de cobros, los CRUD de catálogos, la seguridad de la superficie web, el frontend responsivo y las pruebas. El **proceso** de desarrollo (levantamiento, metodología, fases y conclusiones) vive en [`DOC_METODOLOGIA.md`](./DOC_METODOLOGIA.md); el **backend profundo** (API, migraciones, servicios, diccionario completo de datos, máquina de estados desde el servidor) en [`DOCUMENTACION_BACKEND.md`](./DOCUMENTACION_BACKEND.md); la **visión integral del proyecto** en [`DOCUMENTACION_GENERAL.md`](./DOCUMENTACION_GENERAL.md).
 >
 > **Cómo está organizado.** Los capítulos 1 y 2 son el mapa (qué existe y dónde vive cada ruta). Los capítulos 3 a 6 recorren las pantallas de los tres paneles. El capítulo 7 es el módulo de cobros y pagos. El 8 documenta los CRUD de catálogos. El 9 las reglas de negocio transversales. El 10 la seguridad, el 11 el frontend y el 12 las pruebas. Los anexos guardan el diccionario de datos, el pipeline documental y el despliegue serverless, para que el cuerpo del documento se lea como recorrido de pantallas y no como inventario de tablas.
 
@@ -23,6 +28,7 @@
    * 1.4. Inventario Real de Controladores, Vistas, Modelos y Servicios
    * 1.5. Stack de Presentación
    * 1.6. API REST para la App de Agentes de Tránsito
+   * 1.7. Índice de Pantallas del Subsistema Web
 2. [Mapa Maestro de Rutas](#2-mapa-maestro-de-rutas)
    * 2.1. Convenciones de Enrutamiento y Filtros
    * 2.2. Tabla Completa de Rutas
@@ -246,10 +252,11 @@ reembolsar(string $referenciaPago, float $monto, string $motivo): bool
 | Controladores | 30 | 5 base (`AuthController`, `Home`, `ArchivosLocalesController`, `AgentesWebController`, `DocumentosPagoController`), 12 del panel, 9 del portal, 1 del juez, 1 de cobros compartido, 2 de API |
 | Modelos | 24 | uno por entidad persistible, todos sobre `CodeIgniter\Model` |
 | Servicios y librerías | 22 | 20 servicios + 2 excepciones de dominio en `app/Libraries/` |
-| Vistas | 75 | `admin/` (26), `portal/` (18), `auth/` (7), `juez/` (3), `cobros/` (8), `documentos/` (1), `layouts/` (5), `errors/` (7), más `pager_bootstrap_full.php` |
+| Vistas | 76 | `admin/` (26), `portal/` (18), `auth/` (7), `juez/` (3), `cobros/` (8), `documentos/` (1), `layouts/` (5), `errors/` (7) y el paginador `pager_bootstrap_full.php` |
 | Filtros propios | 5 | `AuthFilter`, `RoleFilter`, `PermisoOperadorFilter`, `AdminRedirectFilter`, `AgenteTokenFilter` |
+| Permisos configurables del operador | 14 | claves de `PermisosOperador::CATALOGO` (§9.5) |
 | Migraciones | 33 PHP + 19 SQL | `app/Database/Migrations/` y `supabase/migrations/` |
-| Clases de prueba | 43 | 410 métodos de prueba (conteo estático del repositorio) |
+| Pruebas | 43 clases, 410 métodos | la corrida reporta 438 casos y 1 876 aserciones (medido con `phpunit`, 29-oct-2026) |
 
 **Vistas por pantalla, en una sola tabla de referencia rápida:**
 
@@ -300,6 +307,85 @@ Tres decisiones de gobernanza visibles en `app/Config/Routes.php`:
 * **CSRF exento en todo `api/*`** (`'csrf' => ['except' => ['api/*']]`): un cliente móvil no maneja tokens de formulario y su protección es el token de portador. La exención está acotada al prefijo `api`, **no** al panel ni al portal.
 
 > **Nota histórica.** Existió un `POST /api/agentes/registro` con su pantalla de enrolamiento. Se **retiró del código**: un agente de tránsito tiene capacidad de sanción y esa alta no puede ser un autorregistro público. Hoy solo el administrador los da de alta desde `/admin/app-transito`.
+
+### 1.7. Índice de Pantallas del Subsistema Web
+
+Esta tabla es la **lista de control de cobertura** del documento: si una pantalla no aparece aquí, no está documentada, y si aparece, su ficha existe en la sección indicada. Se generó del mapa de rutas registrado (§2.2) y no de una lista escrita de memoria; por eso incluye tanto las pantallas visibles al usuario como las dos superficies que no tienen ficha propia de interfaz (el *shell* de la app móvil servida como web y la página 404).
+
+**64 pantallas en cuatro superficies:** 10 públicas de acceso y cuenta, 19 del portal ciudadano, 31 del panel administrativo (de las cuales 2 son exclusivas de administrador y el resto compartidas con el operador de ventanilla) y 4 del panel del juez calificador.
+
+| N.º | Pantalla | Ruta | Rol | Controlador · método | Vista | Sección |
+|---|---|---|---|---|---|---|
+| **Superficie pública, cuentas y acceso** | | | | | | |
+| 1 | Portada pública | `GET /` | Público | `Home::index` | `portal/home` | §4.1 |
+| 2 | Inicio de sesión | `GET /auth/login` · `/login` | Público | `AuthController::login` | `auth/login` | §3.1 |
+| 3 | Autorregistro de ciudadano | `GET /auth/register` · `/register` | Público | `AuthController::register` | `auth/register` | §3.2 |
+| 4 | Recuperación de contraseña | `GET /auth/forgot` | Público | `AuthController::forgot` | `auth/forgot` | §3.3 |
+| 5 | Restablecer contraseña | `GET /auth/reset/(:any)` | Público | `AuthController::reset` | `auth/reset` | §3.3 |
+| 6 | Términos y condiciones | `GET /auth/terminos` | Público | `AuthController::terminos` | `auth/terminos` | §3.4 |
+| 7 | Aviso de privacidad | `GET /auth/privacidad` | Público | `AuthController::privacidad` | `auth/privacidad` | §3.4 |
+| 8 | Reclamo de cuenta sin acceso (COB-08) | `POST /auth/attempt-register` con CURP | Público | `AuthController::attemptRegister` | `auth/register` | §3.5 |
+| 9 | *Shell* de la app móvil servida como web | `GET /agentes` · `/agentes/(:any)` | Público | `AgentesWebController::shell` | `public/agentes/index.html` | §11.7 |
+| 10 | Página 404 propia | `set404Override()` | Público | *no pasa por controlador* | `errors/html/error_404` | §2.3 |
+| **Portal ciudadano** | | | | | | |
+| 11 | Panel de inicio | `GET /portal` · `/portal/dashboard` | Ciudadano | `Ciudadano\PortalController::dashboard` | `portal/dashboard` | §4.2 |
+| 12 | Catálogo de trámites | `GET /portal/tramites` | Ciudadano | `PortalController::tramites` | `portal/tramites` | §4.3 |
+| 13 | Mis solicitudes | `GET /portal/mis-solicitudes` | Ciudadano | `PortalController::misSolicitudes` | `portal/mis_solicitudes` | §4.4 |
+| 14 | Detalle del expediente | `GET /portal/solicitud/(:segment)` | Ciudadano | `PortalController::verSolicitud` | `portal/ver_solicitud` | §4.5 |
+| 15 | Mi perfil | `GET` · `POST /portal/mi-perfil` | Ciudadano | `PortalController::miPerfil` · `guardarPerfil` | `portal/mi_perfil` | §4.6 |
+| 16 | UR-01 Concesión de transporte | `GET /portal/tramites/concesion-transporte` · `/ur-01` | Ciudadano | `TramiteConcesionTransporteController::formulario` | `portal/tramites/concesion_transporte_form` | §4.7 |
+| 17 | UR-02 Constancia de despintado | `GET /portal/tramites/constancia-despintado` · `/ur-02` | Ciudadano | `TramiteDespintadoController::formulario` | `portal/tramites/constancia_despintado_form` | §4.7 |
+| 18 | UR-03 Orden de plaqueo | `GET /portal/tramites/orden-plaqueo` · `/ur-03` | Ciudadano | `TramiteOrdenPlaqueoController::formulario` | `portal/tramites/orden_plaqueo_form` | §4.7 |
+| 19 | UR-04 Permiso eventual | `GET /portal/tramites/permiso-eventual` | Ciudadano | `TramitePermisoEventualController::formulario` | `portal/tramites/permiso_eventual_form` | §4.7 |
+| 20 | UR-05 Cierre de calle | `GET /portal/tramites/cierre-calle` | Ciudadano | `TramiteCierreCalleController::formulario` | `portal/tramites/cierre_calle_form` | §4.7 |
+| 21 | UR-06 Cesión de concesión | `GET /portal/tramites/cesion-concesion` | Ciudadano | `TramiteCesionConcesionController::formulario` | `portal/tramites/cesion_concesion_form` | §4.7 |
+| 22 | UR-07 Carga y descarga | `GET /portal/tramites/carga-descarga` | Ciudadano | `TramiteCargaDescargaController::formulario` | `portal/tramites/carga_descarga_form` | §4.7 |
+| 23 | Resumen y pago UR-07 | `GET /portal/tramites/carga-descarga/resumen/(:any)` | Ciudadano | `TramiteCargaDescargaController::resumen` | `carga_descarga_resumen` | §4.8 |
+| 24 | Resumen y pago UR-04 | `GET /portal/tramites/permiso-eventual/resumen/(:any)` | Ciudadano | `TramitePermisoEventualController::resumen` | `permiso_eventual_resumen` | §4.8 |
+| 25 | Resumen y pago UR-05 | `GET /portal/tramites/cierre-calle/resumen/(:any)` | Ciudadano | `TramiteCierreCalleController::resumen` | `cierre_calle_resumen` | §4.8 |
+| 26 | Permiso de cierre de calle | `GET /portal/tramites/cierre-calle/permiso/(:any)` | Ciudadano | `TramiteCierreCalleController::permiso` | `cierre_calle_permiso` | §4.8 |
+| 27 | Cita de inspección UR-02 | `GET /portal/tramites/ur-02/solicitud/(:any)/cita` | Ciudadano | `TramiteDespintadoController::agendarCitaForm` | `ur02_cita_form` | §4.9 |
+| 28 | Formatos oficiales descargables | `GET /portal/formato/(:segment)` | Ciudadano | `PortalController::descargarFormato` | descarga directa | §4.10 |
+| 29 | Hoja de pago del propio trámite | `GET /documentos/hoja-pago/solicitud/(:segment)` | Ciudadano (solo lo propio) | `DocumentosPagoController::hojaPagoSolicitud` | `documentos/hoja_pago` | §7.10 |
+| **Panel administrativo** | | | | | | |
+| 30 | Dashboard de métricas | `GET /admin/dashboard` | Admin · Operador | `Admin\AdminController::dashboard` | `admin/dashboard` | §5.1 |
+| 31 | Desglose global navegable | `GET /admin/desglose` | Solo administrador | `Admin\DesgloseController::index` | `admin/desglose` | §5.2 |
+| 32 | Bandeja de solicitudes | `GET /admin/solicitudes` | Admin · Operador | `AdminController::listaSolicitudes` | `admin/solicitudes_lista` | §5.3 |
+| 33 | Detalle del expediente | `GET /admin/solicitudes/(:segment)` | Admin · Operador | `AdminController::verSolicitud` | `admin/solicitudes_ver` | §5.4 |
+| 34 | Radicación presencial: búsqueda de ciudadano | `GET /admin/solicitudes/nueva` | Admin · Operador | `Admin\SolicitudPresencialController::index` | `admin/solicitudes_presenciales/index` | §5.5 |
+| 35 | Radicación presencial: formulario por trámite | `GET /admin/solicitudes/nueva/(:segment)` | Admin · Operador | `SolicitudPresencialController::formulario` | `admin/solicitudes_presenciales/formulario` | §5.5 |
+| 36 | Usuarios y ciudadanos | `GET /admin/usuarios` | Admin · Operador | `Admin\UsuariosController::index` | `admin/usuarios/index` | §5.6 |
+| 37 | Alta y edición de usuario | `GET /admin/usuarios/nuevo` · `/editar/(:num)` | Admin · Operador (cuentas internas: solo admin) | `UsuariosController::formNuevo` · `formEditar` | `admin/usuarios/form` | §5.6 |
+| 38 | Formatos oficiales de trámite | `GET /admin/formatos` | Admin · Operador | `AdminController::formatos` | `admin/formatos` | §5.7 |
+| 39 | Auditoría | `GET /admin/auditoria` | Admin · Operador | `AdminController::auditoria` | `admin/auditoria` | §5.8 |
+| 40 | Documentos recibidos | `GET /admin/documentos` | Admin · Operador | `Admin\DocumentosController::index` | `admin/documentos` | §5.9 |
+| 41 | Verificaciones físicas | `GET /admin/verificaciones` | Admin · Operador | `Admin\VerificacionesController::index` | `admin/verificaciones` | §5.10 |
+| 42 | Sesiones de la app de tránsito | `GET /admin/sesiones-app` | Admin · Operador | `Admin\SesionesAppController::index` | `admin/sesiones_app` | §5.11 |
+| 43 | App tránsito: configuración y agentes | `GET /admin/app-transito` | Admin · Operador (alta y baja de agente: solo admin) | `Admin\AppTransitoController::index` | `admin/app_transito/index` | §5.12 |
+| 44 | App tránsito: catálogo de infracciones | `GET /admin/app-transito/catalogo` | Admin · Operador | `AppTransitoController::catalogo` | `admin/app_transito/catalogo` | §8.5 |
+| 45 | App tránsito: boletas de campo | `GET /admin/app-transito/boletas` | Admin · Operador | `AppTransitoController::boletas` | `admin/app_transito/boletas` | §8.7 |
+| 46 | App tránsito: edición de boleta | `GET /admin/app-transito/boletas/editar/(:num)` | Admin · Operador | `AppTransitoController::editarBoleta` | `admin/app_transito/boleta_form` | §8.7 |
+| 47 | Permisos del operador de ventanilla | `GET /admin/permisos-operador` | Solo administrador | `Admin\PermisosController::index` | `admin/permisos_operador` | §5.13 |
+| 48 | Tarifas | `GET /admin/tarifas` | Admin · Operador | `Admin\CatalogoTarifasController::index` | `admin/catalogos/tarifas_index` | §8.1 |
+| 49 | Alta y edición de tarifa | `GET /admin/tarifas/nuevo` · `/editar/(:num)` | Admin · Operador | `CatalogoTarifasController::formNuevo` · `formEditar` | `admin/catalogos/tarifas_form` | §8.1 |
+| 50 | Concesiones | `GET /admin/concesiones` | Admin · Operador | `Admin\CatalogoConcesionesController::index` | `admin/catalogos/concesiones_index` | §8.2 |
+| 51 | Alta y edición de concesión | `GET /admin/concesiones/nuevo` · `/editar/(:num)` | Admin · Operador | `CatalogoConcesionesController::formNuevo` · `formEditar` | `admin/catalogos/concesiones_form` | §8.2 |
+| 52 | Convocatorias | `GET /admin/convocatorias` | Admin · Operador | `Admin\ConvocatoriasController::index` | `admin/convocatorias/index` | §8.3 |
+| 53 | Alta y edición de convocatoria | `GET /admin/convocatorias/nueva` · `/editar/(:num)` | Admin · Operador | `ConvocatoriasController::formNuevo` · `formEditar` | `admin/convocatorias/form` | §8.3 |
+| 54 | Evaluación de convocatoria | `GET /admin/convocatorias/(:num)/evaluacion` | Admin · Operador | `ConvocatoriasController::evaluacion` | `admin/convocatorias/evaluacion` | §8.3 |
+| 55 | Listado de cobros | `GET /admin/cobros` | Admin · Operador | `CobrosController::index` | `cobros/index` | §7.4 |
+| 56 | Detalle del cobro | `GET /admin/cobros/(:num)` | Admin · Operador | `CobrosController::ver` | `cobros/ver` | §7.5 |
+| 57 | Cobro bancario BanBajío | `GET /admin/cobros/banco` | Admin · Operador | `CobrosController::banco` | `cobros/banco` | §7.7 |
+| 58 | Corte de caja | `GET /admin/cobros/corte` | Admin · Operador | `CobrosController::corte` | `cobros/corte` | §7.11 |
+| 59 | Condonaciones | `GET /admin/cobros/condonaciones` | Admin · Operador | `CobrosController::condonaciones` | `cobros/condonaciones` | §7.9 |
+| 60 | Condonar recargo | `GET /admin/cobros/(:num)/condonar` | Admin · Operador (autorización por rol) | `CobrosController::formularioCondonar` | `cobros/condonar` | §7.9 |
+| **Panel del juez calificador** | | | | | | |
+| 61 | Dashboard judicial | `GET /juez` | Juez calificador | `Juez\DashboardController::index` | `juez/dashboard` | §6.1 |
+| 62 | Bandeja de boletas | `GET /juez/boletas` | Juez calificador | `Juez\DashboardController::boletas` | `juez/boletas` | §6.2 |
+| 63 | Detalle y calificación de boleta | `GET /juez/boletas/(:num)` | Juez calificador | `Juez\DashboardController::detalle` | `juez/boleta_detalle` | §6.3 |
+| 64 | Cobros del panel judicial | `GET /juez/cobros` | Juez calificador | `CobrosController::index` | `cobros/index` | §6.4 |
+
+**Cómo leer el índice.** La columna «Rol» indica quién **puede** entrar, no quién entra siempre: en el panel administrativo, un operador de ventanilla con el permiso correspondiente revocado recibe un `403` explicativo en lugar de la pantalla (§9.5), y por eso la columna de rol se lee junto con la matriz de §10.1. Las filas 55-60 y 64 comparten vista y controlador a propósito: el módulo de cobros es **uno solo** y se monta en tres rutas distintas (administrativa, judicial y de documentos), de modo que el mismo folio se ve igual desde cualquiera de los dos paneles.
 
 ---
 
@@ -2153,7 +2239,7 @@ Cuatro detalles que explican decisiones no evidentes:
 
 El segundo grupo existe porque hay formularios cuya estructura HTML no puede pasar por `form_open()` —tablas con un `POST` por renglón, bloques de acciones múltiples—; en esos casos el token se declara a mano. **Un formulario nuevo escrito a mano sin `csrf_field()` falla en producción y no en pruebas**, porque en `testing` el filtro está exento: es el precio de esa comodidad y conviene tenerlo presente.
 
-**XSS.** Los datos se escapan en la vista, con `esc()`: **1 104 llamadas en 75 archivos de vista**. La convención es explícita incluso en atributos y en textos cortos:
+**XSS.** Los datos se escapan en la vista, con `esc()`: **1 104 llamadas en 62 archivos de vista** (medido sobre `app/Views/`, 29-oct-2026). La convención es explícita incluso en atributos y en textos cortos:
 
 ```php
 <span class="rol-chip" title="<?= esc($rolAlcance) ?>">
@@ -2255,7 +2341,7 @@ En sentido inverso: el juez **no** entra a `/admin`, porque no tiene el rol `adm
 
 ## 11. Frontend y Diseño Responsivo
 
-El subsistema web no tiene SPA: son **cuatro plantillas de layout y 75 vistas** que el servidor arma y entrega. Eso simplifica el frontend (no hay estado del lado del cliente que sincronizar) y traslada casi todo el trabajo a CSS: una sola hoja de 2 140 líneas compartida por portal, panel y panel judicial.
+El subsistema web no tiene SPA: son **76 archivos de vista** —cuatro plantillas de *layout*, los parciales compartidos, las pantallas y las páginas de error— que el servidor arma y entrega. Eso simplifica el frontend (no hay estado del lado del cliente que sincronizar) y traslada casi todo el trabajo a CSS: una sola hoja de 2 140 líneas compartida por portal, panel y panel judicial.
 
 ### 11.1. Layouts y Parciales
 
@@ -2399,10 +2485,13 @@ El defecto de diseño más caro en un portal municipal es el **desborde horizont
 
 | Métrica | Valor |
 |---|---|
+| Fecha de medición | **19-oct-2026** (cierre de la corrección «sin desbordes horizontales en móvil») |
 | Pantallas auditadas | **55** (portal, panel, panel judicial y pantallas de acceso) |
 | Anchos por pantalla | 360, 320 y 290 px |
 | Pantallas con desborde al cierre | **0** |
 | Rango útil verificado | 312–354 px: 55 de 55 sin desborde |
+
+> Esta medición es anterior a la fase de cobros: las pantallas de cobros, condonaciones, corte de caja y panel del juez se incorporaron al portal y al panel después del cierre de la auditoría, por lo que **deben volver a medirse con el mismo procedimiento** cuando se exija evidencia actualizada.
 
 Las correcciones que cerraron la auditoría, ordenadas por causa:
 
@@ -2452,7 +2541,7 @@ La configuración vive en `phpunit.xml.dist` y es corta a propósito: una sola s
 | `APP_ENABLE_UR_TT_T_06` | `true` | Habilita la cesión de concesión por *feature flag* para poder probarla |
 | `failOnRisky`, `failOnWarning` | activos | Una prueba sin aserciones o con avisos hace fallar la corrida: no se acepta verde por omisión |
 
-El árbol de pruebas tiene **43 clases y 410 métodos de prueba**, agrupados así:
+El árbol de pruebas tiene **43 clases y 410 métodos declarados**, agrupados así. La corrida completa del 29-oct-2026 reportó **438 casos ejecutados** (los proveedores de datos expanden varios métodos) y **1 876 aserciones**, en 2 min 07 s:
 
 | Grupo | Clases | Métodos | Ruta |
 |---|---|---|---|
@@ -2470,7 +2559,9 @@ El árbol de pruebas tiene **43 clases y 410 métodos de prueba**, agrupados as�
 
 La proporción es informativa: el panel concentra casi la mitad de los métodos porque es donde vive el mayor número de reglas de autorización distintas (cada permiso del operador, cada candado de padrón y cada validación de catálogo necesita su caso). El portal, en cambio, se prueba sobre todo a través de sus formularios, que son siete y comparten estructura.
 
-> **Nota de honestidad metodológica.** El conteo anterior se obtuvo del árbol de código al cierre de este documento y es reproducible con `phpunit --list-tests`. Antes de citarlo en un informe final debe volverse a contar: la cifra envejece con cada *commit*, mientras que la estructura de la tabla no.
+**Las dos cifras —410 y 438— no se contradicen y conviene no confundirlas.** La primera es el conteo estático de métodos `test*` declarados en el árbol; la segunda es la cuenta que imprime PHPUnit al ejecutar, porque un método con proveedor de datos se cuenta una vez por cada juego de datos. Para el informe se cita la ejecución: **438 casos, 1 876 aserciones**.
+
+> **Nota de honestidad metodológica.** Ambas cifras se obtuvieron del árbol de código y de una corrida real al cierre de este documento, y son reproducibles con `phpunit --list-tests` (estático) y `vendor/bin/phpunit` (ejecución). Antes de citarlas en un informe final deben volverse a contar: envejecen con cada *commit*, mientras que la estructura de la tabla no.
 
 ### 12.2. Matriz de Cobertura por Módulo
 
@@ -2659,6 +2750,8 @@ Además de la suite, el repositorio conserva utilidades ejecutables para validac
 ## Anexo A. Diccionario de Datos del Módulo Web
 
 Las columnas que siguen se tomaron de las migraciones de `app/Database/Migrations/`, que son la fuente de verdad del esquema en desarrollo y en pruebas; `supabase/migrations/` conserva el espejo en SQL que se aplica sobre PostgreSQL. El anexo no repite las tablas de cobros ni de calificación, ya descritas en §7.1 y en §6.3.
+
+> **Alcance deliberadamente parcial.** Este anexo conserva solo las tablas que una pantalla web lee o escribe, con las columnas que esa pantalla necesita explicar. El **diccionario completo de las 26 tablas** —llaves primarias, nulabilidad, claves foráneas con su política `RESTRICT`, índices y restricciones `CHECK`— vive en [`DOCUMENTACION_BACKEND.md`](./DOCUMENTACION_BACKEND.md) §11.2, y el procedimiento para migrar un cambio de esquema en §11.4. Se evita duplicarlo aquí a propósito: dos copias del esquema terminan divergiendo y la que se lee es siempre la equivocada. Si una tabla no aparece en este anexo, búsquela en el backend.
 
 ### A.1. `users`
 
