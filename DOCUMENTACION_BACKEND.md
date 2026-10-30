@@ -1895,7 +1895,7 @@ Medido el 29-oct-2026 con `./php82/php.exe vendor/bin/phpunit`:
 | Clases de prueba | **43** |
 | Casos de prueba | **438** |
 | Aserciones | **1 876** |
-| Duración | alrededor de 2 min (02:07 en la corrida de referencia; 01:58 en una repetición del mismo día) |
+| Duración | entre 2 y 3 minutos según la carga de la máquina (02:07 en la corrida de referencia; 01:58 y 03:15 en repeticiones) |
 | Memoria | 32.00 MB |
 | Resultado | OK, sin fallos |
 

@@ -62,7 +62,7 @@ El ecosistema integra tres ramas de software sobre una misma base PostgreSQL en 
 | **Frontend Web** | Bootstrap 5.3.2, Bootstrap Icons 1.11.1, Plus Jakarta Sans, hoja propia *mobile-first* con design tokens (sin *bundler*) |
 | **App Móvil & SPA** | React Native 0.86.3, Expo SDK 57.0.30, React 19.2.3, TypeScript 6.0.3, `expo-router` 57.0.28, `@supabase/supabase-js` 2.117.2, `@react-native-async-storage/async-storage` 2.2.0, `@react-native-community/netinfo` 12.0.1, `expo-secure-store`, `expo-camera`, `expo-location`, `expo-font` |
 | **Despliegue & Cloud** | Vercel Serverless (`vercel-php@0.7.4`), CI/CD por Git; EAS para el APK de agentes |
-| **Pruebas** | PHPUnit 10.5 sobre arnés SQLite aislado: **43 clases, 410 métodos, 438 casos y 1 876 aserciones** (corrida del 29-oct-2026, 2 min 07 s); verificador propio de la app (`node tests/auth-flow.test.cjs`, 18 casos) y `npx tsc --noEmit` |
+| **Pruebas** | PHPUnit 10.5 sobre arnés SQLite aislado: **43 clases, 410 métodos, 438 casos y 1 876 aserciones** (corrida del 29-oct-2026; entre 2 y 3 min según la carga); verificador propio de la app (`node tests/auth-flow.test.cjs`, 18 casos) y `npx tsc --noEmit` |
 
 ---
 
@@ -223,7 +223,7 @@ Para presentaciones y revisiones, `DemoFuncionamientoSeeder` llena el sistema co
 ```
 En Windows, si `php` no está en el PATH: `./php82/php.exe vendor/bin/phpunit`.
 
-La suite tiene **43 clases y 410 métodos declarados**; la corrida completa del **29-oct-2026** reportó **438 casos ejecutados** (los proveedores de datos expanden varios métodos) y **1 876 aserciones**, en 2 min 07 s. Corre contra **SQLite en memoria** con prefijo `db_`, nunca contra la base institucional, y requiere las migraciones aplicadas (`php spark migrate`).
+La suite tiene **43 clases y 410 métodos declarados**; la corrida completa del **29-oct-2026** reportó **438 casos ejecutados** (los proveedores de datos expanden varios métodos) y **1 876 aserciones**, en 2 a 3 minutos según la carga de la máquina (02:07 en la corrida de referencia). Corre contra **SQLite en memoria** con prefijo `db_`, nunca contra la base institucional, y requiere las migraciones aplicadas (`php spark migrate`).
 
 | Área | Qué cubre |
 |---|---|

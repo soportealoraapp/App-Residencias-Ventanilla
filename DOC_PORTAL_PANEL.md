@@ -2541,7 +2541,7 @@ La configuración vive en `phpunit.xml.dist` y es corta a propósito: una sola s
 | `APP_ENABLE_UR_TT_T_06` | `true` | Habilita la cesión de concesión por *feature flag* para poder probarla |
 | `failOnRisky`, `failOnWarning` | activos | Una prueba sin aserciones o con avisos hace fallar la corrida: no se acepta verde por omisión |
 
-El árbol de pruebas tiene **43 clases y 410 métodos declarados**, agrupados así. La corrida completa del 29-oct-2026 reportó **438 casos ejecutados** (los proveedores de datos expanden varios métodos) y **1 876 aserciones**, en 2 min 07 s:
+El árbol de pruebas tiene **43 clases y 410 métodos declarados**, agrupados así. La corrida completa del 29-oct-2026 reportó **438 casos ejecutados** (los proveedores de datos expanden varios métodos) y **1 876 aserciones**. La duración no es una constante: 02:07 en la corrida de referencia y 01:58 a 03:15 en repeticiones, es decir entre 2 y 3 minutos según la carga de la máquina:
 
 | Grupo | Clases | Métodos | Ruta |
 |---|---|---|---|
