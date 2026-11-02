@@ -26,13 +26,17 @@ class RolesSeeder extends Seeder
             ],
         ];
 
-        // Conserva sin cambios el comportamiento histórico de los tres roles
-        // iniciales: una coincidencia por id o nombre impide otra inserción.
+        // El rol se identifica por nombre. En una base nueva la migración de
+        // COB-09 ya ocupó un id, así que si el id histórico está tomado se
+        // inserta sin id y la secuencia asigna el siguiente.
         foreach ($data as $row) {
-            $exists = $this->db->table('roles')->where('id', $row['id'])->orWhere('nombre', $row['nombre'])->countAllResults();
-            if ($exists === 0) {
-                $this->db->table('roles')->insert($row);
+            if ($this->db->table('roles')->where('nombre', $row['nombre'])->countAllResults() > 0) {
+                continue;
             }
+            if ($this->db->table('roles')->where('id', $row['id'])->countAllResults() > 0) {
+                unset($row['id']);
+            }
+            $this->db->table('roles')->insert($row);
         }
 
         // COB-09 no reserva un id: la secuencia asigna el disponible y el nombre

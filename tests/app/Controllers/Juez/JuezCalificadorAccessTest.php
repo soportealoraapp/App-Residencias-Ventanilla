@@ -91,18 +91,21 @@ class JuezCalificadorAccessTest extends DatabaseTestCase
         $this->assertSame(1, $this->db->table('roles')->where('nombre', 'juez_calificador')->countAllResults());
     }
 
-    public function testRolesSeederConservaLaReglaHistoricaDeIdONombre(): void
+    public function testRolesSeederCreaAdministradorAunqueElIdHistoricoEsteOcupado(): void
     {
         $this->db->table('user_roles')->where('role_id', $this->roleIds['administrador'])->delete();
         $this->db->table('roles')->where('id', $this->roleIds['administrador'])->delete();
 
-        // La migración del juez ocupa el id histórico 1 en esta base aislada.
-        // La lógica anterior considera suficiente esa colisión y no reasigna
-        // automáticamente administrador a otro id.
+        // La migración del juez ocupa el id histórico 1 en esta base aislada,
+        // como en una instalación nueva. El seeder busca por nombre, así que
+        // crea administrador con el siguiente id y no duplica al repetirse.
         $this->assertSame(1, $this->db->table('roles')->where('id', 1)->countAllResults());
         Database::seeder('tests')->call('RolesSeeder');
+        Database::seeder('tests')->call('RolesSeeder');
 
-        $this->assertSame(0, $this->db->table('roles')->where('nombre', 'administrador')->countAllResults());
+        $admin = $this->db->table('roles')->where('nombre', 'administrador')->get()->getResult();
+        $this->assertCount(1, $admin);
+        $this->assertNotSame(1, (int) $admin[0]->id);
         $this->assertSame(1, $this->db->table('roles')->where('nombre', 'juez_calificador')->countAllResults());
     }
 

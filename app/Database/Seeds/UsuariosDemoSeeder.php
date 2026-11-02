@@ -50,10 +50,13 @@ class UsuariosDemoSeeder extends Seeder
             }
         }
 
+        // Los ids de rol no son fijos (COB-09), así que se buscan por nombre.
+        $rolId = fn (string $nombre): int => (int) $this->db->table('roles')->select('id')->where('nombre', $nombre)->get()->getRow()->id;
+
         $userRoles = [
-            ['user_id' => 1, 'role_id' => 1],
-            ['user_id' => 2, 'role_id' => 2],
-            ['user_id' => 3, 'role_id' => 3],
+            ['user_id' => 1, 'role_id' => $rolId('administrador')],
+            ['user_id' => 2, 'role_id' => $rolId('operador_ventanilla')],
+            ['user_id' => 3, 'role_id' => $rolId('ciudadano')],
         ];
 
         foreach ($userRoles as $row) {
