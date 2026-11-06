@@ -37,7 +37,7 @@
 |---|---|---|
 | Sistema operativo | Linux o Windows Server | Ubuntu Server, última versión LTS (26.04) |
 | Servidor web | Apache 2.4 con `mod_rewrite` | Apache |
-| PHP | 8.1 o superior (`composer.json` exige `^8.1`; las pruebas se corrieron con 8.2.25) | PHP 8.5, incluido en los repositorios de Ubuntu 26.04 |
+| PHP | 8.2 o superior (lo exige CodeIgniter 4.7; las pruebas se corrieron con 8.2.25) | PHP 8.5, incluido en los repositorios de Ubuntu 26.04; CodeIgniter lo soporta desde la 4.7.0 y el proyecto usa la 4.7.4 |
 | Extensiones de PHP | `intl`, `mbstring`, `pgsql`, `curl`, `fileinfo`, `openssl`, `json` | Instalar con `apt` (ver abajo) |
 | PostgreSQL | 15 o superior | PostgreSQL 18, local en el mismo servidor y separado de MySQL |
 | Composer | 2.x (el repositorio incluye `composer.phar`) | — |
