@@ -13,7 +13,7 @@ En este directorio se encuentran los cinco (5) manuales y guías de operación e
 | **Agentes de Tránsito y Jefes de Turno** | [`Guia_Usuario_Transito_Agente.docx`](./Guia_Usuario_Transito_Agente.docx) | App Móvil Expo/React Native y `/agentes` | 7 recuadros |
 | **Administrador del Sistema** | [`Guia_Usuario_Administrador.docx`](./Guia_Usuario_Administrador.docx) | Panel Administrativo General (`/admin`) | 10 recuadros |
 | **Operador de Ventanilla** | [`Guia_Usuario_Operador_Ventanilla.docx`](./Guia_Usuario_Operador_Ventanilla.docx) | Panel de Mostrador con Permisos (`/admin`) | 6 recuadros |
-| **Ciudadano / Solicitante** | [`Guia_Usuario_Ciudadano.docx`](./Guia_Usuario_Ciudadano.docx) | Portal Web y Móvil (`/portal` y `/`) | 9 recuadros |
+| **Ciudadano / Solicitante** | [`Guia_Usuario_Ciudadano.docx`](./Guia_Usuario_Ciudadano.docx) | Portal Web y Móvil (`/portal` y `/`) | Completa: 19 figuras con capturas reales (`capturas_ciudadano/`) |
 
 ---
 

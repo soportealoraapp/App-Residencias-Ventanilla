@@ -355,6 +355,45 @@ def add_image_placeholder(doc, screen_name, description, elements_to_show, dims=
 
     doc.add_paragraph().paragraph_format.space_after = Pt(4)
 
+def _tamano_captura(image_path, ancho_max, alto_max):
+    """Calcula el ancho en pulgadas para que la imagen quepa en ancho_max x alto_max."""
+    from PIL import Image
+    with Image.open(image_path) as img:
+        ancho_px, alto_px = img.size
+    return min(ancho_max, alto_max * ancho_px / alto_px)
+
+def _add_pie_figura(doc, caption):
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.space_before = Pt(4)
+    p.paragraph_format.space_after = Pt(10)
+    r = p.add_run(caption)
+    r.font.name = 'Calibri'
+    r.font.size = Pt(9.5)
+    r.font.italic = True
+    r.font.color.rgb = COLOR_TEXT_RGB
+
+def add_screenshots(doc, image_paths, caption, max_width=6.3, max_height=7.4):
+    """Inserta una o varias capturas lado a lado, con marco sutil y pie de figura."""
+    table = doc.add_table(rows=1, cols=len(image_paths))
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    ancho_celda = max_width / len(image_paths)
+    borde = {'val': 'single', 'sz': '4', 'color': COLOR_BORDER_HEX}
+    for cell, image_path in zip(table.rows[0].cells, image_paths):
+        cell.width = Inches(ancho_celda)
+        set_cell_margins(cell, top=40, bottom=40, left=40, right=40)
+        set_cell_borders(cell, top=borde, bottom=borde, left=borde, right=borde)
+        p = cell.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.paragraph_format.space_after = Pt(0)
+        p.paragraph_format.keep_with_next = True
+        ancho = _tamano_captura(image_path, ancho_celda - 0.08, max_height)
+        p.add_run().add_picture(image_path, width=Inches(ancho))
+    # La fila no se parte entre páginas: la imagen se queda junto a su pie.
+    trPr = table.rows[0]._tr.get_or_add_trPr()
+    trPr.append(OxmlElement('w:cantSplit'))
+    _add_pie_figura(doc, caption)
+
 def add_styled_table(doc, headers, data, col_widths=None):
     """Crea una tabla con cabecera en azul institucional y filas alternadas."""
     table = doc.add_table(rows=len(data) + 1, cols=len(headers))
@@ -394,6 +433,13 @@ def add_styled_table(doc, headers, data, col_widths=None):
                 run.font.name = 'Calibri'
                 run.font.size = Pt(9.5)
                 run.font.color.rgb = COLOR_TEXT_RGB
+
+    # Las filas no se parten entre páginas y el encabezado se repite en cada una.
+    for row in table.rows:
+        row._tr.get_or_add_trPr().append(OxmlElement('w:cantSplit'))
+    table.rows[0]._tr.get_or_add_trPr().append(OxmlElement('w:tblHeader'))
+    for cell in hdr_cells:
+        cell.paragraphs[0].paragraph_format.keep_with_next = True
 
     # Anchos de columna si se proporcionan
     if col_widths:

@@ -3,216 +3,274 @@
 import os
 import docx
 from generar_guias_word import (
-    apply_document_styles, add_cover_page, add_h1, add_h2, add_h3,
-    add_paragraph, add_bullet, add_callout, add_image_placeholder, add_styled_table
+    apply_document_styles, add_cover_page, add_h1, add_h2,
+    add_paragraph, add_bullet, add_callout, add_screenshots, add_styled_table
 )
+
+CAPTURAS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docs", "guias_usuario", "capturas_ciudadano")
 
 def generar_guia_ciudadano(output_path):
     doc = docx.Document()
     apply_document_styles(doc)
 
+    numero_figura = [0]
+    def figura(nombres, caption, **kwargs):
+        numero_figura[0] += 1
+        rutas = [os.path.join(CAPTURAS, f"{n}.jpg") for n in nombres]
+        add_screenshots(doc, rutas, f"Figura {numero_figura[0]}. {caption}", **kwargs)
+
     # PORTADA
     add_cover_page(
         doc,
         role_title="Ciudadano y Solicitante",
-        subtitle="Guía Paso a Paso para la Realización de Trámites de Movilidad en Línea, Pagos Digitales y Descarga de Documentos",
+        subtitle="Guía Paso a Paso para la Realización de Trámites de Movilidad en Línea, Pagos y Obtención de Documentos",
         target_audience="Ciudadanos, Concesionarios, Choferes y Transportistas de Uriangato",
-        version="1.0"
+        version="1.1"
     )
 
     # ÍNDICE GENERAL
     add_h1(doc, "ÍNDICE GENERAL DE LA GUÍA")
-    add_bullet(doc, "1. Bienvenido a la Ventanilla Única de Movilidad de Uriangato")
+    add_bullet(doc, "1. Bienvenido a la Ventanilla Digital de Movilidad de Uriangato")
     add_bullet(doc, "2. Preparación de Documentos Digitales (Formatos y Consejos)")
-    add_bullet(doc, "3. Creación de Cuenta, Activación y Recuperación de Contraseña")
-    add_bullet(doc, "4. Reclamo de Cuenta para Trámites Iniciados en Ventanilla (COB-08)")
+    add_bullet(doc, "3. Creación de Cuenta, Inicio de Sesión y Recuperación de Contraseña")
+    add_bullet(doc, "4. Si Iniciaste tu Trámite en Ventanilla: Cómo Vincular tu Cuenta")
     add_bullet(doc, "5. Conociendo el Portal Ciudadano (Computadora y Teléfono Celular)")
     add_bullet(doc, "6. Catálogo de los Siete Trámites Municipales Oficiales")
     add_bullet(doc, "7. Procedimiento Paso a Paso: Cómo Iniciar una Solicitud en Línea")
-    add_bullet(doc, "8. Seguimiento de Solicitudes y Comprensión del Semáforo de Estatus")
-    add_bullet(doc, "9. Cómo Subsanar una Observación o Prevención Documental")
-    add_bullet(doc, "10. Métodos de Pago: En Línea, Ventanilla y Sucursales BanBajío")
-    add_bullet(doc, "11. Descarga e Impresión de Documentos Oficiales Emitidos")
+    add_bullet(doc, "8. Seguimiento de Solicitudes y Significado de los Estatus")
+    add_bullet(doc, "9. Cómo Atender una Prevención u Observación")
+    add_bullet(doc, "10. Cómo Pagar: En Línea, Tesorería, Jueces Calificadores y BanBajío")
+    add_bullet(doc, "11. Cómo Obtener tu Permiso o Documento Oficial")
     add_bullet(doc, "12. Canales de Ayuda, Ubicación y Preguntas Frecuentes")
 
     # CAPÍTULO 1
-    add_h1(doc, "1. Bienvenido a la Ventanilla Única de Movilidad de Uriangato")
-    add_paragraph(doc, "El Gobierno Municipal de Uriangato pone a tu disposición la Ventanilla Única Digital de Movilidad y Transporte. Esta plataforma te permite realizar todos tus trámites de movilidad desde la comodidad de tu hogar, negocio o teléfono celular, sin necesidad de hacer filas ni acudir repetidamente a oficinas de gobierno.")
-    
+    add_h1(doc, "1. Bienvenido a la Ventanilla Digital de Movilidad de Uriangato")
+    add_paragraph(doc, "El Gobierno Municipal de Uriangato pone a tu disposición la Ventanilla Digital de Movilidad y Transporte. Esta plataforma te permite iniciar tus trámites de movilidad desde tu casa, negocio o teléfono celular, y consultar su avance sin acudir repetidamente a las oficinas.")
+
     add_paragraph(doc, "Ventajas principales para el ciudadano:")
-    add_bullet(doc, "Inicia solicitudes y sube documentos las 24 horas del día, los 365 días del año.", "Acceso Continuo: ")
-    add_bullet(doc, "Conoce en tiempo real en qué etapa se encuentra tu expediente con un folio único de seguimiento.", "Transparencia Total: ")
-    add_bullet(doc, "Paga con tarjeta en línea o imprime tu orden de pago para ventanilla o bancos.", "Facilidad de Pago: ")
-    add_bullet(doc, "Descarga tus permisos, autorizaciones y constancias en formato digital con sellos oficiales.", "Entrega Digital: ")
+    add_bullet(doc, "Inicia solicitudes y adjunta documentos a cualquier hora, todos los días.", "Acceso Continuo: ")
+    add_bullet(doc, "Consulta en qué etapa va tu expediente con su folio único de seguimiento.", "Transparencia Total: ")
+    add_bullet(doc, "Imprime tu hoja de pago con el importe y las opciones para pagar.", "Facilidad de Pago: ")
+    add_bullet(doc, "Si fuiste primero a las oficinas, puedes ver ese mismo trámite en línea.", "Todo en un Solo Lugar: ")
+
+    add_paragraph(doc, "Para empezar, entra a la portada de la Ventanilla Digital. Ahí encontrarás los botones 'Entrar al portal', si ya tienes cuenta, y 'Crear mi cuenta', si es tu primera vez.")
+    figura(["portada"], "Portada de la Ventanilla Digital.", max_width=4.8)
 
     # CAPÍTULO 2
     add_h1(doc, "2. Preparación de Documentos Digitales (Formatos y Consejos)")
-    add_paragraph(doc, "Antes de iniciar tu trámite en línea, ten a la mano los documentos requeridos en formato digital. El sistema acepta los siguientes formatos oficiales:")
+    add_paragraph(doc, "Antes de iniciar tu trámite en línea, ten a la mano los documentos requeridos en formato digital. Los formularios aceptan lo siguiente:")
     add_bullet(doc, "Para actas, pólizas, facturas, comprobantes y contratos.", "Archivos PDF (.pdf): ")
     add_bullet(doc, "Para fotografías claras de credencial de elector (INE), tarjeta de circulación o placas.", "Imágenes JPG o PNG (.jpg, .jpeg, .png): ")
-    add_bullet(doc, "Cada archivo individual puede pesar hasta 10 Megabytes (10 MB), espacio suficiente para documentos en alta resolución.", "Tamaño Máximo: ")
+    add_bullet(doc, "Cada archivo de un trámite puede pesar hasta 10 MB. La fotografía de tu INE en 'Mi Perfil' puede pesar hasta 5 MB por lado y debe ser JPG o PNG.", "Tamaño Máximo: ")
 
     add_callout(doc, "tip", "CONSEJOS PARA TOMAR BUENAS FOTOS A TUS DOCUMENTOS CON EL CELULAR",
-                "• Coloca el documento sobre una mesa plana con buena iluminación natural.\n• Evita el reflejo del flash sobre credenciales plastificadas.\n• Asegúrate de que las cuatro esquinas del documento sean visibles y los textos sean completamente legibles.\n• Un documento borroso o incompleto causará que la autoridad te pida volverlo a subir, demorando tu trámite.")
+                "• Coloca el documento sobre una mesa plana con buena iluminación natural.\n• Evita el reflejo del flash sobre credenciales plastificadas.\n• Asegúrate de que las cuatro esquinas del documento sean visibles y los textos sean completamente legibles.\n• Un documento borroso o incompleto puede provocar una prevención y demorar tu trámite.")
 
     # CAPÍTULO 3
-    add_h1(doc, "3. Creación de Cuenta, Activación y Recuperación de Contraseña")
-    add_paragraph(doc, "Para realizar trámites por primera vez, debes registrarte en el portal:")
-    
-    add_h2(doc, "Paso a Paso para Crear una Cuenta:")
-    add_bullet(doc, "1. Abre tu navegador de internet e ingresa a la portada municipal o al enlace directo: http://[servidor-municipal]/register")
-    add_bullet(doc, "2. Ingresa tu Clave Única de Registro de Población (CURP) de 18 caracteres.")
-    add_bullet(doc, "3. Captura tu nombre completo, apellidos, correo electrónico personal y número de teléfono celular.")
-    add_bullet(doc, "4. Crea una contraseña segura (mínimo 8 caracteres, combinando letras y números).")
-    add_bullet(doc, "5. Lee y acepta el Aviso de Privacidad y los Términos del Servicio.")
-    add_bullet(doc, "6. Presiona el botón verde 'Crear mi Cuenta'. Tu cuenta quedará lista al instante.")
+    add_h1(doc, "3. Creación de Cuenta, Inicio de Sesión y Recuperación de Contraseña")
+    add_paragraph(doc, "Para realizar trámites por primera vez, debes registrarte en el portal.")
 
-    add_image_placeholder(doc, "Registro de Ciudadano (/auth/register)",
-                          "Formulario de autorregistro ciudadano en el portal municipal.",
-                          "Campos de CURP, Nombre, Correo, Teléfono, Contraseña, casilla de Términos y botón 'Crear mi Cuenta'.")
+    add_h2(doc, "Paso a Paso para Crear una Cuenta:")
+    add_bullet(doc, "1. En la portada presiona 'Crear mi cuenta'.")
+    add_bullet(doc, "2. Escribe tu CURP. Es opcional, pero si ya hiciste un trámite en ventanilla debes capturarla (ver capítulo 4).")
+    add_bullet(doc, "3. Captura tu nombre, apellidos, teléfono, estado, ciudad, dirección y correo electrónico.")
+    add_bullet(doc, "4. Elige un nombre de usuario. El RFC es opcional.")
+    add_bullet(doc, "5. Crea una contraseña de mínimo 8 caracteres, con al menos una letra y un número, y confírmala.")
+    add_bullet(doc, "6. Si quieres, adjunta tu INE por ambos lados. También puedes hacerlo después en 'Mi Perfil'.")
+    add_bullet(doc, "7. Marca la casilla para aceptar los Términos y el Aviso de Privacidad.")
+    add_bullet(doc, "8. Presiona el botón verde 'Registrarme'.")
+
+    figura(["registro"], "Formulario para crear tu cuenta ciudadana.", max_height=5.9)
+
+    add_h2(doc, "Iniciar Sesión")
+    add_paragraph(doc, "En 'Entrar al portal', escribe tu usuario o correo y tu contraseña, y presiona 'Entrar al portal'.")
+    figura(["login"], "Pantalla de inicio de sesión.", max_width=3.4)
 
     add_h2(doc, "¿Olvidaste tu contraseña?")
-    add_paragraph(doc, "Si no recuerdas tu contraseña, haz clic en '¿Olvidaste tu contraseña?' en la pantalla de inicio de sesión (/auth/olvide). Ingresa tu correo registrado y el sistema te enviará las instrucciones para restablecerla de forma segura.")
+    add_paragraph(doc, "En la pantalla de inicio de sesión haz clic en '¿La olvidaste?', escribe tu correo registrado y presiona 'Enviar enlace'. Recibirás un correo con un enlace para crear una contraseña nueva. El enlace funciona durante 24 horas.")
+    figura(["recuperar"], "Recuperación de contraseña.", max_width=3.4)
 
     # CAPÍTULO 4
-    add_h1(doc, "4. Reclamo de Cuenta para Trámites Iniciados en Ventanilla (COB-08)")
+    add_h1(doc, "4. Si Iniciaste tu Trámite en Ventanilla: Cómo Vincular tu Cuenta")
     add_callout(doc, "info", "CASO ESPECIAL: SI ACUDISTE PRIMERO A LAS OFICINAS MUNICIPALES",
-                "Si fuiste a la Dirección de Movilidad y el personal te dio de alta un trámite en mostrador, el sistema generó un expediente a tu nombre pero sin contraseña web. ¡No necesitas crear una cuenta nueva ni duplicar tus datos!")
+                "Si fuiste a la Dirección de Movilidad y el personal registró tu trámite en mostrador, el sistema ya tiene un expediente a tu nombre, pero sin contraseña. No se crea una cuenta duplicada: al registrarte con tu CURP, el portal la reconoce y te entrega esos trámites.")
 
-    add_paragraph(doc, "Cómo reclamar y activar tu cuenta en línea:")
-    add_bullet(doc, "1. En la pantalla de inicio de sesión, haz clic en el enlace 'Reclamar cuenta previa de ventanilla' (/auth/reclamar).")
-    add_bullet(doc, "2. Digita tu CURP y el correo electrónico que proporcionaste al funcionario municipal.")
-    add_bullet(doc, "3. El sistema verificará tu identidad y te permitirá establecer una contraseña personal.")
-    add_bullet(doc, "4. Al ingresar, verás de inmediato el trámite que iniciaste en ventanilla con todo su historial.")
+    add_paragraph(doc, "Cómo vincular tu cuenta:")
+    add_bullet(doc, "1. Presiona 'Crear mi cuenta', igual que en el capítulo 3.")
+    add_bullet(doc, "2. Captura en el campo CURP la misma CURP que diste en ventanilla.")
+    figura(["campo_curp"], "El campo CURP liga los trámites que registraste en ventanilla.", max_width=4.2)
+    add_bullet(doc, "3. Llena el resto del formulario, crea tu contraseña y presiona 'Registrarme'.")
+    add_bullet(doc, "4. Verás el mensaje 'Vinculamos los trámites que ya tenías registrados en ventanilla. Ya puedes iniciar sesión.'")
+    add_bullet(doc, "5. Inicia sesión y encontrarás tu trámite en 'Mis solicitudes', con todo su historial.")
+    figura(["cuenta_vinculada"], "Mensaje de confirmación al vincular tu cuenta.", max_width=3.4)
 
-    add_image_placeholder(doc, "Reclamo de Cuenta Presencial (/auth/reclamar)",
-                          "Módulo para que solicitantes de ventanilla física activen su acceso al portal web.",
-                          "Validador de CURP, correo de contacto y formulario para definir contraseña personal.")
+    add_callout(doc, "warning", "SI EL PORTAL NO TE DEJA REGISTRARTE",
+                "• 'Ya existe una cuenta con esta CURP': ya tienes acceso. Inicia sesión o recupera tu contraseña.\n• 'La cuenta asociada a esta CURP está desactivada': acude a la ventanilla de la Dirección de Movilidad.")
 
     # CAPÍTULO 5
     add_h1(doc, "5. Conociendo el Portal Ciudadano (Computadora y Teléfono Celular)")
-    add_paragraph(doc, "Al ingresar al portal (/portal/dashboard), verás tu Centro de Trámites:")
-    add_bullet(doc, "Acceso directo a 'Iniciar Nuevo Trámite', 'Mis Solicitudes' y 'Avisos Oficiales'.", "Pantalla de Inicio: ")
-    add_bullet(doc, "En tu computadora encontrarás el menú en la parte superior; en tu teléfono celular, encontrarás una barra de navegación inferior fácil de tocar con el pulgar.", "Diseño Adaptado a Celulares: ")
-    add_bullet(doc, "Te permite cambiar tu teléfono, actualizar tu correo o modificar tu contraseña.", "Mi Perfil (/portal/mi-perfil): ")
+    add_paragraph(doc, "Al ingresar verás tu panel de 'Inicio':")
+    add_bullet(doc, "Muestra el total de tus solicitudes, cuántas están en trámite, concluidas y con pago pendiente, además de los trámites disponibles y tus últimas solicitudes.", "Pantalla de Inicio: ")
+    add_bullet(doc, "En la computadora el menú está arriba: Inicio, Trámites, Mis solicitudes y tu nombre. En el celular hay una barra inferior con Inicio, Trámites, Solicitudes y Perfil.", "Diseño Adaptado a Celulares: ")
+    add_bullet(doc, "Te permite actualizar tus datos, tu ubicación y tu contraseña, y subir tu INE. El nombre de usuario no se puede editar.", "Mi Perfil: ")
 
-    add_image_placeholder(doc, "Dashboard del Ciudadano en PC y Móvil (/portal/dashboard)",
-                          "Vista principal del portal con accesos rápidos a trámites y estado de solicitudes.",
-                          "Tarjetas de trámites activos, botón 'Iniciar Nuevo Trámite' y barra de navegación inferior móvil.")
+    figura(["inicio_pc"], "Panel de inicio en computadora.")
+    figura(["inicio_celular", "mis_solicitudes_celular"], "El portal en el celular, con la barra de navegación inferior.", max_width=4.4, max_height=4.8)
+    figura(["perfil"], "Pantalla 'Mi Perfil'.", max_height=7.0)
 
     # CAPÍTULO 6
     add_h1(doc, "6. Catálogo de los Siete Trámites Municipales Oficiales")
-    add_paragraph(doc, "En la sección 'Trámites Disponibles' (/portal/tramites), encontrarás las fichas informativas de los siete procedimientos que puedes gestionar:")
+    add_paragraph(doc, "En la sección 'Trámites' encontrarás los siete procedimientos que puedes gestionar. Los costos y documentos de esta tabla corresponden a las fichas oficiales del municipio y a los formularios del portal:")
 
     add_styled_table(doc,
-                     ["Clave", "Trámite de Movilidad", "Costo Oficial Vigente", "Documentos Básicos Requeridos"],
+                     ["Clave", "Trámite de Movilidad", "Costo Oficial Vigente", "Documentos que se Adjuntan"],
                      [
-                         ["UR-TT-T-01", "Concesión de transporte público de ruta fija", "$9,055.20", "Acta constitutiva/nacimiento, Constancia Fiscal, poder notarial y no antecedentes."],
-                         ["UR-TT-T-02", "Constancia de despintado de unidad", "$64.90", "Identificación oficial (INE) y factura o documento de propiedad del vehículo."],
-                         ["UR-TT-T-03", "Orden de plaqueo para cambio de unidad", "$0.00 (Gratuito)", "Factura o carta factura del nuevo vehículo y comprobante de revista mecánica."],
-                         ["UR-TT-T-04", "Permiso eventual de transporte", "$156.94", "Póliza de seguro o fondo de garantía vigente y documentos de la unidad."],
-                         ["UR-TT-T-05", "Permiso de cierre parcial o total de calle", "$287.00", "Identificación oficial, croquis de ubicación y motivo fundado del evento."],
-                         ["UR-TT-T-06", "Cesión de concesión de transporte", "$9,055.20", "Identificaciones de cedente y cesionario, actas de nacimiento y título original."],
-                         ["UR-TT-T-07", "Permiso de carga y descarga de mercancías", "Desde $191.00 hasta $57,325.00 según días y camiones", "Tarjeta de circulación vigente, identificación y comprobante de domicilio."]
+                         ["UR-TT-T-01", "Concesión de transporte público de ruta fija (solo con convocatoria abierta)", "$9,055.20", "Acta de nacimiento o constitutiva, Constancia de Situación Fiscal, capacidad financiera, constancia de residencia, antecedentes no penales, proyecto técnico de rutas y horarios, fichas técnicas y facturas de vehículos."],
+                         ["UR-TT-T-02", "Constancia de despintado de unidad", "$64.90", "Identificación oficial y factura del vehículo."],
+                         ["UR-TT-T-03", "Orden de plaqueo para cambio de unidad", "Sin costo", "Solicitud firmada, título de concesión, identificación oficial, factura del vehículo y revista físico-mecánica. Persona moral: acta constitutiva y poder notarial."],
+                         ["UR-TT-T-04", "Permiso eventual de transporte", "$156.94", "Solicitud por escrito, proyecto de cantidad de vehículos, frecuencia de servicios, acta y fondo de garantía o póliza de seguro."],
+                         ["UR-TT-T-05", "Permiso de cierre parcial o total de calle", "$287.00", "Identificación oficial y solicitud escrita o croquis del tramo."],
+                         ["UR-TT-T-06", "Cesión de concesión de transporte", "$9,055.20", "Título de concesión e identificaciones y actas de las personas involucradas. El formulario pide lo que corresponde a cada causa de la cesión."],
+                         ["UR-TT-T-07", "Permiso de carga y descarga de mercancías", "Ver tabla siguiente", "Identificación oficial, tarjeta de circulación y factura, remisión u orden de compra."]
                      ],
-                     [1.1, 2.4, 1.4, 1.6])
+                     [0.95, 1.6, 0.8, 3.15])
 
-    add_image_placeholder(doc, "Catálogo Oficial de Trámites (/portal/tramites)",
-                          "Catálogo con tarjetas interactivas de cada trámite municipal.",
-                          "Fichas con costo oficial, requisitos, tiempo estimado de respuesta y botón 'Iniciar Trámite'.")
+    add_paragraph(doc, "Costos del Permiso de Carga y Descarga (UR-TT-T-07):")
+    add_styled_table(doc,
+                     ["Periodo", "Particular (por camión)", "Empresa establecida en el municipio (hasta 15 camiones)"],
+                     [
+                         ["Día", "$191.00", "$573.00"],
+                         ["Mes", "$1,151.00", "$5,732.00"],
+                         ["Semestre", "$5,752.00", "$28,662.00"],
+                         ["Año", "$11,503.00", "$57,325.00"]
+                     ],
+                     [1.5, 2.2, 2.8])
+
+    figura(["catalogo"], "Catálogo Oficial de Trámites, con buscador y filtros.", max_height=7.4)
 
     # CAPÍTULO 7
     add_h1(doc, "7. Procedimiento Paso a Paso: Cómo Iniciar una Solicitud en Línea")
-    add_paragraph(doc, "Iniciar un trámite toma menos de 5 minutos siguiendo estos pasos:")
-    add_bullet(doc, "1. En el catálogo de trámites, localiza el trámite que necesitas y presiona 'Iniciar Trámite'.")
-    add_bullet(doc, "2. Completa los campos del formulario: El sistema precargará tus datos personales y te pedirá los datos del vehículo, ruta o evento según corresponda.")
-    add_bullet(doc, "3. Sube tus documentos: Haz clic en el botón 'Seleccionar archivo' de cada requisito obligatorio y adjunta el PDF o foto correspondiente.")
-    add_bullet(doc, "4. Revisa el resumen de tu solicitud y verifica que todos los datos sean correctos.")
-    add_bullet(doc, "5. Presiona 'Confirmar y Enviar Solicitud'.")
-    add_bullet(doc, "6. ¡Listo! El sistema te mostrará tu Folio Oficial de Solicitud (ejemplo: SOL-2026-000312). Guárdalo para cualquier consulta.")
+    add_paragraph(doc, "Todos los trámites siguen los mismos pasos. Como ejemplo se muestra el Permiso para Cierre de Calle:")
+    add_bullet(doc, "1. En 'Trámites', localiza el que necesitas y presiona 'Iniciar trámite'. Para la Concesión de Transporte, el botón es 'Ver convocatoria / Postular'.")
+    add_bullet(doc, "2. Si quieres revisar los requisitos, presiona 'Descargar formato' en el panel derecho.")
+    add_bullet(doc, "3. Llena los campos. Los marcados con asterisco (*) son obligatorios.")
+    add_bullet(doc, "4. En la sección de documentos, presiona 'Seleccionar archivo' en cada requisito y elige tu PDF o foto.")
+    add_bullet(doc, "5. Presiona 'Enviar Solicitud'.")
 
-    add_image_placeholder(doc, "Formulario de Solicitud y Carga de Archivos (/portal/tramites/formulario)",
-                          "Pantalla de captura donde el ciudadano llena campos y sube sus archivos probatorios.",
-                          "Campos específicos del trámite, botones de subida de archivos con validador de formato y botón 'Enviar'.")
+    figura(["formulario"], "Formulario de solicitud con la carga de documentos.", max_height=7.0)
+
+    add_paragraph(doc, "Al terminar verás el 'Resumen de solicitud' con tu Folio, la fecha, el monto y los datos capturados. El folio es una clave de 20 letras y números (ejemplo: 6B072D9B222C4928A99F). Guárdalo: con él se identifica tu trámite en cualquier consulta.")
+    figura(["solicitud_enviada"], "Resumen de la solicitud enviada, con su folio.")
+
+    add_h2(doc, "Qué Sigue Después de Enviar")
+    add_styled_table(doc,
+                     ["Trámite", "Siguiente paso"],
+                     [
+                         ["UR-TT-T-01", "Tu postulación se evalúa junto con las demás de la convocatoria."],
+                         ["UR-TT-T-02", "El portal te lleva a agendar tu cita de inspección. La unidad debe presentarse totalmente despintada. El pago se autoriza después de la verificación."],
+                         ["UR-TT-T-03", "La Dirección revisa tu expediente y, si está correcto, lo aprueba. No hay pago."],
+                         ["UR-TT-T-04", "La Dirección revisa tu solicitud y después autoriza el pago."],
+                         ["UR-TT-T-05", "La Dirección valida tu solicitud y después autoriza el pago."],
+                         ["UR-TT-T-06", "La Dirección revisa los documentos de la cesión."],
+                         ["UR-TT-T-07", "La solicitud pasa directamente a 'Pago pendiente'."]
+                     ],
+                     [1.3, 5.2])
 
     # CAPÍTULO 8
-    add_h1(doc, "8. Seguimiento de Solicitudes y Comprensión del Semáforo de Estatus")
-    add_paragraph(doc, "En cualquier momento puedes consultar el avance de tus solicitudes en la pestaña 'Mis Solicitudes' (/portal/mis-solicitudes). Cada expediente tiene asignado un distintivo de color (badge) que indica exactamente qué está ocurriendo:")
+    add_h1(doc, "8. Seguimiento de Solicitudes y Significado de los Estatus")
+    add_paragraph(doc, "En cualquier momento puedes consultar tus solicitudes en 'Mis solicitudes'. Puedes buscar por folio o por nombre del trámite, y filtrar por Pago pendiente, En revisión, Aprobados / Concluidos u Observación / Rechazo. Cada solicitud tiene una etiqueta de color que indica su situación:")
 
     add_styled_table(doc,
-                     ["Distintivo Visual", "Nombre del Estado", "Qué Significa para Ti"],
+                     ["Color de la Etiqueta", "Estatus", "Qué Significa para Ti"],
                      [
-                         ["🔵 Azul", "Recibido", "Tu solicitud ingresó con éxito al sistema y está en fila de revisión."],
-                         ["🟡 Amarillo", "En Revisión / Estudio", "El personal técnico de la Dirección está cotejando tus documentos."],
-                         ["🟠 Naranja", "Prevención", "ATENCIÓN REQUERIDA: Algún documento fue observado y debes corregirlo."],
-                         ["🟣 Morado", "Pago Pendiente", "¡Trámite autorizado! Ya puedes pagar tus derechos en línea o en banco."],
-                         ["🟢 Verde", "Pagado", "Tu pago fue confirmado y tu documento final está en proceso de emisión."],
-                         ["🟢 Verde Éxito", "Emitido / Concluido", "¡Trámite terminado! Tu permiso o constancia está lista para descargar."],
-                         ["🔴 Rojo", "Rechazado", "La solicitud no fue procedente. Puedes ver la justificación legal en el detalle."]
+                         ["Azul claro", "Recibido, Cita agendada, Autorizado para pago", "Tu solicitud ingresó al sistema o avanzó a su siguiente etapa."],
+                         ["Azul", "En revisión, En validación, En revisión documental", "El personal de la Dirección está revisando tu expediente."],
+                         ["Amarillo", "Prevención", "ATENCIÓN REQUERIDA: hay una observación que debes atender (capítulo 9)."],
+                         ["Amarillo", "Pago pendiente", "Trámite autorizado para pago (capítulo 10)."],
+                         ["Verde", "Verificado, Aprobado, Pagado", "Tu trámite superó esa etapa."],
+                         ["Verde", "Permiso emitido, Constancia emitida, Título emitido, Vigente", "Tu documento fue emitido (capítulo 11)."],
+                         ["Rojo", "Rechazado, Vencido", "La solicitud no procedió o el permiso venció. El motivo aparece en el Historial de estatus."]
                      ],
-                     [1.5, 1.8, 3.2])
+                     [1.2, 2.4, 2.9])
 
-    add_image_placeholder(doc, "Bandeja 'Mis Solicitudes' (/portal/mis-solicitudes)",
-                          "Listado de trámites del ciudadano con insignias de color según su estado de avance.",
-                          "Tabla con Folio, Trámite, Fecha de ingreso, Estatus con distintivo de color y botón 'Ver Detalle'.")
+    figura(["mis_solicitudes"], "Bandeja 'Mis solicitudes', con folio, estatus, fecha, monto y acciones.")
+
+    add_paragraph(doc, "Presiona 'Detalle' para abrir la solicitud. Arriba verás la 'Evolución del trámite' por etapas y, al lado, el 'Historial de estatus' con la fecha y el comentario de cada cambio.")
 
     # CAPÍTULO 9
-    add_h1(doc, "9. Cómo Subsanar una Observación o Prevención Documental")
-    add_paragraph(doc, "Si tu solicitud cambia a color naranja 'Prevención', no te preocupes: esto significa que un funcionario revisó tu expediente y notó que algún archivo estaba borroso, incompleto o vencido.")
-    
-    add_paragraph(doc, "Pasos para corregir tu trámite:")
-    add_bullet(doc, "1. Entra a 'Mis Solicitudes' y haz clic en 'Ver Detalle'.")
-    add_bullet(doc, "2. Lee con atención el recuadro de 'Observaciones de la Dirección' (ejemplo: 'La identificación oficial adjunta está cortada por el reverso').")
-    add_bullet(doc, "3. En la sección de documentos observados, haz clic en 'Reemplazar Archivo'.")
-    add_bullet(doc, "4. Sube la fotografía o PDF corregido.")
-    add_bullet(doc, "5. Presiona 'Reenviar Documentación'. Tu expediente regresará automáticamente a revisión sin costo adicional.")
+    add_h1(doc, "9. Cómo Atender una Prevención u Observación")
+    add_paragraph(doc, "Si tu solicitud cambia a 'Prevención', significa que un funcionario revisó tu expediente y necesita que aclares o completes algo. No es un rechazo.")
 
-    add_image_placeholder(doc, "Atención a Prevenciones (/portal/solicitud/ver/[id])",
-                          "Pantalla donde se muestra el comentario del funcionario y el botón para subir el documento corregido.",
-                          "Recuadro de alerta naranja con el mensaje de prevención, botón 'Subir Corrección' y botón 'Reenviar'.")
+    add_paragraph(doc, "Pasos para atenderla:")
+    add_bullet(doc, "1. Entra a 'Mis solicitudes' y presiona 'Detalle'.")
+    add_bullet(doc, "2. Verás el aviso rojo 'Prevención / Aclaración Requerida'.")
+    add_bullet(doc, "3. Lee en el 'Historial de estatus' el comentario de la Dirección, que indica qué falta.")
+    add_bullet(doc, "4. Acude a la Dirección de Movilidad con el documento o escríbele a sus datos de contacto (capítulo 12), mencionando tu folio.")
+    add_bullet(doc, "5. Cuando la Dirección reciba lo que falta, tu expediente regresará a revisión.")
+
+    add_callout(doc, "info", "LA CORRECCIÓN NO SE SUBE POR EL PORTAL",
+                "Por ahora el portal te muestra la observación, pero no tiene un botón para reemplazar archivos. La documentación complementaria se entrega directamente a la Dirección.")
+
+    figura(["prevencion"], "Solicitud en Prevención, con el aviso rojo y la evolución del trámite.")
+    figura(["prevencion_historial"], "El comentario de la Dirección aparece en el Historial de estatus.", max_width=2.8)
 
     # CAPÍTULO 10
-    add_h1(doc, "10. Métodos de Pago: En Línea, Ventanilla y Sucursales BanBajío")
-    add_paragraph(doc, "Cuando tu trámite esté en estado 'Pago Pendiente', podrás liquidar los derechos mediante dos opciones cómodas:")
+    add_h1(doc, "10. Cómo Pagar: En Línea, Tesorería, Jueces Calificadores y BanBajío")
+    add_paragraph(doc, "Cuando tu trámite esté en 'Pago pendiente', verás un aviso amarillo con el monto a cubrir y podrás pagar de las siguientes maneras.")
 
-    add_h2(doc, "Opción 1: Pago en Línea (Con Tarjeta Bancaria)")
-    add_bullet(doc, "1. En la ficha de tu trámite, presiona el botón verde 'Pagar en Línea'.")
-    add_bullet(doc, "2. Ingresa los datos de tu tarjeta de crédito o débito.")
-    add_bullet(doc, "3. El sistema procesará el pago de forma segura y acreditará tu expediente de inmediato, cambiando a 'Pagado'.")
+    figura(["pago_detalle"], "Solicitud en Pago pendiente, con los botones 'Hoja de pago' y 'Pagar en línea'.")
 
-    add_h2(doc, "Opción 2: Pago en Ventanilla Municipal o Banco BanBajío")
-    add_bullet(doc, "1. Presiona el botón 'Descargar Hoja de Pago Oficial' (COB-05).")
-    add_bullet(doc, "2. Se descargará un archivo PDF con folio oficial COB-AAAA-NNNNNN, desglose del monto y código de referencia único.")
-    add_bullet(doc, "3. Imprime la hoja de pago y acude a las ventanillas de la Dirección de Movilidad o a cualquier sucursal de BanBajío.")
-    add_bullet(doc, "4. Tras pagar, el sistema registrará tu depósito y se emitirá tu Recibo Oficial con folio REC-AAAA-NNNNNN.")
+    add_h2(doc, "Opción 1: Con la Hoja de Pago (Todos los Trámites con Costo)")
+    add_bullet(doc, "1. En el detalle de tu solicitud presiona el botón verde 'Hoja de pago'.")
+    add_bullet(doc, "2. Se abrirá tu hoja con el folio del trámite, el folio de cobro (COB-AAAA-NNNNNN), el total y la referencia bancaria. Presiona 'Imprimir hoja'.")
+    add_bullet(doc, "3. Paga en cualquiera de los lugares que indica la hoja: el Área de Jueces Calificadores de la Dirección, la Tesorería Municipal o BanBajío, con la referencia.")
+    add_bullet(doc, "4. Al registrarse tu pago, el trámite cambia a 'Pagado' y el cobro queda con un folio de recibo (REC-AAAA-NNNNNN).")
 
-    add_image_placeholder(doc, "Opciones de Pago y Hoja de Pago Imprimible (COB-05)",
-                          "Pantalla para elegir pago con tarjeta o descargar la orden de pago para ventanilla/banco.",
-                          "Botón 'Pagar con Tarjeta', botón 'Imprimir Hoja de Pago BanBajío' y desglose de tarifas.")
+    figura(["hoja_pago"], "Hoja de ayuda para el pago, con los lugares donde puedes pagar.", max_height=6.4)
+
+    add_callout(doc, "warning", "LA HOJA DE PAGO NO ES UN RECIBO",
+                "La hoja es informativa y no sustituye el recibo oficial de pago. Consérvala junto con tu folio para cualquier aclaración. El monto puede cambiar si el trámite se rechaza o si cambia la tarifa antes del pago.")
+
+    add_h2(doc, "Opción 2: Pago en Línea (Trámites UR-TT-T-04, UR-TT-T-05 y UR-TT-T-07)")
+    add_bullet(doc, "1. Presiona 'Pagar en línea' en el aviso amarillo, o 'Pagar' en 'Mis solicitudes'.")
+    add_bullet(doc, "2. Revisa el resumen y confirma el pago.")
+    add_bullet(doc, "3. Al confirmarse, tu permiso se emite de inmediato.")
+
+    add_callout(doc, "warning", "PAGO EN LÍNEA EN MODO DE DEMOSTRACIÓN",
+                "El pago en línea funciona en modo de demostración hasta que el municipio active el servicio con BanBajío: no hace cargos reales ni pide datos de tarjeta. Mientras tanto, para pagar usa la Hoja de Pago.")
 
     # CAPÍTULO 11
-    add_h1(doc, "11. Descarga e Impresión de Documentos Oficiales Emitidos")
-    add_paragraph(doc, "Una vez que tu expediente alcance el estado 'Concluido / Emitido':")
-    add_bullet(doc, "1. Ingresa al detalle de tu trámite en 'Mis Solicitudes'.")
-    add_bullet(doc, "2. Encontrarás el botón destacado 'Descargar Documento Oficial'.")
-    add_bullet(doc, "3. Podrás descargar en PDF tu Constancia de Despintado, Permiso Eventual, Orden de Plaqueo o Título de Concesión.")
-    add_bullet(doc, "4. Este documento cuenta con firma electrónica, folio institucional y plena validez legal ante cualquier autoridad vial.")
+    add_h1(doc, "11. Cómo Obtener tu Permiso o Documento Oficial")
+    add_paragraph(doc, "La forma de obtener tu documento depende del trámite:")
+    add_styled_table(doc,
+                     ["Trámite", "Cómo se obtiene"],
+                     [
+                         ["UR-TT-T-05 Cierre de Calle", "Desde el resumen de tu solicitud: presiona 'Ver permiso' y después 'Imprimir permiso'."],
+                         ["UR-TT-T-01, UR-TT-T-02 y UR-TT-T-03", "El título, la constancia o la orden se entregan en la Dirección de Movilidad cuando el trámite concluye."],
+                         ["UR-TT-T-04, UR-TT-T-06 y UR-TT-T-07", "Consulta el estatus y las vigencias en el detalle de tu solicitud. Si hay archivos en 'Documentos adjuntos', se bajan con el botón 'Descargar'; si necesitas el documento impreso, acude a la Dirección."]
+                     ],
+                     [2.2, 4.3])
 
-    add_image_placeholder(doc, "Descarga de Documento Oficial Emitido",
-                          "Vista final del expediente con el enlace de descarga del permiso o constancia autorizada.",
-                          "Tarjeta de felicitación con botón 'Descargar Permiso Oficial en PDF' y resumen de vigencia.")
+    figura(["permiso_resumen"], "Resumen de un permiso emitido, con el botón 'Ver permiso'.")
+    figura(["permiso"], "Permiso para Cierre de Calle, listo para imprimir. Los datos son de ejemplo.", max_height=6.6)
+
+    add_callout(doc, "info", "VIGENCIA DEL PERMISO DE CIERRE DE CALLE",
+                "El permiso es válido únicamente durante la fecha y el horario autorizados.")
 
     # CAPÍTULO 12
     add_h1(doc, "12. Canales de Ayuda, Ubicación y Preguntas Frecuentes")
-    add_paragraph(doc, "¿Tienes dudas o requieres asistencia técnica?")
-    add_bullet(doc, "Dirección de Movilidad y Transporte — Presidencia Municipal de Uriangato, Gto.", "Oficinas de Atención: ")
-    add_bullet(doc, "Lunes a Viernes de 8:30 a 15:30 horas.", "Horario de Atención en Ventanilla: ")
-    add_bullet(doc, "soporte.movilidad@uriangato.gob.mx", "Correo de Soporte Técnico: ")
+    add_paragraph(doc, "¿Tienes dudas o requieres asistencia?")
+    add_bullet(doc, "Dirección de Movilidad y Transporte Municipal, Blvd. Juan Pablo II núm. 40, col. Lázaro Cárdenas, Uriangato, Gto.", "Oficinas de Atención: ")
+    add_bullet(doc, "Lunes a viernes de 8:00 a 15:00 y de 16:00 a 19:00; sábado de 8:00 a 15:00.", "Horario del Área de Jueces Calificadores: ")
+    add_bullet(doc, "445 457 8000", "Teléfono: ")
+    add_bullet(doc, "movilidaduriangato@gmail.com", "Correo: ")
 
     add_h2(doc, "Preguntas Frecuentes del Ciudadano:")
-    add_bullet(doc, "La plataforma está disponible las 24 horas del día. Si realizas un trámite en la noche o fin de semana, será atendido a primera hora del siguiente día hábil.", "¿Puedo ingresar un trámite en fin de semana? ")
-    add_bullet(doc, "Sí. Al momento de crear tu cuenta, puedes registrar la razón social y subir el acta constitutiva y poder notarial en los trámites que lo requieran.", "¿Puedo hacer trámites como empresa o persona moral? ")
-    add_bullet(doc, "No. El trámite UR-TT-T-03 de Orden de Plaqueo para cambio de unidad de transporte público es 100% gratuito conforme a la Ley de Ingresos.", "¿Tiene costo la Orden de Plaqueo? ")
+    add_bullet(doc, "Sí. El portal está disponible a cualquier hora. Tu solicitud será revisada en los horarios de la Dirección.", "¿Puedo ingresar un trámite en fin de semana? ")
+    add_bullet(doc, "Sí. Tu cuenta es personal, pero en los trámites que lo permiten el formulario te deja indicar si eres persona física o moral y pide el acta constitutiva y el poder notarial cuando corresponde.", "¿Puedo hacer trámites como empresa o persona moral? ")
+    add_bullet(doc, "No. La Orden de Plaqueo (UR-TT-T-03) no tiene costo, según su ficha oficial.", "¿Tiene costo la Orden de Plaqueo? ")
+    add_bullet(doc, "Entra a 'Mis solicitudes': ahí está el folio de cada trámite, con un botón para copiarlo.", "¿Dónde veo mi folio? ")
+    add_bullet(doc, "Abre el 'Detalle' de la solicitud. El motivo aparece en el 'Historial de estatus'.", "¿Por qué rechazaron mi solicitud? ")
 
     # Guardar
     doc.save(output_path)
@@ -221,4 +279,3 @@ def generar_guia_ciudadano(output_path):
 if __name__ == "__main__":
     out = os.path.join(os.path.dirname(__file__), "..", "docs", "guias_usuario", "Guia_Usuario_Ciudadano.docx")
     generar_guia_ciudadano(out)
-
