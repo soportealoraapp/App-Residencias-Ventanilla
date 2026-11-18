@@ -633,7 +633,11 @@ class AdminController extends Controller
             return redirect()->back()->with('error', 'Debes seleccionar un archivo.');
         }
 
-        if (! in_array($file->getClientMimeType(), ['application/pdf', 'image/jpeg', 'image/png'], true)) {
+        // Auditoría B4: se usa el tipo real del contenido (finfo), no el que
+        // declara el navegador, y la extensión sale de ese tipo.
+        $extensiones = ['application/pdf' => 'pdf', 'image/jpeg' => 'jpg', 'image/png' => 'png'];
+        $mimeReal    = (string) $file->getMimeType();
+        if (! isset($extensiones[$mimeReal])) {
             return redirect()->back()->with('error', 'El archivo debe ser PDF, JPG o PNG.');
         }
 
@@ -642,12 +646,12 @@ class AdminController extends Controller
         }
 
         $nombreOriginal = $file->getName();
-        $extension = $file->getClientExtension() ?: 'pdf';
+        $extension = $extensiones[$mimeReal];
         $nombreInterno = $tramite . '_' . bin2hex(random_bytes(8)) . '.' . $extension;
 
         $contenido = file_get_contents($file->getTempName());
         $storage = new \App\Libraries\SupabaseStorage();
-        $ok = $storage->subir('formatos', $nombreInterno, $contenido, $file->getClientMimeType());
+        $ok = $storage->subir('formatos', $nombreInterno, $contenido, $mimeReal);
         if (! $ok) {
             return redirect()->back()->with('error', 'Error al subir el archivo a almacenamiento.');
         }
@@ -661,7 +665,7 @@ class AdminController extends Controller
             'descripcion'    => $this->request->getPost('descripcion') ?? null,
             'nombre_archivo' => $nombreOriginal,
             'ruta_interna'   => $nombreInterno,
-            'mime_type'      => $file->getClientMimeType(),
+            'mime_type'      => $mimeReal,
             'tamano_bytes'   => $file->getSize(),
             'usuario_id'     => $userId,
             'activo'         => 1,

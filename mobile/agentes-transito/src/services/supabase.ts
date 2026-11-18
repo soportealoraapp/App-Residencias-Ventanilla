@@ -348,3 +348,15 @@ export async function subirFotoEvidencia(
   }
   return res.url;
 }
+
+/**
+ * Revoca el token en el servidor al cerrar sesión (auditoría B2). Si no hay red
+ * no bloquea la salida: el token se borra igual del dispositivo y caduca solo.
+ */
+export async function revocarSesionAgente(): Promise<void> {
+  try {
+    await apiRequest("/api/agentes/logout", { method: "POST", timeoutMs: 5000 });
+  } catch {
+    // Sin conexión o token ya vencido: la sesión local se cierra de todos modos.
+  }
+}

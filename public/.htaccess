@@ -13,8 +13,7 @@ Options -Indexes
     Options +FollowSymlinks
     RewriteEngine On
 
-    # !IMPORTANT! WAS ONLY ADDED FOR TRAE TO FIND STATIC FILES.
-    # IN PRODUCTION, PLEASE REMOVE THIS FOR SECURITY.
+    # Front controller: lo que no sea un archivo o carpeta real va a index.php.
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^([\s\S]*)$ index.php/$1 [NC,L,QSA]

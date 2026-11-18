@@ -27,7 +27,7 @@ class AgentesTransitoApiController extends Controller
      */
     public function login(): ResponseInterface
     {
-        $this->configureCors();
+        // Los encabezados CORS los pone el filtro global `cors` (Config\Cors, auditoría B1).
         if (strtoupper($this->request->getMethod()) === 'OPTIONS') {
             return $this->response->setStatusCode(204)->setBody('');
         }
@@ -128,14 +128,25 @@ class AgentesTransitoApiController extends Controller
         ]);
     }
 
-    private function configureCors(): void
+    /**
+     * Cierre de sesión desde la app (auditoría B2): revoca el token en el
+     * servidor para que una copia robada deje de servir de inmediato, en vez
+     * de seguir viva hasta que caduque. Siempre responde 200: cerrar sesión
+     * con un token ya revocado o vencido no es un error para la app.
+     */
+    public function logout(): ResponseInterface
     {
-        $origin = $this->request->getHeaderLine('Origin') ?: '*';
-        $this->response
-            ->setHeader('Access-Control-Allow-Origin', $origin)
-            ->setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-            ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin')
-            ->setHeader('Access-Control-Max-Age', '7200');
-    }
+        if (strtoupper($this->request->getMethod()) === 'OPTIONS') {
+            return $this->response->setStatusCode(204)->setBody('');
+        }
 
+        $agenteId = (new AgenteTokenService())->revocar($this->request);
+        if ($agenteId !== null) {
+            (new AuditoriaModel())->registrar('agentes_transito', $agenteId, 'logout_agente', null, [
+                'ip' => $this->request->getIPAddress(),
+            ]);
+        }
+
+        return $this->response->setJSON(['success' => true]);
+    }
 }

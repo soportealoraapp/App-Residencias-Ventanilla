@@ -130,11 +130,7 @@ class InfraccionesApiController extends Controller
      */
     public function parametros(): ResponseInterface
     {
-        $origin = $this->request->getHeaderLine('Origin') ?: '*';
-        $this->response
-            ->setHeader('Access-Control-Allow-Origin', $origin)
-            ->setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
-            ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+        // Los encabezados CORS los pone el filtro global `cors` (Config\Cors, auditoría B1).
 
         if (strtoupper($this->request->getMethod()) === 'OPTIONS') {
             return $this->response->setStatusCode(204)->setBody('');
@@ -166,12 +162,7 @@ class InfraccionesApiController extends Controller
      */
     public function sincronizar(): ResponseInterface
     {
-        $origin = $this->request->getHeaderLine('Origin') ?: '*';
-        $this->response
-            ->setHeader('Access-Control-Allow-Origin', $origin)
-            ->setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-            ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin')
-            ->setHeader('Access-Control-Max-Age', '7200');
+        // Los encabezados CORS los pone el filtro global `cors` (Config\Cors, auditoría B1).
 
         if (strtoupper($this->request->getMethod()) === 'OPTIONS') {
             return $this->response->setStatusCode(204)->setBody('');
@@ -364,12 +355,7 @@ class InfraccionesApiController extends Controller
      */
     public function subirEvidencia(): ResponseInterface
     {
-        $origin = $this->request->getHeaderLine('Origin') ?: '*';
-        $this->response
-            ->setHeader('Access-Control-Allow-Origin', $origin)
-            ->setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-            ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin')
-            ->setHeader('Access-Control-Max-Age', '7200');
+        // Los encabezados CORS los pone el filtro global `cors` (Config\Cors, auditoría B1).
 
         if (strtoupper($this->request->getMethod()) === 'OPTIONS') {
             return $this->response->setStatusCode(204)->setBody('');

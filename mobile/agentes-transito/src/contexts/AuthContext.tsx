@@ -12,7 +12,7 @@ import {
   restoreAgentProfile,
   saveAgentProfile,
 } from "../services/authProfileStorage";
-import { loginAgente } from "../services/supabase";
+import { loginAgente, revocarSesionAgente } from "../services/supabase";
 
 export type AgenteUsuario = AgentePerfil;
 
@@ -85,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    await revocarSesionAgente();
     const erroresAlCerrar = await clearAgentProfile(AsyncStorage, clearAgentToken);
     setUser(null);
     setSessionError(erroresAlCerrar.length > 0 ? erroresAlCerrar.join(" ") : null);

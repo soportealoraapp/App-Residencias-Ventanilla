@@ -388,25 +388,27 @@ $oldNumSerie = old('vehiculo_num_serie', '');
         })
         .then(r => r.json())
         .then(json => {
-            if (json && json.success) {
-                placasInput.value = json.vehiculo_placas || '';
-                numSerieInput.value = json.vehiculo_num_serie || '';
-                placasInput.readOnly = true;
-                numSerieInput.readOnly = true;
-                let html = '<div class="alert alert-success small py-2 mb-0" role="alert"><i class="bi bi-check-circle-fill me-1"></i><strong>Concesión VIGENTE</strong>';
-                if (json.titular_actual) {
-                    html += '<br><span class="opacity-75">Titular: ' + json.titular_actual + '</span>';
-                }
-                if (json.vigencia_fin) {
-                    html += '<br><span class="opacity-75">Vigencia hasta: ' + json.vigencia_fin + '</span>';
-                }
-                html += '</div>';
-                concesionResultado.innerHTML = html;
+            // El servidor solo dice si el título está vigente (auditoría B3); las
+            // placas y la serie las captura el solicitante. El texto se pone con
+            // textContent para que nada de la respuesta se interprete como HTML.
+            placasInput.readOnly = false;
+            numSerieInput.readOnly = false;
+            const aviso = document.createElement('div');
+            const icono = document.createElement('i');
+            const texto = document.createElement('span');
+            if (json && json.vigente) {
+                aviso.className = 'alert alert-success small py-2 mb-0';
+                aviso.setAttribute('role', 'alert');
+                icono.className = 'bi bi-check-circle-fill me-1';
+                texto.className = 'fw-bold';
+                texto.textContent = 'Concesión VIGENTE';
             } else {
-                placasInput.readOnly = false;
-                numSerieInput.readOnly = false;
-                concesionResultado.innerHTML = '<div class="text-danger small mt-1"><i class="bi bi-x-circle me-1"></i>' + (json ? json.mensaje : 'Concesión no encontrada o vencida') + '</div>';
+                aviso.className = 'text-danger small mt-1';
+                icono.className = 'bi bi-x-circle me-1';
+                texto.textContent = (json && json.mensaje) ? String(json.mensaje) : 'Concesión no encontrada o vencida';
             }
+            aviso.append(icono, texto);
+            concesionResultado.replaceChildren(aviso);
         })
         .catch(() => {
             placasInput.readOnly = false;

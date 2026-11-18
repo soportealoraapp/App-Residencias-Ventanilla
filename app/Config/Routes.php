@@ -30,6 +30,8 @@ $routes->get('api/checklist-infracciones', 'Api\InfraccionesApiController::check
 
 $routes->options('api/agentes/login', 'Api\AgentesTransitoApiController::login');
 $routes->post('api/agentes/login', 'Api\AgentesTransitoApiController::login');
+$routes->options('api/agentes/logout', 'Api\AgentesTransitoApiController::logout');
+$routes->post('api/agentes/logout', 'Api\AgentesTransitoApiController::logout');
 
 $routes->get('api/parametros', 'Api\InfraccionesApiController::parametros');
 $routes->options('api/parametros', 'Api\InfraccionesApiController::parametros');

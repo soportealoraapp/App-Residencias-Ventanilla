@@ -329,13 +329,29 @@ class AuthController extends Controller
 
     public function attemptForgot()
     {
-        $email = $this->request->getPost('email');
+        $email   = strtolower(trim((string) $this->request->getPost('email')));
+        $ip      = $this->request->getIPAddress();
+        $mensaje = 'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.';
 
-        $user = $this->userModel->where('email', $email)->first();
+        // Auditoría B5: límite por IP y por correo, contado en la tabla de
+        // auditoría (Vercel no tiene caché persistente). Del correo se guarda
+        // solo su hash. Al rebasar el límite se responde igual que siempre,
+        // para no delatar si la cuenta existe, pero no se envía nada.
+        $correoHash = $email === '' ? '' : hash('sha256', $email);
+        if ($this->auditoriaModel->contarRecientes('recuperacion_pedida', 'ip', $ip, 60) >= 5
+            || $this->auditoriaModel->contarRecientes('recuperacion_pedida', 'correo', $correoHash, 60) >= 3) {
+            $this->auditoriaModel->registrar('users', null, 'recuperacion_limitada', null, ['ip' => $ip, 'correo' => $correoHash]);
+
+            return redirect()->back()->with('message', $mensaje);
+        }
+        $this->auditoriaModel->registrar('users', null, 'recuperacion_pedida', null, ['ip' => $ip, 'correo' => $correoHash]);
+
+        $user = $email === '' ? null : $this->userModel->where('email', $email)->first();
 
         if ($user !== null) {
             $token = bin2hex(random_bytes(20));
-            $expira = date('Y-m-d H:i:s', time() + 86400);
+            // El enlace vale 1 hora (antes 24 h).
+            $expira = date('Y-m-d H:i:s', time() + 3600);
 
             // Se guarda solo el hash: una fuga de la BD no revelaría enlaces válidos.
             $this->userModel->update($user->id, [
@@ -361,7 +377,7 @@ class AuthController extends Controller
             $html .= '<div style="text-align:center;margin:30px 0;">';
             $html .= '<a href="' . $resetUrl . '" style="background:#0d6efd;color:#fff;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block;">Restablecer contraseña</a>';
             $html .= '</div>';
-            $html .= '<p style="color:#999;font-size:12px;">Si no solicitaste este cambio, puedes ignorar este mensaje. El enlace expirará en 24 horas.</p>';
+            $html .= '<p style="color:#999;font-size:12px;">Si no solicitaste este cambio, puedes ignorar este mensaje. El enlace expirará en 1 hora.</p>';
             $html .= '<p style="color:#999;font-size:12px;">Si el botón no funciona, copia y pega este enlace en tu navegador:</p>';
             $html .= '<p style="color:#999;font-size:11px;word-break:break-all;">' . $resetUrl . '</p>';
             $html .= '</div>';
@@ -375,7 +391,7 @@ class AuthController extends Controller
             $emailService->send();
         }
 
-        return redirect()->back()->with('message', 'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.');
+        return redirect()->back()->with('message', $mensaje);
     }
 
     public function reset(?string $token = null)

@@ -262,7 +262,7 @@ sudo apachectl configtest && sudo systemctl reload apache2
   ```
 
 - **Respaldo de Supabase:** la app todavía consulta Supabase como respaldo para el catálogo y los parámetros. Retirar ese respaldo (o dejar vacías sus variables) antes de producción, para que todo pase por la API del servidor municipal.
-- **CORS:** la lista de orígenes permitidos está escrita en `app/Config/Cors.php` (`localhost` y `app-residencias.vercel.app`). Agregar `https://movilidad.uriangato.gob.mx` y quitar los de pruebas.
+- **CORS:** `app/Config/Cors.php` arma la lista sola: el dominio de `APP_BASEURL` y, fuera de producción, los `localhost` de Expo. La app web de agentes vive en el mismo dominio (`/agentes`) y la nativa no manda `Origin`, así que no hace falta agregar nada. Solo si se publica la app web en otro dominio, ponerlo en `APP_CORS_ORIGINS` (separados por coma).
 
 ---
 
@@ -274,7 +274,7 @@ sudo apachectl configtest && sudo systemctl reload apache2
 | 2 | No cargar usuarios demo; si existen, borrarlos (`php spark demo:limpiar --force` borra los datos de `DemoFuncionamientoSeeder`) | Base de datos |
 | 3 | `CI_ENVIRONMENT = production`, para no mostrar errores detallados | `.env` |
 | 4 | Proxy de confianza: fuera de Vercel la app ya no confía en `X-Forwarded-For` de cualquier IP. Si hay un proxy inverso o balanceador delante de PHP, poner su IP o rango en `APP_PROXY_IPS` (varias, separadas por coma). Sin eso, el límite de intentos fallidos contaría todo como una sola IP y, si el proxy termina el HTTPS, `APP_FORCE_HTTPS` provocaría redirecciones en bucle. Sin proxy, dejarla sin definir | `.env` |
-| 5 | CORS con el dominio municipal (sección 8) | `app/Config/Cors.php` |
+| 5 | CORS: con `CI_ENVIRONMENT = production` solo se acepta el dominio de `APP_BASEURL` más los de `APP_CORS_ORIGINS` (sección 8) | `.env` |
 | 6 | Llave de cifrado nueva y `.env` con permisos restringidos | `.env` |
 | 7 | Pasarela de pagos: mientras no haya convenio con BanBajío, dejar apagada la bandera `APP_ENABLE_PAGO_EN_LINEA`. Así el portal solo ofrece la hoja de pago para caja; encendida, usa la pasarela simulada | `.env` |
 

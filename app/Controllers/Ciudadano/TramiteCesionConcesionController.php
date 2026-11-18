@@ -81,17 +81,15 @@ class TramiteCesionConcesionController extends Controller
         $numeroTituloDecoded = urldecode($numeroTitulo);
         $concesion = $this->concesionModel->findByNumeroTitulo($numeroTituloDecoded);
 
-        if ($concesion === null || $concesion->estatus !== 'vigente') {
-            return $response->setJSON(['success' => false, 'mensaje' => 'Número de título no encontrado o concesión no vigente']);
-        }
+        // Auditoría B3: solo se responde si el título está vigente. El titular,
+        // las placas y el número de serie no se exponen, para que nadie pueda
+        // recorrer números de título y sacar datos personales de los concesionarios.
+        $vigente = $concesion !== null && $concesion->estatus === 'vigente';
 
         return $response->setJSON([
-            'success'          => true,
-            'titular_actual'   => $concesion->titular_actual ?? '',
-            'vehiculo_placas'  => $concesion->vehiculo_placas ?? '',
-            'vehiculo_num_serie' => $concesion->vehiculo_num_serie ?? '',
-            'vigencia_inicio'  => $concesion->vigencia_inicio ?? '',
-            'vigencia_fin'     => $concesion->vigencia_fin ?? '',
+            'success' => $vigente,
+            'vigente' => $vigente,
+            'mensaje' => $vigente ? 'Concesión vigente.' : 'Número de título no encontrado o concesión no vigente',
         ]);
     }
 

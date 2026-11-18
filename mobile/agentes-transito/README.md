@@ -124,7 +124,7 @@ EXPO_PUBLIC_APP_ENV=development
 
 En desarrollo la IP de esa URL se ajusta sola: el navegador usa `localhost` y el celular usa la IP de la PC que ejecuta Expo (`src/constants/config.ts`), así que no hay que editarla al cambiar de red. Solo se respeta tal cual si apunta a un servidor público. La consola de Expo muestra `[config] API_BASE_URL = ...` para confirmar a dónde se conecta.
 
-Con `EXPO_PUBLIC_APP_ENV=development` el login muestra botones de **acceso rápido de prueba** (`AGT-204`, `AGT-107`, `JEF-001`, contraseña `transito2026`); siguen validándose contra el backend y desaparecen con `production`.
+Con `EXPO_PUBLIC_APP_ENV=development` y `EXPO_PUBLIC_DEMO_PASSWORD` definida en el `.env` local, el login muestra botones de **acceso rápido de prueba** (`AGT-204`, `AGT-107`, `JEF-001`); siguen validándose contra el backend. La contraseña no está en el código y `scripts/exportar_agentes_web.ps1` la deja fuera del bundle publicado.
 
 **Diagnóstico rápido:** abre `http://<IP-de-tu-PC>:8080/api/parametros` en el navegador del celular. Si no muestra un JSON, el problema es de red (firewall o Wi-Fi distinto), no de la app.
 

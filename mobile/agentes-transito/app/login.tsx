@@ -19,18 +19,20 @@ import { Ionicons } from "@expo/vector-icons";
 
 /**
  * Agentes del AgentesTransitoSeeder para entrar rápido durante las pruebas.
- * Solo se muestran con EXPO_PUBLIC_APP_ENV=development y siempre se validan
- * contra el backend: si el agente no existe o está inactivo, el acceso falla.
+ * Auditoría B6: la contraseña ya no está escrita en el código (quedaba en el
+ * bundle web publicado). Los botones solo aparecen en desarrollo y si el
+ * .env local define EXPO_PUBLIC_DEMO_PASSWORD; siempre se validan contra el
+ * backend, así que si el agente no existe o está inactivo, el acceso falla.
  */
+const PASSWORD_PRUEBA = process.env.EXPO_PUBLIC_DEMO_PASSWORD ?? "";
 const AGENTES_PRUEBA =
-  APP_ENV === "development"
+  APP_ENV === "development" && PASSWORD_PRUEBA !== ""
     ? [
         { placa: "AGT-204", etiqueta: "AGT-204 · Carlos M.", icono: "shield" as const },
         { placa: "AGT-107", etiqueta: "AGT-107 · María H.", icono: "shield" as const },
         { placa: "JEF-001", etiqueta: "JEF-001 · Javier R.", icono: "star" as const },
       ]
     : [];
-const PASSWORD_PRUEBA = "transito2026";
 
 export default function LoginScreen() {
   const router = useRouter();

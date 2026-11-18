@@ -24,11 +24,8 @@ class AgenteTokenFilter implements FilterInterface
             return null;
         }
 
-        $origin = $request->getHeaderLine('Origin') ?: '*';
-
         return Services::response()
             ->setStatusCode(401)
-            ->setHeader('Access-Control-Allow-Origin', $origin)
             ->setHeader('WWW-Authenticate', 'Bearer')
             ->setJSON([
                 'success' => false,

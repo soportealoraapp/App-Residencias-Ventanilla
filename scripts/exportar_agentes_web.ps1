@@ -29,6 +29,9 @@ if (-not (Test-Path -LiteralPath (Join-Path $app 'node_modules'))) {
 
 Push-Location -LiteralPath $app
 try {
+    # Auditoría B6: el bundle publicado nunca lleva la contraseña de los botones
+    # de prueba. Expo no sobrescribe variables ya definidas con las del .env.
+    $env:EXPO_PUBLIC_DEMO_PASSWORD = ''
     Write-Output '[1/3] expo export (web)'
     npx expo export -p web --output-dir ..\..\public\agentes --clear
     if ($LASTEXITCODE -ne 0) { throw "expo export fallo con codigo $LASTEXITCODE" }

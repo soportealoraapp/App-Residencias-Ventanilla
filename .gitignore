@@ -53,3 +53,9 @@ scripts/*secret*
 # Runtime local distribuido para pruebas
 php82/
 php-*.zip
+
+# Sobrantes locales fuera del repo (auditoría B6): el zip de PHP portable,
+# logs de spark serve y una base SQLite vacía (la real vive en writable/).
+/php-*.zip
+/spark-server*.log
+/database.sqlite

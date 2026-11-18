@@ -81,6 +81,31 @@ class AgenteTokenService
         return $agente;
     }
 
+    /**
+     * Revoca el token Bearer de la solicitud (cierre de sesión, auditoría B2).
+     * Devuelve el id del agente dueño del token, o null si no había uno vigente.
+     */
+    public function revocar(RequestInterface $request): ?int
+    {
+        $token = self::extraerBearer($request->getHeaderLine('Authorization'));
+        if ($token === null) {
+            return null;
+        }
+
+        $tokenModel = new AgenteTokenModel();
+        $registro   = $tokenModel->where('token_hash', self::hash($token))->where('revocado_en', null)->first();
+        if ($registro === null) {
+            return null;
+        }
+
+        $tokenModel->update($registro->id, ['revocado_en' => date('Y-m-d H:i:s')]);
+        if (self::$autenticados !== null) {
+            unset(self::$autenticados[$request]);
+        }
+
+        return (int) $registro->agente_id;
+    }
+
     private static function extraerBearer(string $header): ?string
     {
         if (preg_match('/^Bearer\s+([A-Fa-f0-9]{64})$/', trim($header), $m) !== 1) {
