@@ -71,32 +71,7 @@ class AuditoriaModel extends Model
      */
     public function intentosFallidosPorIp(string $ip, int $minutos = 15): int
     {
-        if ($ip === '') {
-            return 0;
-        }
-
-        $desde = date('Y-m-d H:i:s', time() - ($minutos * 60));
-
-        $filas = $this->select('detalle')
-            ->where('accion', 'login_fallido')
-            ->where('fecha >=', $desde)
-            ->orderBy('fecha', 'DESC')
-            ->limit(1000)
-            ->get()
-            ->getResult();
-
-        $total = 0;
-        foreach ($filas as $fila) {
-            $detalle = $fila->detalle ?? null;
-            if (is_string($detalle)) {
-                $detalle = json_decode($detalle, true);
-            }
-            if (is_array($detalle) && ($detalle['ip'] ?? null) === $ip) {
-                $total++;
-            }
-        }
-
-        return $total;
+        return $this->contarRecientes('login_fallido', 'ip', $ip, $minutos);
     }
 
     /**
@@ -106,7 +81,16 @@ class AuditoriaModel extends Model
      */
     public function registrosPorIp(string $ip, int $minutos = 60, string $accion = 'registro_ciudadano'): int
     {
-        if ($ip === '') {
+        return $this->contarRecientes($accion, 'ip', $ip, $minutos);
+    }
+
+    /**
+     * Cuenta los registros recientes de una acción cuyo detalle JSON tiene
+     * `$clave` igual a `$valor` (p. ej. la IP o la placa de un login fallido).
+     */
+    public function contarRecientes(string $accion, string $clave, string $valor, int $minutos): int
+    {
+        if ($valor === '') {
             return 0;
         }
 
@@ -126,7 +110,7 @@ class AuditoriaModel extends Model
             if (is_string($detalle)) {
                 $detalle = json_decode($detalle, true);
             }
-            if (is_array($detalle) && ($detalle['ip'] ?? null) === $ip) {
+            if (is_array($detalle) && ($detalle[$clave] ?? null) === $valor) {
                 $total++;
             }
         }

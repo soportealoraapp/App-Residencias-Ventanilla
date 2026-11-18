@@ -108,6 +108,8 @@ CI_ENVIRONMENT = production
 APP_BASEURL = https://movilidad.uriangato.gob.mx/
 APP_FORCE_HTTPS = true
 APP_ALLOWED_HOSTNAMES = movilidad.uriangato.gob.mx
+# Solo si hay un proxy inverso o balanceador delante de PHP: su IP o rango (sección 9)
+# APP_PROXY_IPS = 10.0.0.5
 APP_TIMEZONE = America/Mexico_City
 APP_LOCALE = es
 
@@ -271,7 +273,7 @@ sudo apachectl configtest && sudo systemctl reload apache2
 | 1 | Dejar apagada la bandera `APP_ENABLE_DEMO_LOGIN` (o no definirla). Con ella encendida, el login muestra los botones de "Acceso Rápido de Prueba" con las cuentas demo | `.env` |
 | 2 | No cargar usuarios demo; si existen, borrarlos (`php spark demo:limpiar --force` borra los datos de `DemoFuncionamientoSeeder`) | Base de datos |
 | 3 | `CI_ENVIRONMENT = production`, para no mostrar errores detallados | `.env` |
-| 4 | Restringir `proxyIPs`: hoy confía en cualquier `X-Forwarded-For` (`0.0.0.0/0`); poner solo la IP del proxy municipal, si existe. Afecta al bloqueo de intentos fallidos por IP | `app/Config/App.php` |
+| 4 | Proxy de confianza: fuera de Vercel la app ya no confía en `X-Forwarded-For` de cualquier IP. Si hay un proxy inverso o balanceador delante de PHP, poner su IP o rango en `APP_PROXY_IPS` (varias, separadas por coma). Sin eso, el límite de intentos fallidos contaría todo como una sola IP y, si el proxy termina el HTTPS, `APP_FORCE_HTTPS` provocaría redirecciones en bucle. Sin proxy, dejarla sin definir | `.env` |
 | 5 | CORS con el dominio municipal (sección 8) | `app/Config/Cors.php` |
 | 6 | Llave de cifrado nueva y `.env` con permisos restringidos | `.env` |
 | 7 | Pasarela de pagos: mientras no haya convenio con BanBajío, dejar apagada la bandera `APP_ENABLE_PAGO_EN_LINEA`. Así el portal solo ofrece la hoja de pago para caja; encendida, usa la pasarela simulada | `.env` |

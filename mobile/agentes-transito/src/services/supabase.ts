@@ -159,7 +159,10 @@ export async function loginAgente(placa: string, password: string): Promise<Logi
     });
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
-      throw new Error("Credenciales incorrectas o agente inactivo.");
+      throw new Error("Placa o contraseña incorrectas.");
+    }
+    if (error instanceof ApiError && error.status === 429) {
+      throw new Error("Demasiados intentos fallidos. Espere unos minutos e inténtelo de nuevo.");
     }
     if (error instanceof ApiError && error.status === 422) {
       throw new Error("Ingrese una placa y contraseña válidas.");

@@ -35,12 +35,18 @@ class App extends BaseConfig
         // peticiones a PHP como HTTP plano, pero incluye el header
         // X-Forwarded-Proto: https. Necesitamos trustear ese header para
         // que CI4 detecte la peticion como HTTPS y NO emita un redirect.
-        // En un entorno serverless de Vercel toda la infraestructura es de
-        // confianza, por lo que aceptamos cualquier IP de proxy.
+        // En Vercel el único que llega a PHP es su edge, así que se acepta
+        // cualquier IP de proxy. Fuera de Vercel (servidor municipal o local)
+        // un cliente podría falsear X-Forwarded-For y saltarse el límite de
+        // intentos por IP (auditoría M7): solo se confía en las IPs o rangos
+        // de APP_PROXY_IPS (separados por coma), p. ej. el proxy inverso real.
         // ----------------------------------------------------------------
-        $this->proxyIPs = [
-            '0.0.0.0/0' => 'X-Forwarded-For',
-        ];
+        if (getenv('VERCEL') !== false && getenv('VERCEL') !== '') {
+            $this->proxyIPs = ['0.0.0.0/0' => 'X-Forwarded-For'];
+        } else {
+            $proxies = array_filter(array_map('trim', explode(',', (string) getenv('APP_PROXY_IPS'))));
+            $this->proxyIPs = array_fill_keys($proxies, 'X-Forwarded-For');
+        }
 
         $envBaseUrl = getenv('APP_BASEURL') !== false ? getenv('APP_BASEURL') : getenv('app.baseURL');
         if (is_string($envBaseUrl) && $envBaseUrl !== '') {

@@ -4,11 +4,24 @@ namespace App\Controllers\Api;
 
 use App\Libraries\AgenteTokenService;
 use App\Models\AgenteTransitoModel;
+use App\Models\AuditoriaModel;
 use CodeIgniter\Controller;
 use CodeIgniter\HTTP\ResponseInterface;
 
 class AgentesTransitoApiController extends Controller
 {
+    /**
+     * Límite de intentos fallidos (auditoría M6). Se cuentan en la tabla de
+     * auditoría, igual que en el login web, porque en Vercel no hay caché
+     * persistente. Por placa frena adivinar la contraseña de un agente; por IP,
+     * probar muchas placas desde el mismo equipo.
+     */
+    private const VENTANA_MINUTOS = 15;
+    private const MAX_FALLOS_POR_PLACA = 5;
+    private const MAX_FALLOS_POR_IP = 15;
+    private const MENSAJE_CREDENCIALES = 'Placa o contraseña incorrectas.';
+    private const HASH_SENUELO = '$2y$10$EHgK/vUWPycfFKsgTmpnZehdoMfpOuqjcMUd8T9wOebEyWhBKT3GO';
+
     /**
      * Inicio de sesión de agentes de tránsito desde la aplicación móvil.
      */
@@ -51,25 +64,48 @@ class AgentesTransitoApiController extends Controller
             ]);
         }
 
-        $placa = strtoupper(trim($placaInput));
-        $agenteModel = new AgenteTransitoModel();
-        $agente = $agenteModel->getPorPlaca($placa);
+        $placa     = mb_substr(strtoupper(trim($placaInput)), 0, 30);
+        $ip        = $this->request->getIPAddress();
+        $auditoria = new AuditoriaModel();
 
-        if ($agente === null || (int)$agente->activo !== 1) {
-            return $this->response->setStatusCode(401)->setJSON([
-                'success' => false,
-                'message' => 'Credenciales inválidas o agente no activo.',
-            ]);
+        if ($auditoria->contarRecientes('login_agente_fallido', 'placa', $placa, self::VENTANA_MINUTOS) >= self::MAX_FALLOS_POR_PLACA
+            || $auditoria->contarRecientes('login_agente_fallido', 'ip', $ip, self::VENTANA_MINUTOS) >= self::MAX_FALLOS_POR_IP) {
+            $auditoria->registrar('agentes_transito', null, 'login_agente_bloqueado', null, ['placa' => $placa, 'ip' => $ip]);
+
+            return $this->response->setStatusCode(429)
+                ->setHeader('Retry-After', (string) (self::VENTANA_MINUTOS * 60))
+                ->setJSON([
+                    'success' => false,
+                    'message' => 'Demasiados intentos fallidos. Espera unos minutos e inténtalo de nuevo.',
+                ]);
         }
 
-        if (! password_verify($passwordInput, $agente->password_hash)) {
+        $agente = (new AgenteTransitoModel())->getPorPlaca($placa);
+
+        // Siempre se verifica contra un hash (real o señuelo) para que el tiempo
+        // de respuesta no delate qué placas existen, y el mensaje es el mismo
+        // para placa inexistente, contraseña incorrecta o agente inactivo.
+        $hash        = (string) ($agente?->password_hash ?? '');
+        $claveValida = password_verify($passwordInput, $hash !== '' ? $hash : self::HASH_SENUELO) && $hash !== '';
+
+        if ($agente === null || ! $claveValida || (int) $agente->activo !== 1) {
+            $motivo = match (true) {
+                $agente === null => 'placa_inexistente',
+                ! $claveValida   => 'contrasena_incorrecta',
+                default          => 'agente_inactivo',
+            };
+            $auditoria->registrar('agentes_transito', $agente?->id !== null ? (int) $agente->id : null, 'login_agente_fallido', null, [
+                'placa' => $placa, 'ip' => $ip, 'motivo' => $motivo,
+            ]);
+
             return $this->response->setStatusCode(401)->setJSON([
                 'success' => false,
-                'message' => 'Credenciales inválidas.',
+                'message' => self::MENSAJE_CREDENCIALES,
             ]);
         }
 
         $acceso = (new AgenteTokenService())->emitir((int) $agente->id);
+        $auditoria->registrar('agentes_transito', (int) $agente->id, 'login_agente_exitoso', null, ['placa' => $placa, 'ip' => $ip]);
 
         return $this->response->setStatusCode(200)->setJSON([
             'success'    => true,

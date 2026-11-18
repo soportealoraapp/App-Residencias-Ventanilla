@@ -13,12 +13,12 @@ class RoleFilter implements FilterInterface
     public function before(RequestInterface $request, $arguments = [])
     {
         $session = Services::session();
-        $userId = $session->get('user_id');
-        if (!$userId) {
-            $session->setFlashdata('error', 'Acceso denegado: debes iniciar sesión');
-            return redirect()->to('/auth/login');
+        // Sesión iniciada y cuenta todavía activa (auditoría M3).
+        $sinSesion = AuthFilter::exigirSesionVigente();
+        if ($sinSesion !== null) {
+            return $sinSesion;
         }
-        $userId = (int) $userId;
+        $userId = (int) $session->get('user_id');
 
         $userModel = new UserModel();
 
