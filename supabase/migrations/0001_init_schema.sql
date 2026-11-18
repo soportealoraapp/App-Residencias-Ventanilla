@@ -181,6 +181,11 @@ SELECT setval(pg_get_serial_sequence('public.roles', 'id'), COALESCE((SELECT MAX
 -- =====================================================
 -- NOTA: El hash debe recalcularse segun el algoritmo PHP password_hash()
 -- Estos hashes son genericos de 12345678 con PASSWORD_DEFAULT
+-- ⚠️  AUDITORÍA (C2/C3): estas cuentas son de DEMOSTRACIÓN y quedan con
+--     contraseñas conocidas. En cualquier base nueva, al terminar de aplicar
+--     las migraciones, correr supabase/seguridad/fase0_contencion.sql para
+--     ponerles una clave propia. El servidor municipal no usa este archivo:
+--     ahí las cuentas se crean a mano (GUIA_MIGRACION.md, sección 10).
 INSERT INTO public.users (id, username, email, nombre_completo, password_hash, rfc, telefono, domicilio, activo) VALUES
     (1, 'admin', 'admin@uriangato.gob.mx', 'Administrador del Sistema', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, NULL, 1),
     (2, 'operador1', 'operador1@uriangato.gob.mx', 'Operador Ventanilla Uno', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, NULL, 1),

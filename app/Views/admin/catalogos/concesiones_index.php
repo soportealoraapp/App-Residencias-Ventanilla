@@ -183,7 +183,7 @@ foreach ($estatusOpciones as $valor => $etiqueta) {
                                 <td class="text-end text-nowrap">
                                     <a href="/admin/concesiones/editar/<?= (int) $c->id ?>" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Editar concesión" aria-label="Editar concesión"><i class="bi bi-pencil" aria-hidden="true"></i></a>
                                     <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Eliminar concesión" aria-label="Eliminar concesión" onclick="confirmarEliminar(<?= (int) $c->id ?>)"><i class="bi bi-trash" aria-hidden="true"></i></button>
-                                    <form id="form-eliminar-<?= (int) $c->id ?>" action="/admin/concesiones/eliminar/<?= (int) $c->id ?>" method="post" class="d-none"></form>
+                                    <form id="form-eliminar-<?= (int) $c->id ?>" action="/admin/concesiones/eliminar/<?= (int) $c->id ?>" method="post" class="d-none"><?= csrf_field() ?></form>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

@@ -31,7 +31,8 @@
         </div>
     <?php endif ?>
 
-    <!-- Demo Quick-Fill Chips for UX testing -->
+    <?php if (\App\Libraries\FeatureFlags::loginDemo()): ?>
+    <!-- Botones de acceso rápido: solo con APP_ENABLE_DEMO_LOGIN=true -->
     <div class="mb-3">
         <label class="form-label text-muted small fw-semibold d-block mb-1">
             <i class="bi bi-lightning-charge-fill text-warning me-1"></i>Acceso Rápido de Prueba:
@@ -54,6 +55,13 @@
             </a>
         </div>
     </div>
+    <?php else: ?>
+    <div class="mb-3 text-end">
+        <a class="small text-decoration-none text-muted" href="/agentes" target="_blank" rel="noopener" title="App de campo para agentes de tránsito">
+            <i class="bi bi-phone me-1"></i>App de agentes
+        </a>
+    </div>
+    <?php endif ?>
 
     <?= form_open('/auth/attempt-login') ?>
         <div class="mb-3">

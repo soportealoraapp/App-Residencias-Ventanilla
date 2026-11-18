@@ -14,6 +14,11 @@ INSERT INTO public.roles (id, nombre, descripcion) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- Insertar o actualizar usuarios demo con hashes PHP correctos
+-- ⚠️  AUDITORÍA (C2/C3): estas cuentas son de DEMOSTRACIÓN y quedan con
+--     contraseñas conocidas. En cualquier base nueva, al terminar de aplicar
+--     las migraciones, correr supabase/seguridad/fase0_contencion.sql para
+--     ponerles una clave propia. El servidor municipal no usa este archivo:
+--     ahí las cuentas se crean a mano (GUIA_MIGRACION.md, sección 10).
 INSERT INTO public.users (id, username, email, nombre_completo, password_hash, rfc, telefono, domicilio, activo) VALUES
     (1, 'admin',      'admin@uriangato.gob.mx',     'Administrador del Sistema', '$2y$10$kArQEDyJkStuG2R7PK5.aOkdxl1sDQVQOsSW6Imwh4JCaQrhDaBU6', NULL,           NULL,         NULL,                                  1),
     (2, 'operador1',  'operador1@uriangato.gob.mx', 'Operador Ventanilla Uno',   '$2y$10$8JgiL8f5q.9iiCqMgVAVl.BgH1odCA0Jd08aCgwJ50UoDvLnkcIxS', NULL,           NULL,         NULL,                                  1),

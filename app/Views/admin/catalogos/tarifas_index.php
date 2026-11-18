@@ -168,7 +168,7 @@ $chipsTarifas[] = [
                                 <td class="text-end text-nowrap">
                                     <a href="/admin/tarifas/editar/<?= (int) $tarifa->id ?>" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Editar tarifa" aria-label="Editar tarifa"><i class="bi bi-pencil" aria-hidden="true"></i></a>
                                     <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Eliminar tarifa" aria-label="Eliminar tarifa" onclick="confirmarEliminar(<?= (int) $tarifa->id ?>)"><i class="bi bi-trash" aria-hidden="true"></i></button>
-                                    <form id="form-eliminar-<?= (int) $tarifa->id ?>" action="/admin/tarifas/eliminar/<?= (int) $tarifa->id ?>" method="post" class="d-none"></form>
+                                    <form id="form-eliminar-<?= (int) $tarifa->id ?>" action="/admin/tarifas/eliminar/<?= (int) $tarifa->id ?>" method="post" class="d-none"><?= csrf_field() ?></form>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

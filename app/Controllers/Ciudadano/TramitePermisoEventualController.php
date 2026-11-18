@@ -12,6 +12,7 @@ use App\Models\SolicitudModel;
 use CodeIgniter\Controller;
 use Config\Services;
 use DateTime;
+use App\Libraries\FeatureFlags;
 
 class TramitePermisoEventualController extends Controller
 {
@@ -216,6 +217,9 @@ class TramitePermisoEventualController extends Controller
         }
         if ($solicitud->estatus !== 'Pago pendiente') {
             return redirect()->back()->with('error', 'La solicitud aún no está autorizada para pago.');
+        }
+        if (! FeatureFlags::pagoEnLinea()) {
+            return redirect()->back()->with('error', 'El pago en línea no está disponible. Imprime la hoja de pago y paga en caja de Tesorería.');
         }
 
         $resultado = $this->gateway->crearCargo($solicitud->folio, (float) $solicitud->monto, 'UR-TT-T-04 Permiso Eventual de Transporte');

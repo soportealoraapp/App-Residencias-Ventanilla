@@ -72,7 +72,11 @@ class AuthController extends Controller
         $hashParaVerificar = $user?->password_hash
             ?? '$2y$10$EHgK/vUWPycfFKsgTmpnZehdoMfpOuqjcMUd8T9wOebEyWhBKT3GO';
 
-        if ($user === null || ! password_verify($password, $hashParaVerificar)) {
+        // Una cuenta sin contraseña (alta en ventanilla) nunca entra con login, aunque
+        // alguien conozca el texto del hash señuelo.
+        $sinContrasena = $user !== null && trim((string) ($user->password_hash ?? '')) === '';
+
+        if ($user === null || ! password_verify($password, $hashParaVerificar) || $sinContrasena) {
             $this->auditoriaModel->registrar('users', null, 'login_fallido', null, [
                 'metodo' => 'username_o_email',
                 'ip'     => $ip,
@@ -358,7 +362,8 @@ class AuthController extends Controller
                 ->first();
         }
 
-        if ($this->request->getMethod() === 'post') {
+        // CodeIgniter 4.5+ entrega el método en mayúsculas ('POST').
+        if (strtoupper($this->request->getMethod()) === 'POST') {
             if ($user === null) {
                 return redirect()->back()->with('errors', ['token' => 'Token inválido o expirado.']);
             }

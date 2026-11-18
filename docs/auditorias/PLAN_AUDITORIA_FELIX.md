@@ -139,7 +139,7 @@ Cambios chicos de código, cada uno con su prueba.
 | Fase | Estado |
 |---|---|
 | 0 — Contención | **Aplicada en Supabase el 17 nov 2026.** Se corrieron `supabase/migrations/0020_rls_todas_las_tablas.sql` (0.1) y `supabase/seguridad/fase0_contencion.sql` (0.3–0.5). Verificado con la llave anon pública: `users`, `user_roles`, `cobros`, `ci_sessions`, `agentes_transito` y `solicitudes` responden 401, y el INSERT en `user_roles` se rechaza. `catalogo_infracciones_app` y `parametros_app` siguen respondiendo 200. Pendiente: revisar el Security Advisor y los logs (0.2). |
-| 1 — Críticos y altos fáciles | Pendiente |
+| 1 — Críticos y altos fáciles | **Hecha en código (17 nov 2026).** Banderas `APP_ENABLE_DEMO_LOGIN` y `APP_ENABLE_PAGO_EN_LINEA`, apagadas por defecto (1.1, 1.4). Reset de contraseña con `POST` (1.3). Login rechazado sin hash (1.6). Permisos del operador en `portal/tramites/ur-01/convocatorias/*` y `ur-02/solicitudes/*` (1.5). Cita UR-02 solo para el titular o el personal, y reprogramar sin borrar (1.8). CSRF en eliminar tarifa y concesión (1.7). 1.2: el servidor municipal ya no crea usuarios por migración; en los SQL 0001/0004/0005 de Supabase quedó la advertencia de correr `fase0_contencion.sql`. Pruebas en `AuditoriaFaseUnoTest` y `SeguridadAuthTest`. |
 | 2 — Altos con diseño | Pendiente |
 | 3 — Medios | Pendiente |
 | 4 — Bajos y limpieza | Pendiente |

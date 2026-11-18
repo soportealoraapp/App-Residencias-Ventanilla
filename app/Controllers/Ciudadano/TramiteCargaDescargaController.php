@@ -16,6 +16,7 @@ use App\Libraries\BanbajioMockGateway;
 use App\Models\AuditoriaModel;
 use Config\Services;
 use DateTime;
+use App\Libraries\FeatureFlags;
 
 class TramiteCargaDescargaController extends Controller
 {
@@ -291,6 +292,12 @@ class TramiteCargaDescargaController extends Controller
         $solicitud = $this->solicitudModel->find($solicitudId);
         if ($solicitud === null || (int)$solicitud->ciudadano_id !== $userId) {
             return redirect()->to('/portal/mis-solicitudes')->with('error', 'Solicitud no encontrada o acceso denegado.');
+        }
+        if ($solicitud->estatus !== 'Pago pendiente') {
+            return redirect()->back()->with('error', 'La solicitud no está pendiente de pago.');
+        }
+        if (! FeatureFlags::pagoEnLinea()) {
+            return redirect()->back()->with('error', 'El pago en línea no está disponible. Imprime la hoja de pago y paga en caja de Tesorería.');
         }
 
         $resultado = $this->gateway->crearCargo($solicitud->folio, (float)$solicitud->monto, 'UR-TT-T-07 Permiso Carga y Descarga');

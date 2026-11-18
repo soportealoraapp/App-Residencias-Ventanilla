@@ -35,7 +35,8 @@ final class PermisosOperador
             'nombre'      => 'Solicitudes y trámites',
             'descripcion' => 'Ver solicitudes, cambiar estatus, validar pagos, evaluaciones UR-04/UR-05 y descargar documentos.',
             'icono'       => 'folder2-open',
-            'rutas'       => ['admin/solicitudes'],
+            // El dictamen y la cita UR-02 también se registran por el portal.
+            'rutas'       => ['admin/solicitudes', 'portal/tramites/ur-02/solicitudes'],
         ],
         'cobros' => [
             'nombre'      => 'Cobros',
@@ -89,7 +90,8 @@ final class PermisosOperador
             'nombre'      => 'Convocatorias UR-01',
             'descripcion' => 'Publicar y editar convocatorias, evaluar postulaciones y seleccionar ganadores (la baja definitiva es solo del administrador).',
             'icono'       => 'award-fill',
-            'rutas'       => ['admin/convocatorias'],
+            // Ver postulaciones y elegir ganadores también se hace por el portal.
+            'rutas'       => ['admin/convocatorias', 'portal/tramites/ur-01/convocatorias'],
         ],
         'app_transito_config' => [
             'nombre'      => 'App Tránsito: configuración y agentes',

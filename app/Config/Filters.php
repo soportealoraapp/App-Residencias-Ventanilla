@@ -60,11 +60,14 @@ class Filters extends BaseConfig
                 'portal/mi-perfil',
             ],
         ],
-        // Permisos configurables del operador de ventanilla en todo el panel.
+        // Permisos configurables del operador de ventanilla en todo el panel,
+        // y en las rutas del portal que solo usa el personal (auditoría A5).
         'permisoOperador' => [
             'before' => [
                 'admin',
                 'admin/*',
+                'portal/tramites/ur-01/convocatorias/*',
+                'portal/tramites/ur-02/solicitudes/*',
             ],
         ],
     ];

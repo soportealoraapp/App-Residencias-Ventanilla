@@ -152,8 +152,8 @@ class TramiteDespintadoController extends Controller
     public function agendarCitaForm(string $folio)
     {
         $solicitud = $this->solicitudModel->findByFolio($folio);
-        if ($solicitud === null) {
-            return redirect()->to('/portal/mis-solicitudes')->with('error', 'Solicitud no encontrada.');
+        if (! $this->puedeAgendar($solicitud)) {
+            return redirect()->to('/portal/mis-solicitudes')->with('error', 'Solicitud no encontrada o acceso denegado.');
         }
 
         $verificacion = $this->verificacionModel->primerPorSolicitud((int) $solicitud->id);
@@ -171,8 +171,21 @@ class TramiteDespintadoController extends Controller
         $userId = (int) $session->get('user_id');
 
         $solicitud = $this->solicitudModel->findByFolio($folio);
-        if ($solicitud === null) {
-            return redirect()->to('/portal/mis-solicitudes')->with('error', 'Solicitud no encontrada.');
+        if (! $this->puedeAgendar($solicitud)) {
+            return redirect()->to('/portal/mis-solicitudes')->with('error', 'Solicitud no encontrada o acceso denegado.');
+        }
+
+        // Solo se agenda desde "Recibido", o se reprograma una cita que aún no
+        // tiene dictamen. Se valida ANTES de tocar la verificación existente.
+        $solicitudId      = (int) $solicitud->id;
+        $verificacion     = $this->verificacionModel->primerPorSolicitud($solicitudId);
+        $esPrimeraCita    = $solicitud->estatus === 'Recibido';
+        $esReprogramacion = $solicitud->estatus === 'Cita agendada'
+            && $verificacion !== null
+            && ($verificacion->resultado ?? null) === null;
+        if (! $esPrimeraCita && ! $esReprogramacion) {
+            return redirect()->to('/portal/solicitud/' . rawurlencode($folio))
+                ->with('error', 'La cita ya no se puede agendar ni reprogramar en el estatus actual de la solicitud.');
         }
 
         $rules = [
@@ -191,25 +204,61 @@ class TramiteDespintadoController extends Controller
         }
         $fechaSql = date('Y-m-d H:i:s', $fechaTimestamp);
 
-        $solicitudId = (int) $solicitud->id;
-        $this->verificacionModel->where('solicitud_id', $solicitudId)->delete();
-        $this->verificacionModel->insert([
-            'solicitud_id' => $solicitudId,
-            'fecha_cita'   => $fechaSql,
-            'resultado'    => null,
-            'observaciones' => null,
-            'created_at'   => date('Y-m-d H:i:s'),
-            'updated_at'   => date('Y-m-d H:i:s'),
-        ]);
+        if ($esReprogramacion) {
+            $this->verificacionModel->update((int) $verificacion->id, [
+                'fecha_cita' => $fechaSql,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+            (new \App\Models\HistorialEstatusModel())->insert([
+                'solicitud_id'     => $solicitudId,
+                'estatus_anterior' => 'Cita agendada',
+                'estatus_nuevo'    => 'Cita agendada',
+                'usuario_id'       => $userId,
+                'fecha'            => date('Y-m-d H:i:s'),
+                'comentario'       => 'Cita de inspección física reprogramada para: ' . date('d/m/Y H:i', $fechaTimestamp),
+            ]);
+        } else {
+            $this->verificacionModel->insert([
+                'solicitud_id'  => $solicitudId,
+                'fecha_cita'    => $fechaSql,
+                'resultado'     => null,
+                'observaciones' => null,
+                'created_at'    => date('Y-m-d H:i:s'),
+                'updated_at'    => date('Y-m-d H:i:s'),
+            ]);
 
-        $this->estadoService->cambiarEstatus(
-            $solicitudId,
-            'Cita agendada',
-            $userId,
-            'Cita de inspección física agendada para: ' . date('d/m/Y H:i', $fechaTimestamp)
-        );
+            $this->estadoService->cambiarEstatus(
+                $solicitudId,
+                'Cita agendada',
+                $userId,
+                'Cita de inspección física agendada para: ' . date('d/m/Y H:i', $fechaTimestamp)
+            );
+        }
 
         return redirect()->to('/portal/solicitud/' . $folio)
             ->with('message', '¡Cita de verificación física agendada con éxito para el ' . date('d/m/Y H:i', $fechaTimestamp) . '!');
+    }
+
+    /**
+     * La cita UR-02 solo la agenda el titular de la solicitud o el personal
+     * (auditoría M1: antes cualquier usuario con sesión podía reemplazarla).
+     */
+    private function puedeAgendar(?object $solicitud): bool
+    {
+        if ($solicitud === null || ($solicitud->tramite ?? null) !== 'UR-TT-T-02') {
+            return false;
+        }
+
+        $userId = (int) Services::session()->get('user_id');
+        if ($userId > 0 && (int) $solicitud->ciudadano_id === $userId) {
+            return true;
+        }
+
+        $roles = (array) (Services::session()->get('roles') ?? []);
+        if ($roles === [] && $userId > 0) {
+            $roles = (new \App\Models\UserModel())->conRoles($userId);
+        }
+
+        return (bool) array_intersect(['administrador', 'operador_ventanilla'], $roles);
     }
 }

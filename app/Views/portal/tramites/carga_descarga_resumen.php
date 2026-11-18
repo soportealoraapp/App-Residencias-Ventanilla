@@ -33,7 +33,7 @@ $mapEstatusClass = [
     'Rechazado' => 'bg-danger',
 ];
 $estatusClass = $mapEstatusClass[$solicitud->estatus] ?? 'bg-secondary';
-$puedePagar = $solicitud->estatus === 'Pago pendiente';
+$puedePagar = $solicitud->estatus === 'Pago pendiente' && \App\Libraries\FeatureFlags::pagoEnLinea();
 ?>
 <?= $this->extend('layouts/portal') ?>
 <?= $this->section('content') ?>
@@ -183,6 +183,14 @@ $puedePagar = $solicitud->estatus === 'Pago pendiente';
                 </div>
                 <?php endif; ?>
 
+                <?php if ($solicitud->estatus === 'Pago pendiente' && ! $puedePagar): ?>
+                <div class="alert alert-info small mb-3">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Imprime la hoja de pago y paga en caja de Tesorería. Tu permiso se emite cuando ventanilla registra el pago.
+                </div>
+                <?php endif; ?>
+
+                <?php if ($puedePagar): ?>
                 <div class="d-flex align-items-center p-3 border rounded mb-3 bg-warning-subtle">
                     <i class="bi bi-shield-lock fs-3 text-warning me-3"></i>
                     <div class="small">
@@ -190,6 +198,7 @@ $puedePagar = $solicitud->estatus === 'Pago pendiente';
                         <div class="text-muted">Plataforma encriptada SSL · Referencia: MOCK</div>
                     </div>
                 </div>
+                <?php endif; ?>
 
                 <?php if ($puedePagar): ?>
                 <?= form_open('/portal/tramites/carga-descarga/pagar/' . $solicitud->id, ['id' => 'formPago']) ?>

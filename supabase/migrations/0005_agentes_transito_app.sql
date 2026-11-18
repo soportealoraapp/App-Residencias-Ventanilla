@@ -162,6 +162,11 @@ ON CONFLICT (clave) DO NOTHING;
 -- DATOS INICIALES: Agentes de prueba
 -- password_hash corresponde a 'transito2026' con bcrypt cost 10
 -- -----------------------------------------------------------------------
+-- ⚠️  AUDITORÍA (C2/C3): estas cuentas son de DEMOSTRACIÓN y quedan con
+--     contraseñas conocidas. En cualquier base nueva, al terminar de aplicar
+--     las migraciones, correr supabase/seguridad/fase0_contencion.sql para
+--     ponerles una clave propia. El servidor municipal no usa este archivo:
+--     ahí las cuentas se crean a mano (GUIA_MIGRACION.md, sección 10).
 INSERT INTO public.agentes_transito (placa, nombre_completo, password_hash, rol, sector) VALUES
     ('AGT-204', 'Oficial Carlos Mendoza Ruiz',   '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'operativo', 'Sector Centro'),
     ('AGT-107', 'Oficial María Hernández López', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'operativo', 'Sector Norte'),

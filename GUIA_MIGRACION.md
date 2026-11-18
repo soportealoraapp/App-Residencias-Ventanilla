@@ -268,15 +268,14 @@ sudo apachectl configtest && sudo systemctl reload apache2
 
 | # | Ajuste | Dónde |
 |---|---|---|
-| 1 | Quitar los botones de "Acceso Rápido de Prueba" de la pantalla de inicio de sesión, que llenan usuario y contraseña de las cuentas demo | `app/Views/auth/login.php` |
+| 1 | Dejar apagada la bandera `APP_ENABLE_DEMO_LOGIN` (o no definirla). Con ella encendida, el login muestra los botones de "Acceso Rápido de Prueba" con las cuentas demo | `.env` |
 | 2 | No cargar usuarios demo; si existen, borrarlos (`php spark demo:limpiar --force` borra los datos de `DemoFuncionamientoSeeder`) | Base de datos |
 | 3 | `CI_ENVIRONMENT = production`, para no mostrar errores detallados | `.env` |
 | 4 | Restringir `proxyIPs`: hoy confía en cualquier `X-Forwarded-For` (`0.0.0.0/0`); poner solo la IP del proxy municipal, si existe. Afecta al bloqueo de intentos fallidos por IP | `app/Config/App.php` |
 | 5 | CORS con el dominio municipal (sección 8) | `app/Config/Cors.php` |
 | 6 | Evidencias fuera de `public/` (sección 6) | `InfraccionesApiController` |
-| 7 | Verificar el estatus antes de cobrar en el pago en línea de UR-TT-T-07 | `TramiteCargaDescargaController::pagar()` |
-| 8 | Llave de cifrado nueva y `.env` con permisos restringidos | `.env` |
-| 9 | Pasarela de pagos: mientras no haya credenciales de BanBajío, el pago en línea sigue simulado. Decidir con la Dirección si se oculta en producción y se opera solo el pago presencial | Configuración de servicios |
+| 7 | Llave de cifrado nueva y `.env` con permisos restringidos | `.env` |
+| 8 | Pasarela de pagos: mientras no haya convenio con BanBajío, dejar apagada la bandera `APP_ENABLE_PAGO_EN_LINEA`. Así el portal solo ofrece la hoja de pago para caja; encendida, usa la pasarela simulada | `.env` |
 
 ---
 
