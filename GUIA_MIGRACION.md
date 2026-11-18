@@ -207,7 +207,7 @@ Comprobar:
    ```
 
 2. Los documentos se entregan con enlaces firmados que caducan (`ArchivosLocalesController`), así que no necesitan estar en `public/`.
-3. **Pendiente conocido:** las fotografías de evidencia de las boletas todavía se guardan en `public/uploads/infracciones`, accesibles por URL. Antes de abrir el sistema, corregirlo en el código (guardarlas con el mismo esquema de enlaces firmados) o, como medida temporal, bloquear el acceso directo a esa carpeta en el servidor web.
+3. Las fotografías de evidencia de las boletas se guardan en `STORAGE_LOCAL_PATH/evidencias`, fuera de `public/`, y solo las abre el personal con sesión en `/evidencias/…`.
 4. Los documentos de Supabase son de prueba y no se migran.
 
 ---
@@ -273,9 +273,8 @@ sudo apachectl configtest && sudo systemctl reload apache2
 | 3 | `CI_ENVIRONMENT = production`, para no mostrar errores detallados | `.env` |
 | 4 | Restringir `proxyIPs`: hoy confía en cualquier `X-Forwarded-For` (`0.0.0.0/0`); poner solo la IP del proxy municipal, si existe. Afecta al bloqueo de intentos fallidos por IP | `app/Config/App.php` |
 | 5 | CORS con el dominio municipal (sección 8) | `app/Config/Cors.php` |
-| 6 | Evidencias fuera de `public/` (sección 6) | `InfraccionesApiController` |
-| 7 | Llave de cifrado nueva y `.env` con permisos restringidos | `.env` |
-| 8 | Pasarela de pagos: mientras no haya convenio con BanBajío, dejar apagada la bandera `APP_ENABLE_PAGO_EN_LINEA`. Así el portal solo ofrece la hoja de pago para caja; encendida, usa la pasarela simulada | `.env` |
+| 6 | Llave de cifrado nueva y `.env` con permisos restringidos | `.env` |
+| 7 | Pasarela de pagos: mientras no haya convenio con BanBajío, dejar apagada la bandera `APP_ENABLE_PAGO_EN_LINEA`. Así el portal solo ofrece la hoja de pago para caja; encendida, usa la pasarela simulada | `.env` |
 
 ---
 
@@ -305,7 +304,7 @@ sudo apachectl configtest && sudo systemctl reload apache2
   pg_dump -U ventanilla_movilidad -F c ventanilla_movilidad > respaldo_$(date +%F).dump
   ```
 
-- **Documentos:** respaldo de `STORAGE_LOCAL_PATH` y de `public/uploads/` con la misma frecuencia.
+- **Documentos:** respaldo de `STORAGE_LOCAL_PATH` (incluye las evidencias de las boletas) con la misma frecuencia.
 - **Registros:** revisar `writable/logs/` y limpiar sesiones antiguas en `writable/session/`.
 - **Tarea programada pendiente:** el vencimiento automático de los permisos de carga y descarga todavía no está implementado; cuando exista, se ejecutará con `cron` o el Programador de tareas.
 - **Actualizaciones:** antes de actualizar el código, respaldar, ejecutar `php spark migrate` y revisar `migrate:status`.

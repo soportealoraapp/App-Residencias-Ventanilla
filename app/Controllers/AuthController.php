@@ -129,16 +129,42 @@ class AuthController extends Controller
     {
         normalizar_campos_mayusculas($this->request, ['curp', 'rfc']);
 
-        // COB-08: la CURP es opcional al registrarse. Si pertenece a una cuenta
-        // que ventanilla dio de alta sin acceso, este registro la reclama en vez
-        // de crear un duplicado: la persona conserva los trámites que ya tenía.
-        // Si la CURP ya tiene contraseña, la cuenta existe y se rechaza.
+        // COB-08 y auditoría A1: una cuenta que ventanilla dio de alta sin
+        // acceso se reclama SOLO con el código de activación impreso en el
+        // acuse. La CURP no basta, porque se deduce de datos públicos. Con el
+        // código la persona conserva los trámites que ya tenía.
         $curp          = CuentaCiudadanoService::normalizarCurp((string) $this->request->getPost('curp'));
+        $codigo        = CuentaCiudadanoService::normalizarCodigo((string) $this->request->getPost('codigo_activacion'));
         $cuentaService = new CuentaCiudadanoService();
         $sinAcceso     = null;
+        $ip            = $this->request->getIPAddress();
+
+        if ($codigo !== '') {
+            if (ENVIRONMENT !== 'testing' && $this->auditoriaModel->registrosPorIp($ip, 60, 'codigo_activacion_fallido') >= 10) {
+                return redirect()->back()->withInput()->with('errors', [
+                    'codigo_activacion' => 'Demasiados intentos con códigos incorrectos. Espera una hora o acude a la ventanilla.',
+                ]);
+            }
+            $sinAcceso = $cuentaService->cuentaPorCodigoActivacion($codigo);
+            if ($sinAcceso === null) {
+                $this->auditoriaModel->registrar('users', null, 'codigo_activacion_fallido', null, ['ip' => $ip]);
+                return redirect()->back()->withInput()->with('errors', [
+                    'codigo_activacion' => 'El código de activación no es válido o ya venció. Pide uno nuevo en la ventanilla.',
+                ]);
+            }
+            $curpCuenta = (string) ($sinAcceso->curp ?? '');
+            if ($curp !== '' && $curpCuenta !== '' && $curp !== $curpCuenta) {
+                return redirect()->back()->withInput()->with('errors', [
+                    'curp' => 'La CURP no coincide con la registrada en ventanilla para este código.',
+                ]);
+            }
+        }
 
         if ($curp !== '') {
             foreach ($cuentaService->buscarPorCurp($curp) as $existente) {
+                if ($sinAcceso !== null && (int) $existente->id === (int) $sinAcceso->id) {
+                    continue;
+                }
                 if (trim((string) ($existente->password_hash ?? '')) !== '') {
                     return redirect()->back()->withInput()->with('errors', [
                         'curp' => 'Ya existe una cuenta con esta CURP. Inicia sesión o recupera tu contraseña.',
@@ -149,7 +175,9 @@ class AuthController extends Controller
                         'curp' => 'La cuenta asociada a esta CURP está desactivada. Acude a la ventanilla de Tránsito y Transporte.',
                     ]);
                 }
-                $sinAcceso ??= $existente;
+                return redirect()->back()->withInput()->with('errors', [
+                    'codigo_activacion' => 'Esta CURP ya tiene trámites registrados en ventanilla. Escribe el código de activación impreso en tu acuse o pide uno en la ventanilla.',
+                ]);
             }
         }
 
@@ -184,8 +212,6 @@ class AuthController extends Controller
         if (! $this->validate($rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
-
-        $ip = $this->request->getIPAddress();
 
         // Anti abuso: frena el alta automatizada masiva desde una misma IP.
         if (ENVIRONMENT !== 'testing' && $this->auditoriaModel->registrosPorIp($ip) >= 5) {

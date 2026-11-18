@@ -22,10 +22,13 @@
         <div class="card border-0 shadow-sm h-100"><div class="card-body">
             <h2 class="h5">Evidencias</h2>
             <div class="row g-2">
+                <?php $hayEvidencias = false; ?>
                 <?php foreach (['foto_placa_url' => 'Placa', 'foto_contexto_url' => 'Contexto', 'foto_documento_url' => 'Documento'] as $campo => $etiqueta): ?>
-                    <?php if (! empty($boleta->{$campo})): ?><div class="col-4"><a href="<?= esc($boleta->{$campo}) ?>" target="_blank" rel="noopener"><img src="<?= esc($boleta->{$campo}) ?>" alt="<?= esc($etiqueta) ?>" class="img-fluid rounded border" style="height:100px;width:100%;object-fit:cover"></a><small class="d-block text-center text-muted"><?= esc($etiqueta) ?></small></div><?php endif; ?>
+                    <?php /* Auditoría M2: solo rutas de evidencia del propio servidor, nunca la URL tal cual. */ ?>
+                    <?php $rutaFoto = \App\Libraries\EvidenciaBoleta::rutaSegura($boleta->{$campo} ?? null, (string) $boleta->folio); ?>
+                    <?php if ($rutaFoto !== null): $hayEvidencias = true; ?><div class="col-4"><a href="<?= esc($rutaFoto, 'attr') ?>" target="_blank" rel="noopener"><img src="<?= esc($rutaFoto, 'attr') ?>" alt="<?= esc($etiqueta) ?>" class="img-fluid rounded border" style="height:100px;width:100%;object-fit:cover"></a><small class="d-block text-center text-muted"><?= esc($etiqueta) ?></small></div><?php endif; ?>
                 <?php endforeach; ?>
-                <?php if (empty($boleta->foto_placa_url) && empty($boleta->foto_contexto_url) && empty($boleta->foto_documento_url)): ?><p class="text-muted small mb-0">Sin evidencias disponibles.</p><?php endif; ?>
+                <?php if (! $hayEvidencias): ?><p class="text-muted small mb-0">Sin evidencias disponibles.</p><?php endif; ?>
             </div>
         </div></div>
     </div>

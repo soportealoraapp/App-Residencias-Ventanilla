@@ -48,7 +48,15 @@ $valor = static fn (string $nombre): string => (string) old($nombre, $prellenado
                 <div class="small text-muted"><i class="bi bi-magic me-1"></i>Algunos campos se llenaron con los datos de su cuenta; revísalos antes de registrar.</div>
             <?php endif; ?>
         </div>
-        <span class="badge bg-primary">Cuenta vinculada</span>
+        <?php if (trim((string) ($ciudadano->password_hash ?? '')) === ''): ?>
+            <a class="btn btn-sm btn-outline-primary" href="<?= site_url('admin/solicitudes/acuse-activacion/' . (int) $ciudadano->id) ?>" target="_blank" rel="noopener"
+               title="Genera un código nuevo; el anterior deja de servir">
+                <i class="bi bi-printer me-1"></i>Acuse con código de activación
+            </a>
+            <span class="badge bg-secondary">Sin acceso al portal</span>
+        <?php else: ?>
+            <span class="badge bg-primary">Cuenta vinculada</span>
+        <?php endif; ?>
     </div>
 </div>
 

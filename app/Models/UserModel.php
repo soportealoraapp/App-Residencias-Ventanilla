@@ -28,6 +28,8 @@ class UserModel extends Model
         'activo',
         'reset_token',
         'reset_expira',
+        'activacion_hash',
+        'activacion_expira',
     ];
     protected $useTimestamps    = true;
     protected $dateFormat       = 'datetime';

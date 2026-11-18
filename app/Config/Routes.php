@@ -81,6 +81,7 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
         $routes->get('verificaciones', 'Admin\\VerificacionesController::index', ['as' => 'admin.verificaciones']);
         $routes->get('sesiones-app', 'Admin\\SesionesAppController::index', ['as' => 'admin.sesiones_app']);
         $routes->get('solicitudes', 'Admin\\AdminController::listaSolicitudes', ['as' => 'admin.solicitudes']);
+        $routes->get('solicitudes/acuse-activacion/(:num)', 'Admin\\SolicitudPresencialController::acuseActivacion/$1');
         $routes->get('solicitudes/nueva', 'Admin\\SolicitudPresencialController::index');
         $routes->post('solicitudes/nueva/buscar-ciudadano', 'Admin\\SolicitudPresencialController::buscarCiudadano');
         $routes->post('solicitudes/nueva/registrar-ciudadano', 'Admin\\SolicitudPresencialController::registrarCiudadano');
@@ -167,6 +168,8 @@ $routes->group('admin', ['filter' => 'auth'], function($routes) {
 
 // Archivos del almacenamiento local (sin Supabase), servidos con URL firmada.
 $routes->get('archivos/(:segment)', 'ArchivosLocalesController::servir/$1');
+// Evidencias de boletas: solo personal con sesión (auditoría A4).
+$routes->get('evidencias/(:segment)/(:segment)', 'EvidenciasController::ver/$1/$2', ['filter' => 'role:administrador,operador_ventanilla,juez_calificador']);
 
 $routes->get('/', 'Home::index');
 

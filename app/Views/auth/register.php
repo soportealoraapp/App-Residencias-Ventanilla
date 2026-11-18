@@ -52,7 +52,17 @@
                 <input type="text" class="form-control text-uppercase" id="curp" name="curp" value="<?= old('curp') ?>" placeholder="Ingresa tu CURP" maxlength="18"
                        autocomplete="off" autocapitalize="characters" spellcheck="false">
             </div>
-            <span class="hint">Si la capturas, ligamos los trámites que ya registraste en ventanilla.</span>
+            <span class="hint">Opcional. Sirve para identificarte en los trámites.</span>
+        </div>
+
+        <div class="mb-3">
+            <label for="codigo_activacion" class="form-label small fw-semibold">Código de activación <span class="text-muted">(solo si te registraron en ventanilla)</span></label>
+            <div class="input-group">
+                <span class="input-group-text bg-light text-muted"><i class="bi bi-key"></i></span>
+                <input type="text" class="form-control text-uppercase font-monospace" id="codigo_activacion" name="codigo_activacion" value="<?= esc((string) old('codigo_activacion')) ?>" placeholder="Ej. AB2C-7KQM" maxlength="9"
+                       autocomplete="off" autocapitalize="characters" spellcheck="false">
+            </div>
+            <span class="hint">Viene impreso en el acuse que te entregaron. Con él ligamos tu cuenta a los trámites que ya iniciaste.</span>
         </div>
 
         <div class="row g-2 mb-3">

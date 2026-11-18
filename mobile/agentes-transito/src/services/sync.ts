@@ -71,8 +71,10 @@ export async function sincronizarInfraccionesLocales(): Promise<SyncResultado> {
       const boletaPayload = transformarInfraccionABoleta(itemActualizado);
       await sincronizarBoleta(boletaPayload);
 
+      // Localmente se conservan las fotos del teléfono para poder verlas: las
+      // URLs del servidor solo las abre el personal con sesión en el panel.
       sincronizadasPorId.set(item.id, {
-        ...itemActualizado,
+        ...item,
         estado: "sincronizada",
         sincronizadoEn: new Date().toISOString(),
       });

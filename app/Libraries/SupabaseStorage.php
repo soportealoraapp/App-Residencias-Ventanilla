@@ -14,7 +14,7 @@ namespace App\Libraries;
 class SupabaseStorage
 {
     /** Buckets que se pueden servir desde el almacenamiento local. */
-    public const BUCKETS_LOCALES = ['documentos', 'formatos', 'ine'];
+    public const BUCKETS_LOCALES = ['documentos', 'formatos', 'ine', 'evidencias'];
 
     protected string $baseUrl;
     protected string $anonKey;

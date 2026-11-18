@@ -366,31 +366,34 @@ $acciones = $__view['acciones'] ?? [];
                                                 <!-- FOTOGRAFÍAS DE EVIDENCIA -->
                                                 <h6 class="fw-bold small text-uppercase text-muted mb-2">Evidencias Fotográficas</h6>
                                                 <div class="row g-2">
-                                                    <?php if (!empty($b->foto_placa_url)): ?>
+                                                    <?php $rutaFoto = \App\Libraries\EvidenciaBoleta::rutaSegura($b->foto_placa_url ?? null, (string) $b->folio); ?>
+                                                    <?php if ($rutaFoto !== null): ?>
                                                         <div class="col-4">
                                                             <div class="border rounded-3 p-1 text-center bg-light">
-                                                                <img src="<?= esc($b->foto_placa_url) ?>" class="img-fluid rounded" style="max-height: 140px; object-fit: cover;" alt="Foto Placa">
+                                                                <img src="<?= esc($rutaFoto, 'attr') ?>" class="img-fluid rounded" style="max-height: 140px; object-fit: cover;" alt="Foto Placa">
                                                                 <small class="d-block text-muted mt-1">Placa</small>
                                                             </div>
                                                         </div>
                                                     <?php endif; ?>
-                                                    <?php if (!empty($b->foto_contexto_url)): ?>
+                                                    <?php $rutaFoto = \App\Libraries\EvidenciaBoleta::rutaSegura($b->foto_contexto_url ?? null, (string) $b->folio); ?>
+                                                    <?php if ($rutaFoto !== null): ?>
                                                         <div class="col-4">
                                                             <div class="border rounded-3 p-1 text-center bg-light">
-                                                                <img src="<?= esc($b->foto_contexto_url) ?>" class="img-fluid rounded" style="max-height: 140px; object-fit: cover;" alt="Foto Contexto">
+                                                                <img src="<?= esc($rutaFoto, 'attr') ?>" class="img-fluid rounded" style="max-height: 140px; object-fit: cover;" alt="Foto Contexto">
                                                                 <small class="d-block text-muted mt-1">Contexto</small>
                                                             </div>
                                                         </div>
                                                     <?php endif; ?>
-                                                    <?php if (!empty($b->foto_documento_url)): ?>
+                                                    <?php $rutaFoto = \App\Libraries\EvidenciaBoleta::rutaSegura($b->foto_documento_url ?? null, (string) $b->folio); ?>
+                                                    <?php if ($rutaFoto !== null): ?>
                                                         <div class="col-4">
                                                             <div class="border rounded-3 p-1 text-center bg-light">
-                                                                <img src="<?= esc($b->foto_documento_url) ?>" class="img-fluid rounded" style="max-height: 140px; object-fit: cover;" alt="Foto Documento">
+                                                                <img src="<?= esc($rutaFoto, 'attr') ?>" class="img-fluid rounded" style="max-height: 140px; object-fit: cover;" alt="Foto Documento">
                                                                 <small class="d-block text-muted mt-1">Documento / Garantía</small>
                                                             </div>
                                                         </div>
                                                     <?php endif; ?>
-                                                    <?php if (empty($b->foto_placa_url) && empty($b->foto_contexto_url) && empty($b->foto_documento_url)): ?>
+                                                    <?php if (\App\Libraries\EvidenciaBoleta::rutaSegura($b->foto_placa_url ?? null, (string) $b->folio) === null && \App\Libraries\EvidenciaBoleta::rutaSegura($b->foto_contexto_url ?? null, (string) $b->folio) === null && \App\Libraries\EvidenciaBoleta::rutaSegura($b->foto_documento_url ?? null, (string) $b->folio) === null): ?>
                                                         <div class="col-12 text-muted small py-2">No se adjuntaron fotografías a esta boleta.</div>
                                                     <?php endif; ?>
                                                 </div>

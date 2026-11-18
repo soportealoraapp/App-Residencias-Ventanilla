@@ -13,9 +13,30 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
 {
     use FeatureTestTrait;
 
+    private string $dirStorage;
+    private array $envOriginal = [];
+
     protected function setUp(): void
     {
         parent::setUp();
+        // Evidencias en un almacenamiento local temporal, nunca en Supabase ni en public/.
+        foreach (['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'STORAGE_LOCAL_PATH'] as $k) {
+            $this->envOriginal[$k] = $_ENV[$k] ?? null;
+        }
+        $this->dirStorage = WRITEPATH . 'test_tmp' . DIRECTORY_SEPARATOR . 'evid_' . bin2hex(random_bytes(4));
+        $_ENV['SUPABASE_URL'] = '';
+        $_ENV['SUPABASE_SERVICE_ROLE_KEY'] = '';
+        $_ENV['STORAGE_LOCAL_PATH'] = $this->dirStorage;
+
+        // Auditoría A6: el servidor resuelve las faltas contra su propio catálogo.
+        foreach ([['Art. 87 Frac. I a)', 'Circular sin placas', 'PLACAS', 5, 10], ['Art. 39 Frac. III', 'Exceso de velocidad', 'CONDUCTORES', 2, 4]] as [$fundamento, $descripcion, $categoria, $min, $max]) {
+            if ($this->db->table('catalogo_infracciones_app')->where('fundamento_legal', $fundamento)->countAllResults() === 0) {
+                $this->db->table('catalogo_infracciones_app')->insert([
+                    'fundamento_legal' => $fundamento, 'descripcion' => $descripcion, 'categoria' => $categoria,
+                    'monto_min_uma' => $min, 'monto_max_uma' => $max, 'activo' => 1, 'orden' => 1,
+                ]);
+            }
+        }
         // Insertar agente de prueba
         $agenteModel = new AgenteTransitoModel();
         $agenteModel->where('placa', 'AGT-TEST-1')->delete();
@@ -115,7 +136,7 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
             'folio'                  => $folioTest,
             'agente_placa'           => 'AGT-TEST-1',
             'agente_nombre'          => 'Oficial de Prueba',
-            'fecha_infraccion'       => '2026-10-13',
+            'fecha_infraccion'       => date('Y-m-d'),
             'hora_infraccion'        => '10:30:00',
             'lugar'                  => 'Portal Independencia y Morelos',
             'latitud'                => 20.1412,
@@ -304,7 +325,7 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
         $folio = 'FOLIO-CALIFICADA-' . bin2hex(random_bytes(4));
         $original = $this->boleta($folio, 'AGT-TEST-1', 'Lugar original');
         $original['faltas_json'] = [[
-            'id' => 'f1', 'fundamentoLegal' => 'Art. original', 'descripcion' => 'Original',
+            'id' => 'f1', 'fundamentoLegal' => 'Art. 39 Frac. III', 'descripcion' => 'Original',
             'categoria' => 'GENERAL', 'montoMinUma' => '2', 'montoMaxUma' => '4',
         ]];
         $token = $this->loginToken();
@@ -326,8 +347,12 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
         $reenvio['falta_fundamento_legal'] = 'Art. móvil';
         $reenvio['faltas_json'][0]['montoMaxUma'] = '99';
         $reenvio['lugar'] = 'Lugar completado por resincronización';
-        $this->withHeaders(['Authorization' => 'Bearer ' . $token])->withBodyFormat('json')
-            ->post('api/infracciones/sincronizar', $reenvio)->assertStatus(200);
+        $respuesta = $this->withHeaders(['Authorization' => 'Bearer ' . $token])->withBodyFormat('json')
+            ->post('api/infracciones/sincronizar', $reenvio);
+        $respuesta->assertStatus(200);
+        $json = json_decode($respuesta->getJSON(), true);
+        $this->assertSame(0, $json['sincronizadas']);
+        $this->assertStringContainsString('ya fue calificada', $json['errores'][0]);
 
         $actual = $model->where('folio', $folio)->first();
         $this->assertSame('calificada', $actual->estado);
@@ -335,7 +360,8 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
         $this->assertSame('2026-10-10', $actual->fecha_infraccion);
         $this->assertSame('Art. confirmado', $actual->falta_fundamento_legal);
         $this->assertStringNotContainsString('99', (string) $actual->faltas_json);
-        $this->assertSame('Lugar completado por resincronización', $actual->lugar);
+        // Auditoría A6: ningún campo cambia una vez calificada, tampoco el lugar.
+        $this->assertSame('Lugar original', $actual->lugar);
     }
 
     public function testSincronizar_IgnoraEstadoAdministrativoEnBoletaNueva(): void
@@ -370,38 +396,74 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
             ->post('api/infracciones/evidencias', [
                 'folio'  => 'FOLIO-EVIDENCIA-AJENA',
                 'tipo'   => 'placa',
-                'base64' => base64_encode('imagen'),
+                'base64' => 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
             ]);
 
         $response->assertStatus(403);
-        $this->assertDirectoryDoesNotExist(FCPATH . 'uploads/infracciones/FOLIO-EVIDENCIA-AJENA');
+        $this->assertDirectoryDoesNotExist($this->dirStorage . DIRECTORY_SEPARATOR . 'evidencias' . DIRECTORY_SEPARATOR . 'FOLIO-EVIDENCIA-AJENA');
     }
 
-    public function testEvidencias_ConTokenValido_GuardaImagen(): void
+    public function testEvidencias_ConTokenValido_GuardaImagenFueraDePublic(): void
     {
         $folio = 'FOLIO-EVIDENCIA-' . bin2hex(random_bytes(4));
-        $dir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'infracciones' . DIRECTORY_SEPARATOR . $folio;
 
-        try {
-            $response = $this->withHeaders(['Authorization' => 'Bearer ' . $this->loginToken()])
-                ->withBodyFormat('json')
-                ->post('api/infracciones/evidencias', [
-                    'folio'  => $folio,
-                    'tipo'   => '../../placa',
-                    'base64' => base64_encode('imagen'),
-                ]);
+        $response = $this->withHeaders(['Authorization' => 'Bearer ' . $this->loginToken()])
+            ->withBodyFormat('json')
+            ->post('api/infracciones/evidencias', [
+                'folio'  => $folio,
+                'tipo'   => '../../placa',
+                'base64' => 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+            ]);
 
-            $response->assertStatus(200);
-            $archivos = glob($dir . DIRECTORY_SEPARATOR . '*');
-            $this->assertCount(1, $archivos);
-            // Un "tipo" no reconocido no puede salir del directorio del folio.
-            $this->assertStringStartsWith('evidencia_', basename($archivos[0]));
-        } finally {
-            array_map('unlink', glob($dir . DIRECTORY_SEPARATOR . '*') ?: []);
-            if (is_dir($dir)) {
-                rmdir($dir);
+        $response->assertStatus(200);
+        $url = json_decode($response->getJSON(), true)['url'];
+        // Un "tipo" no reconocido no sale de la carpeta del folio y el nombre no se adivina.
+        $this->assertMatchesRegularExpression('#/evidencias/' . $folio . '/evidencia_[a-f0-9]{32}\\.png$#', $url);
+        $archivos = glob($this->dirStorage . DIRECTORY_SEPARATOR . 'evidencias' . DIRECTORY_SEPARATOR . $folio . DIRECTORY_SEPARATOR . '*');
+        $this->assertCount(1, $archivos);
+        $this->assertDirectoryDoesNotExist(FCPATH . 'uploads/infracciones/' . $folio);
+    }
+
+    public function testEvidencias_RechazaContenidoQueNoEsImagen(): void
+    {
+        $response = $this->withHeaders(['Authorization' => 'Bearer ' . $this->loginToken()])
+            ->withBodyFormat('json')
+            ->post('api/infracciones/evidencias', [
+                'folio'  => 'FOLIO-NO-IMAGEN',
+                'tipo'   => 'placa',
+                'base64' => base64_encode('<?php echo 1; ?>'),
+            ]);
+
+        $response->assertStatus(415);
+        $this->assertDirectoryDoesNotExist($this->dirStorage . DIRECTORY_SEPARATOR . 'evidencias' . DIRECTORY_SEPARATOR . 'FOLIO-NO-IMAGEN');
+    }
+
+    protected function tearDown(): void
+    {
+        foreach ($this->envOriginal as $k => $v) {
+            if ($v === null) {
+                unset($_ENV[$k]);
+            } else {
+                $_ENV[$k] = $v;
             }
         }
+        $this->borrarDirectorio($this->dirStorage);
+        parent::tearDown();
+    }
+
+    private function borrarDirectorio(string $dir): void
+    {
+        if (! is_dir($dir)) {
+            return;
+        }
+        $iterador = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($iterador as $item) {
+            $item->isDir() ? rmdir($item->getPathname()) : unlink($item->getPathname());
+        }
+        rmdir($dir);
     }
 
     private function loginToken(string $placa = 'AGT-TEST-1', string $password = 'secreto123'): string
@@ -432,9 +494,10 @@ class ApiAgentesTransitoYBoletasTest extends DatabaseTestCase
         return [
             'folio'            => $folio,
             'agente_placa'     => $placa,
-            'fecha_infraccion' => '2026-10-13',
+            'fecha_infraccion' => date('Y-m-d'),
             'hora_infraccion'  => '10:30:00',
             'lugar'            => $lugar,
+            'falta_fundamento_legal' => 'Art. 87 Frac. I a)',
             'conductor_ausente' => false,
             'sin_placas'       => false,
             'estado'           => 'recibida',

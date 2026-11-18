@@ -8,6 +8,7 @@ use App\Models\CatalogoInfraccionAppModel;
 use App\Models\ParametroAppModel;
 use CodeIgniter\Controller;
 use CodeIgniter\HTTP\ResponseInterface;
+use App\Libraries\EvidenciaBoleta;
 
 class InfraccionesApiController extends Controller
 {
@@ -263,17 +264,43 @@ class InfraccionesApiController extends Controller
                 $garantias = json_encode($garantias, JSON_UNESCAPED_UNICODE);
             }
 
-            $faltasJson = $b['faltas_json'] ?? null;
-            if (is_array($faltasJson)) {
-                $faltasJson = json_encode($faltasJson, JSON_UNESCAPED_UNICODE);
+            // Auditoría A6: una boleta que el juez ya tomó no se toca desde la app.
+            $existente = $boletaModel->where('folio', $folio)->first();
+            if ($existente !== null && (string) $existente->estado !== 'recibida') {
+                $errores[] = "La boleta {$folio} ya fue calificada; no se puede modificar desde la app.";
+                continue;
             }
+
+            // Fecha y hora con formato real y dentro de la ventana permitida:
+            // deciden el descuento del 40 % o el recargo.
+            $fecha = $this->fechaInfraccionValida($b['fecha_infraccion'] ?? null);
+            if ($fecha === null) {
+                $errores[] = "La boleta {$folio} tiene una fecha de infracción inválida, futura o de hace más de "
+                    . self::DIAS_MAXIMOS_SINCRONIZACION . ' días.';
+                continue;
+            }
+            $hora = $this->horaValida($b['hora_infraccion'] ?? null);
+            if ($hora === null) {
+                $errores[] = "La boleta {$folio} tiene una hora de infracción inválida.";
+                continue;
+            }
+
+            // Fundamento, descripción y rango UMA salen del catálogo del servidor,
+            // nunca de lo que mande el dispositivo.
+            $faltas = $this->faltasDesdeCatalogo($b);
+            if (is_string($faltas)) {
+                $errores[] = "La boleta {$folio}: {$faltas}";
+                continue;
+            }
+            $principal  = $faltas[0];
+            $faltasJson = json_encode($faltas, JSON_UNESCAPED_UNICODE);
 
             $data = [
                 'folio'                 => $folio,
                 'agente_placa'          => $placa,
                 'agente_nombre'         => $agente->nombre_completo,
-                'fecha_infraccion'      => $b['fecha_infraccion'] ?? date('Y-m-d'),
-                'hora_infraccion'       => $b['hora_infraccion'] ?? date('H:i:s'),
+                'fecha_infraccion'      => $fecha,
+                'hora_infraccion'       => $hora,
                 'lugar'                 => $b['lugar'] ?? 'No especificado',
                 'latitud'               => isset($b['latitud']) && is_numeric($b['latitud']) ? (float)$b['latitud'] : null,
                 'longitud'              => isset($b['longitud']) && is_numeric($b['longitud']) ? (float)$b['longitud'] : null,
@@ -287,35 +314,31 @@ class InfraccionesApiController extends Controller
                 'vehiculo_linea'        => $b['vehiculo_linea'] ?? null,
                 'vehiculo_color'        => $b['vehiculo_color'] ?? null,
                 'vehiculo_tipo'         => $b['vehiculo_tipo'] ?? 'particular',
-                'falta_fundamento_legal'=> $b['falta_fundamento_legal'] ?? null,
-                'falta_descripcion'     => $b['falta_descripcion'] ?? null,
-                'falta_categoria'       => $b['falta_categoria'] ?? null,
-                'falta_monto_min_uma'   => isset($b['falta_monto_min_uma']) && is_numeric($b['falta_monto_min_uma']) ? (float)$b['falta_monto_min_uma'] : null,
-                'falta_monto_max_uma'   => isset($b['falta_monto_max_uma']) && is_numeric($b['falta_monto_max_uma']) ? (float)$b['falta_monto_max_uma'] : null,
+                'falta_fundamento_legal'=> $principal['fundamentoLegal'],
+                'falta_descripcion'     => $principal['descripcion'],
+                'falta_categoria'       => $principal['categoria'],
+                'falta_monto_min_uma'   => array_sum(array_column($faltas, 'montoMinUma')),
+                'falta_monto_max_uma'   => array_sum(array_column($faltas, 'montoMaxUma')),
                 'faltas_json'           => $faltasJson,
                 'hechos'                => $b['hechos'] ?? null,
                 'garantias_retenidas'   => $garantias,
                 'inventario_grua'       => $b['inventario_grua'] ?? null,
-                'foto_placa_url'        => $b['foto_placa_url'] ?? null,
-                'foto_contexto_url'     => $b['foto_contexto_url'] ?? null,
-                'foto_documento_url'    => $b['foto_documento_url'] ?? null,
+                // Auditoría M2: solo evidencias guardadas por este servidor para este folio.
+                'foto_placa_url'        => $this->urlEvidencia($b['foto_placa_url'] ?? null, $folio),
+                'foto_contexto_url'     => $this->urlEvidencia($b['foto_contexto_url'] ?? null, $folio),
+                'foto_documento_url'    => $this->urlEvidencia($b['foto_documento_url'] ?? null, $folio),
                 // El estado administrativo lo controla el servidor, no la app.
                 'estado'                => 'recibida',
                 'sincronizado_en'       => date('Y-m-d H:i:s'),
-                'creado_en_dispositivo' => $b['creado_en_dispositivo'] ?? date('Y-m-d H:i:s'),
+                'creado_en_dispositivo' => $this->fechaHoraODefault($b['creado_en_dispositivo'] ?? null),
             ];
 
-            $existente = $boletaModel->where('folio', $folio)->first();
             if ($existente !== null) {
-                // Una resincronización puede completar datos operativos o fotografías,
-                // pero no revierte ni recalcula información ya confirmada por el juez.
-                if ((string) $existente->estado !== 'recibida') {
-                    foreach ([
-                        'estado', 'fecha_infraccion', 'infractor_nombre',
-                        'falta_fundamento_legal', 'falta_descripcion', 'falta_categoria',
-                        'falta_monto_min_uma', 'falta_monto_max_uma', 'faltas_json',
-                    ] as $campoProtegido) {
-                        unset($data[$campoProtegido]);
+                // Mientras siga "recibida" la app puede completar datos; una foto
+                // ausente o no válida no borra la que ya estaba guardada.
+                foreach (['foto_placa_url', 'foto_contexto_url', 'foto_documento_url'] as $campoFoto) {
+                    if ($data[$campoFoto] === null) {
+                        unset($data[$campoFoto]);
                     }
                 }
                 $boletaModel->update($existente->id, $data);
@@ -336,7 +359,8 @@ class InfraccionesApiController extends Controller
 
     /**
      * Subida de fotos de evidencia de infracciones (placa, contexto, documento).
-     * Guarda en almacenamiento local seguro public/uploads/infracciones/{folio}/
+     * Se guardan en almacenamiento privado (EvidenciaBoleta, auditoría A4); la app
+     * recibe una URL del servidor que solo abre el personal con sesión.
      */
     public function subirEvidencia(): ResponseInterface
     {
@@ -358,75 +382,69 @@ class InfraccionesApiController extends Controller
         $placaAgente = strtoupper(trim((string) $agente->placa));
         $boletaModel = new \App\Models\BoletaInfraccionModel();
 
-        $folio = trim((string)($this->request->getPost('folio') ?? 'sin_folio'));
-        $tipo  = $this->tipoEvidencia($this->request->getPost('tipo'));
-        $folioLimpio = preg_replace('/[^A-Za-z0-9_-]/', '_', $folio);
-
         $file = $this->request->getFile('foto');
-        if ($file !== null && $file->isValid()) {
-            if (! $this->folioPermitido($boletaModel, $folio, $placaAgente)) {
-                return $this->respuestaFolioAjeno($folio);
-            }
+        $json = $file === null ? $this->request->getJSON(true) : null;
 
-            // La extensión se deduce del contenido, nunca del nombre enviado por el cliente.
-            $ext = strtolower((string) $file->guessExtension());
-            if ($ext === 'jpeg') {
-                $ext = 'jpg';
-            }
-            if (! in_array($ext, ['jpg', 'png', 'webp'], true)) {
-                return $this->response->setStatusCode(415)->setJSON([
+        if ($file !== null) {
+            $folio = trim((string) ($this->request->getPost('folio') ?? ''));
+            $tipo  = $this->tipoEvidencia($this->request->getPost('tipo'));
+            if (! $file->isValid()) {
+                return $this->response->setStatusCode(400)->setJSON([
                     'success' => false,
-                    'message' => 'Solo se aceptan imágenes JPG, PNG o WEBP.',
+                    'message' => 'No se recibió un archivo de imagen válido.',
                 ]);
             }
-            $nombreArchivo = "{$tipo}_" . time() . "_{$folioLimpio}.{$ext}";
-
-            $destDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'infracciones' . DIRECTORY_SEPARATOR . $folioLimpio;
-            if (! is_dir($destDir)) {
-                mkdir($destDir, 0755, true);
+            $contenido = (string) file_get_contents($file->getTempName());
+        } elseif (is_array($json) && ! empty($json['base64'])) {
+            $folio = trim((string) ($json['folio'] ?? ''));
+            $tipo  = $this->tipoEvidencia($json['tipo'] ?? null);
+            $base64 = (string) preg_replace('#^data:image/\w+;base64,#i', '', (string) $json['base64']);
+            // Límite antes de decodificar: 5 MB de imagen son ~6.7 MB en base64.
+            $decodificado = strlen($base64) <= (int) ceil(EvidenciaBoleta::TAMANO_MAXIMO * 4 / 3) + 4
+                ? base64_decode($base64, true)
+                : false;
+            if ($decodificado === false) {
+                return $this->response->setStatusCode(400)->setJSON([
+                    'success' => false,
+                    'message' => 'La imagen en base64 no es válida o supera 5 MB.',
+                ]);
             }
-
-            $file->move($destDir, $nombreArchivo);
-
-            $publicUrl = base_url("uploads/infracciones/{$folioLimpio}/{$nombreArchivo}");
-            return $this->response->setJSON([
-                'success' => true,
-                'url'     => $publicUrl,
+            $contenido = $decodificado;
+        } else {
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'message' => 'No se recibió un archivo de imagen o base64 válido.',
             ]);
         }
 
-        $json = $this->request->getJSON(true);
-        if (is_array($json) && !empty($json['base64'])) {
-            $folio = trim((string)($json['folio'] ?? $folio));
-            $tipo  = $this->tipoEvidencia($json['tipo'] ?? $tipo);
-            $folioLimpio = preg_replace('/[^A-Za-z0-9_-]/', '_', $folio);
-
-            if (! $this->folioPermitido($boletaModel, $folio, $placaAgente)) {
-                return $this->respuestaFolioAjeno($folio);
-            }
-
-            $destDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'infracciones' . DIRECTORY_SEPARATOR . $folioLimpio;
-            if (! is_dir($destDir)) {
-                mkdir($destDir, 0755, true);
-            }
-
-            $base64Data = preg_replace('#^data:image/\w+;base64,#i', '', (string)$json['base64']);
-            $decoded = base64_decode($base64Data, true);
-            if ($decoded !== false) {
-                $nombreArchivo = "{$tipo}_" . time() . "_{$folioLimpio}.jpg";
-                file_put_contents($destDir . DIRECTORY_SEPARATOR . $nombreArchivo, $decoded);
-                $publicUrl = base_url("uploads/infracciones/{$folioLimpio}/{$nombreArchivo}");
-
-                return $this->response->setJSON([
-                    'success' => true,
-                    'url'     => $publicUrl,
-                ]);
-            }
+        if ($folio === '') {
+            return $this->response->setStatusCode(422)->setJSON([
+                'success' => false,
+                'message' => 'La evidencia necesita el folio de la boleta.',
+            ]);
+        }
+        if (! $this->folioPermitido($boletaModel, $folio, $placaAgente)) {
+            return $this->respuestaFolioAjeno($folio);
         }
 
-        return $this->response->setStatusCode(400)->setJSON([
-            'success' => false,
-            'message' => 'No se recibió un archivo de imagen o base64 válido.',
+        try {
+            $url = (new EvidenciaBoleta())->guardar($folio, $tipo, $contenido);
+        } catch (\InvalidArgumentException $e) {
+            return $this->response->setStatusCode(415)->setJSON([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ]);
+        } catch (\Throwable $e) {
+            log_message('error', 'Evidencia de boleta {folio}: {msg}', ['folio' => $folio, 'msg' => $e->getMessage()]);
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false,
+                'message' => 'No fue posible guardar la evidencia. Intenta de nuevo.',
+            ]);
+        }
+
+        return $this->response->setJSON([
+            'success' => true,
+            'url'     => $url,
         ]);
     }
 
@@ -460,6 +478,99 @@ class InfraccionesApiController extends Controller
         $existente = $boletaModel->where('folio', $folio)->first();
 
         return $existente === null || strtoupper(trim((string) $existente->agente_placa)) === $placaAgente;
+    }
+
+    /** Días hacia atrás que se aceptan al sincronizar una boleta capturada sin señal. */
+    public const DIAS_MAXIMOS_SINCRONIZACION = 7;
+
+    private function fechaInfraccionValida(mixed $valor): ?string
+    {
+        $valor = is_string($valor) ? trim($valor) : '';
+        $fecha = \DateTimeImmutable::createFromFormat('!Y-m-d', $valor);
+        if ($fecha === false || $fecha->format('Y-m-d') !== $valor) {
+            return null;
+        }
+        $hoy = new \DateTimeImmutable('today');
+        // Un día de margen hacia adelante por diferencias de zona horaria del teléfono.
+        if ($fecha > $hoy->modify('+1 day') || $fecha < $hoy->modify('-' . self::DIAS_MAXIMOS_SINCRONIZACION . ' days')) {
+            return null;
+        }
+
+        return $valor;
+    }
+
+    private function horaValida(mixed $valor): ?string
+    {
+        $valor = is_string($valor) ? trim($valor) : '';
+        if (preg_match('/^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/', $valor, $m) !== 1) {
+            return null;
+        }
+
+        return sprintf('%s:%s:%s', $m[1], $m[2], ($m[3] ?? '') !== '' ? $m[3] : '00');
+    }
+
+    private function fechaHoraODefault(mixed $valor): string
+    {
+        $marca = is_string($valor) && trim($valor) !== '' ? strtotime($valor) : false;
+
+        return date('Y-m-d H:i:s', $marca !== false ? $marca : time());
+    }
+
+    private function urlEvidencia(mixed $url, string $folio): ?string
+    {
+        $ruta = EvidenciaBoleta::rutaSegura(is_string($url) ? $url : null, $folio, true);
+
+        return $ruta === null ? null : site_url(ltrim($ruta, '/'));
+    }
+
+    /**
+     * Faltas de la boleta resueltas contra catalogo_infracciones_app por su
+     * fundamento legal. Devuelve la lista normalizada o un mensaje de error.
+     *
+     * @return list<array{id:string,fundamentoLegal:string,descripcion:string,categoria:string,montoMinUma:float,montoMaxUma:float}>|string
+     */
+    private function faltasDesdeCatalogo(array $b): array|string
+    {
+        $faltas = $b['faltas_json'] ?? null;
+        if (is_string($faltas)) {
+            $faltas = json_decode($faltas, true);
+        }
+        if (! is_array($faltas) || $faltas === [] || ! array_is_list($faltas)) {
+            $fundamento = trim((string) ($b['falta_fundamento_legal'] ?? ''));
+            $faltas = $fundamento !== '' ? [['fundamentoLegal' => $fundamento]] : [];
+        }
+        if ($faltas === []) {
+            return 'no trae faltas.';
+        }
+        if (count($faltas) > 20) {
+            return 'trae demasiadas faltas.';
+        }
+
+        $catalogo  = new \App\Models\CatalogoInfraccionAppModel();
+        $resueltas = [];
+        foreach ($faltas as $i => $falta) {
+            $fundamento = is_array($falta) ? trim((string) ($falta['fundamentoLegal'] ?? $falta['fundamento_legal'] ?? '')) : '';
+            if ($fundamento === '') {
+                return 'una falta no trae fundamento legal.';
+            }
+            $fila = $catalogo->where('fundamento_legal', $fundamento)
+                ->orderBy('activo', 'DESC')
+                ->orderBy('orden', 'ASC')
+                ->first();
+            if ($fila === null || $fila->monto_min_uma === null || $fila->monto_max_uma === null) {
+                return "la falta «{$fundamento}» no existe en el catálogo del servidor.";
+            }
+            $resueltas[] = [
+                'id'              => is_array($falta) && isset($falta['id']) && is_scalar($falta['id']) ? (string) $falta['id'] : 'falta-' . $i,
+                'fundamentoLegal' => (string) $fila->fundamento_legal,
+                'descripcion'     => (string) $fila->descripcion,
+                'categoria'       => (string) ($fila->categoria ?? ''),
+                'montoMinUma'     => (float) $fila->monto_min_uma,
+                'montoMaxUma'     => (float) $fila->monto_max_uma,
+            ];
+        }
+
+        return $resueltas;
     }
 
     private function tipoEvidencia(mixed $tipo): string

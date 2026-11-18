@@ -104,7 +104,7 @@ class AuditoriaModel extends Model
      * Frena el alta automatizada masiva (spam) apoyándose en la BD, ya que la
      * caché es efímera en entornos serverless como Vercel.
      */
-    public function registrosPorIp(string $ip, int $minutos = 60): int
+    public function registrosPorIp(string $ip, int $minutos = 60, string $accion = 'registro_ciudadano'): int
     {
         if ($ip === '') {
             return 0;
@@ -113,7 +113,7 @@ class AuditoriaModel extends Model
         $desde = date('Y-m-d H:i:s', time() - ($minutos * 60));
 
         $filas = $this->select('detalle')
-            ->where('accion', 'registro_ciudadano')
+            ->where('accion', $accion)
             ->where('fecha >=', $desde)
             ->orderBy('fecha', 'DESC')
             ->limit(1000)

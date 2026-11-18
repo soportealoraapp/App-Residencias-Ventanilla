@@ -169,9 +169,22 @@ class CuentaCiudadanoService
             return false;
         }
 
-        $permitidos = ['username', 'password_hash', 'email', 'telefono', 'domicilio', 'estado', 'ciudad', 'rfc', 'nombre_completo', 'apellido', 'curp'];
-        $cambios    = array_intersect_key($datos, array_flip($permitidos));
-        if ($cambios === [] || ! $userModel->update($userId, $cambios)) {
+        // Auditoría A1: el acceso (usuario y contraseña) es lo único que se
+        // escribe siempre. Los datos que capturó ventanilla (nombre, correo,
+        // teléfono, domicilio, CURP…) solo se completan si estaban vacíos.
+        $cambios = array_intersect_key($datos, array_flip(['username', 'password_hash']));
+        foreach (['email', 'telefono', 'domicilio', 'estado', 'ciudad', 'rfc', 'nombre_completo', 'apellido', 'curp'] as $campo) {
+            $nuevo = $datos[$campo] ?? null;
+            if ($nuevo !== null && trim((string) $nuevo) !== '' && trim((string) ($usuario->{$campo} ?? '')) === '') {
+                $cambios[$campo] = $nuevo;
+            }
+        }
+        if (! isset($cambios['username'], $cambios['password_hash'])) {
+            return false;
+        }
+        $cambios['activacion_hash']   = null;
+        $cambios['activacion_expira'] = null;
+        if (! $userModel->update($userId, $cambios)) {
             return false;
         }
 
@@ -180,6 +193,70 @@ class CuentaCiudadanoService
         ]);
 
         return true;
+    }
+
+    /** Caracteres del código: sin 0/O ni 1/I/L para que no se confundan al teclear. */
+    private const ALFABETO_CODIGO = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+    /** Días de vigencia del código de activación impreso en el acuse. */
+    public const DIAS_VIGENCIA_CODIGO = 30;
+
+    /** Deja solo letras y dígitos en mayúsculas ("abcd-2345" → "ABCD2345"). */
+    public static function normalizarCodigo(string $codigo): string
+    {
+        return strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $codigo) ?? '');
+    }
+
+    /**
+     * Genera un código de activación nuevo para una cuenta sin acceso y
+     * devuelve el texto para imprimirlo (formato XXXX-XXXX). Solo se guarda su
+     * hash: cada impresión del acuse invalida el código anterior.
+     */
+    public function generarCodigoActivacion(int $userId, ?int $generadoPor = null): string
+    {
+        $userModel = new UserModel();
+        $usuario   = $userModel->find($userId);
+        if ($usuario === null || trim((string) ($usuario->password_hash ?? '')) !== '') {
+            throw new \RuntimeException('La cuenta ya tiene acceso al portal; no necesita código de activación.');
+        }
+
+        $codigo = '';
+        $max    = strlen(self::ALFABETO_CODIGO) - 1;
+        for ($i = 0; $i < 8; $i++) {
+            $codigo .= self::ALFABETO_CODIGO[random_int(0, $max)];
+        }
+
+        $userModel->update($userId, [
+            'activacion_hash'   => hash('sha256', $codigo),
+            'activacion_expira' => date('Y-m-d H:i:s', time() + self::DIAS_VIGENCIA_CODIGO * 86400),
+        ]);
+        (new AuditoriaModel())->registrar('users', $userId, 'codigo_activacion_generado', $generadoPor, []);
+
+        return substr($codigo, 0, 4) . '-' . substr($codigo, 4);
+    }
+
+    /**
+     * Cuenta sin acceso, activa y con código vigente que corresponde al código
+     * escrito, o null.
+     */
+    public function cuentaPorCodigoActivacion(string $codigo): ?object
+    {
+        $codigo = self::normalizarCodigo($codigo);
+        if (strlen($codigo) !== 8) {
+            return null;
+        }
+
+        $usuario = (new UserModel())
+            ->where('activacion_hash', hash('sha256', $codigo))
+            ->where('activacion_expira >=', date('Y-m-d H:i:s'))
+            ->where('activo', 1)
+            ->first();
+
+        if ($usuario === null || trim((string) ($usuario->password_hash ?? '')) !== '') {
+            return null;
+        }
+
+        return $usuario;
     }
 
     /**

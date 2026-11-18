@@ -103,7 +103,8 @@ final class PermisosOperador
             'nombre'      => 'App Tránsito: boletas de campo',
             'descripcion' => 'Consultar y editar las boletas capturadas por los agentes.',
             'icono'       => 'receipt-cutoff',
-            'rutas'       => ['admin/app-transito/boletas'],
+            // Las fotos de evidencia se sirven fuera de admin/ (auditoría A4).
+            'rutas'       => ['admin/app-transito/boletas', 'evidencias'],
         ],
         'app_transito_catalogo' => [
             'nombre'      => 'App Tránsito: catálogo de faltas',

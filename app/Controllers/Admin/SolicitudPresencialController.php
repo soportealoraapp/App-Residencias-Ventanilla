@@ -277,7 +277,7 @@ class SolicitudPresencialController extends Controller
         }
 
         return redirect()->to('/admin/solicitudes/nueva?ciudadano_id=' . $id)
-            ->with('message', 'Ciudadano registrado sin cuenta de acceso. Su trámite queda a su nombre; puede reclamar la cuenta registrándose en el portal con su CURP.');
+            ->with('message', 'Ciudadano registrado sin cuenta de acceso. Su trámite queda a su nombre. Imprime el acuse con código de activación para que pueda reclamar su cuenta en el portal.');
     }
 
     /**
@@ -523,6 +523,37 @@ class SolicitudPresencialController extends Controller
     }
 
     /** Cuenta activa del ciudadano, o null si no existe o está desactivada. */
+    /**
+     * Acuse imprimible con el código de activación de una cuenta registrada sin
+     * acceso (auditoría A1). Cada impresión genera un código nuevo e invalida
+     * el anterior; el código nunca se guarda en claro.
+     */
+    public function acuseActivacion(int $id)
+    {
+        $ciudadano = $this->ciudadanoActivo($id);
+        if ($ciudadano === null) {
+            return redirect()->to('/admin/solicitudes/nueva')->with('error', 'No se encontró al ciudadano.');
+        }
+        if (trim((string) ($ciudadano->password_hash ?? '')) !== '') {
+            return redirect()->to('/admin/solicitudes/nueva?ciudadano_id=' . $id)
+                ->with('error', 'Este ciudadano ya tiene acceso al portal; no necesita código de activación.');
+        }
+
+        $codigo = (new CuentaCiudadanoService())->generarCodigoActivacion($id, (int) session('user_id') ?: null);
+
+        return view('admin/solicitudes_presenciales/acuse_activacion', [
+            'ciudadano'   => $ciudadano,
+            'codigo'      => $codigo,
+            'vence'       => date('d/m/Y', time() + CuentaCiudadanoService::DIAS_VIGENCIA_CODIGO * 86400),
+            'solicitudes' => (new \App\Models\SolicitudModel())
+                ->select('folio, tramite, estatus, fecha_solicitud')
+                ->where('ciudadano_id', $id)
+                ->orderBy('fecha_solicitud', 'DESC')
+                ->findAll(10),
+            'portal'      => site_url('auth/register'),
+        ]);
+    }
+
     private function ciudadanoActivo(int $id): ?object
     {
         if ($id <= 0) {

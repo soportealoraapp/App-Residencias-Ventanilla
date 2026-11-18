@@ -75,8 +75,9 @@ class RegistroCurpOpcionalTest extends DatabaseTestCase
         $this->assertSame(self::CURP, $this->usuario('username', 'anasofia')->curp);
     }
 
-    public function testConLaCurpDeVentanillaSeReclamaLaCuentaSinDuplicarla(): void
+    public function testConLaCurpDeVentanillaSinCodigoNoSeReclamaLaCuenta(): void
     {
+        // Auditoría A1: la CURP se deduce de datos públicos, así que no basta.
         $servicio = new CuentaCiudadanoService();
         $id = $servicio->crearSinAcceso([
             'nombre' => 'Ana Sofía', 'apellido' => 'Núñez Castro',
@@ -84,7 +85,29 @@ class RegistroCurpOpcionalTest extends DatabaseTestCase
         ]);
         $antes = $this->contarUsuarios();
 
-        $respuesta = $this->post('/auth/attempt-register', $this->datos(['curp' => self::CURP]));
+        $this->post('/auth/attempt-register', $this->datos(['curp' => self::CURP, 'email' => 'atacante@evil.test']));
+
+        $errores = (array) session('errors');
+        $this->assertArrayHasKey('codigo_activacion', $errores);
+        $this->assertSame($antes, $this->contarUsuarios());
+        $usuario = $this->usuario('id', (string) $id);
+        $this->assertNull($usuario->password_hash);
+        $this->assertSame('ana@example.com', $usuario->email);
+    }
+
+    public function testConElCodigoDelAcuseSeReclamaLaCuentaSinDuplicarla(): void
+    {
+        $servicio = new CuentaCiudadanoService();
+        $id = $servicio->crearSinAcceso([
+            'nombre' => 'Ana Sofía', 'apellido' => 'Núñez Castro',
+            'curp' => self::CURP, 'email' => 'ana@example.com', 'telefono' => '4450001111',
+        ]);
+        $codigo = $servicio->generarCodigoActivacion($id);
+        $antes = $this->contarUsuarios();
+
+        $respuesta = $this->post('/auth/attempt-register', $this->datos([
+            'curp' => self::CURP, 'codigo_activacion' => strtolower($codigo), 'telefono' => '4459999999',
+        ]));
 
         $respuesta->assertRedirectTo(site_url('auth/login'));
         $this->assertSame($antes, $this->contarUsuarios());
@@ -93,8 +116,54 @@ class RegistroCurpOpcionalTest extends DatabaseTestCase
         $usuario = $this->usuario('id', (string) $id);
         $this->assertSame('anasofia', $usuario->username);
         $this->assertTrue(password_verify('Secreto123', (string) $usuario->password_hash));
-        // El nombre capturado en ventanilla se respeta: la persona conserva su historial.
+        // Lo capturado en ventanilla se respeta: nombre y teléfono no se sobrescriben.
         $this->assertSame('Ana Sofía Núñez Castro', $usuario->nombre_completo);
+        $this->assertSame('4450001111', $usuario->telefono);
+        $this->assertNull($usuario->activacion_hash);
+    }
+
+    public function testElCodigoSirveAunqueVentanillaNoCapturoLaCurp(): void
+    {
+        $servicio = new CuentaCiudadanoService();
+        $id = $servicio->crearSinAcceso(['nombre' => 'Ana Sofía', 'apellido' => 'Núñez Castro']);
+        $codigo = $servicio->generarCodigoActivacion($id);
+
+        $this->post('/auth/attempt-register', $this->datos(['curp' => self::CURP, 'codigo_activacion' => $codigo]))
+            ->assertRedirectTo(site_url('auth/login'));
+
+        $usuario = $this->usuario('id', (string) $id);
+        $this->assertSame('anasofia', $usuario->username);
+        $this->assertSame(self::CURP, $usuario->curp);
+    }
+
+    public function testUnCodigoIncorrectoOUsadoSeRechaza(): void
+    {
+        $servicio = new CuentaCiudadanoService();
+        $id = $servicio->crearSinAcceso(['nombre' => 'Ana Sofía', 'apellido' => 'Núñez Castro']);
+        $codigo = $servicio->generarCodigoActivacion($id);
+
+        $this->post('/auth/attempt-register', $this->datos(['codigo_activacion' => 'ZZZZ-ZZZZ']));
+        $this->assertArrayHasKey('codigo_activacion', (array) session('errors'));
+        $this->assertNull($this->usuario('id', (string) $id)->password_hash);
+
+        // Un código nuevo invalida el anterior.
+        $servicio->generarCodigoActivacion($id);
+        $this->post('/auth/attempt-register', $this->datos(['codigo_activacion' => $codigo]));
+        $this->assertArrayHasKey('codigo_activacion', (array) session('errors'));
+        $this->assertNull($this->usuario('id', (string) $id)->password_hash);
+    }
+
+    public function testUnCodigoVencidoSeRechaza(): void
+    {
+        $servicio = new CuentaCiudadanoService();
+        $id = $servicio->crearSinAcceso(['nombre' => 'Ana Sofía', 'apellido' => 'Núñez Castro']);
+        $codigo = $servicio->generarCodigoActivacion($id);
+        $this->db->table('users')->where('id', $id)->update(['activacion_expira' => date('Y-m-d H:i:s', time() - 60)]);
+
+        $this->post('/auth/attempt-register', $this->datos(['codigo_activacion' => $codigo]));
+
+        $this->assertArrayHasKey('codigo_activacion', (array) session('errors'));
+        $this->assertNull($this->usuario('id', (string) $id)->password_hash);
     }
 
     public function testUnaCurpConCuentaActivaSeRechazaYNoCreaFilas(): void

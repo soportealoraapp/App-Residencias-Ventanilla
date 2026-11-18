@@ -68,6 +68,7 @@ class Filters extends BaseConfig
                 'admin/*',
                 'portal/tramites/ur-01/convocatorias/*',
                 'portal/tramites/ur-02/solicitudes/*',
+                'evidencias/*',
             ],
         ],
     ];
