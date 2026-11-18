@@ -12,10 +12,9 @@ class CreateCatalogoInfraccionesTable extends Migration
             'id' => ['type' => 'BIGINT', 'unsigned' => true, 'auto_increment' => true],
             'fundamento_legal' => ['type' => 'VARCHAR', 'constraint' => 60],
             'descripcion' => ['type' => 'TEXT'],
-            'categoria_actor' => [
-                'type' => 'ENUM',
-                'constraint' => ['conductor_general', 'motociclista', 'ciclista', 'concesionario_operador'],
-            ],
+            // ENUM es de MySQL: en PostgreSQL rompía `php spark migrate` en una
+            // base limpia. Texto con CHECK, igual que supabase/migrations/0008.
+            'categoria_actor' => ['type' => 'VARCHAR', 'constraint' => 30],
             'monto_min_uma' => ['type' => 'DECIMAL', 'constraint' => '8,2'],
             'monto_max_uma' => ['type' => 'DECIMAL', 'constraint' => '8,2'],
             'created_at' => ['type' => 'DATETIME', 'null' => true],
@@ -24,6 +23,9 @@ class CreateCatalogoInfraccionesTable extends Migration
         $this->forge->addKey('id', true);
         $this->forge->addUniqueKey('fundamento_legal', 'uq_catalogo_infracciones_fundamento');
         $this->forge->createTable('catalogo_infracciones');
+        if ($this->db->DBDriver === 'Postgre') {
+            $this->db->query("ALTER TABLE catalogo_infracciones ADD CONSTRAINT catalogo_infracciones_categoria_actor_check CHECK (categoria_actor IN ('conductor_general', 'motociclista', 'ciclista', 'concesionario_operador'))");
+        }
 
         // Tabla de configuración del sistema (para el valor de UMA, nunca hardcodeado)
         $this->forge->addField([

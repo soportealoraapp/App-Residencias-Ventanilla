@@ -75,7 +75,13 @@ CREATE USER ventanilla_movilidad WITH PASSWORD '<contraseña segura>';
 CREATE DATABASE ventanilla_movilidad OWNER ventanilla_movilidad ENCODING 'UTF8';
 ```
 
-La base de datos queda **local**, en el PostgreSQL 18 del mismo servidor. Los demás servicios del municipio usan MySQL, así que el sistema no comparte motor ni tablas con ellos.
+La base de datos queda **local**, en el PostgreSQL 18 del mismo servidor. Los demás servicios del municipio usan MySQL, así que el sistema no comparte motor ni tablas con ellos. El sistema está hecho y probado para PostgreSQL; no se instala sobre MySQL.
+
+PostgreSQL no debe aceptar conexiones desde internet: solo la aplicación, en el mismo servidor. En Supabase esto se cubrió con RLS (`supabase/migrations/0020`) porque ahí la base sí tiene una API pública; en el servidor municipal se cubre con la red:
+
+- `postgresql.conf`: `listen_addresses = 'localhost'`.
+- `pg_hba.conf`: solo `host ventanilla_movilidad ventanilla_movilidad 127.0.0.1/32 scram-sha-256` (y `::1/128`), sin reglas para otras redes.
+- No abrir el puerto 5432 en el firewall.
 
 ---
 
@@ -165,7 +171,7 @@ php spark migrate
 php spark migrate:status   # todas deben aparecer como aplicadas
 ```
 
-El proyecto tiene 34 migraciones (de `2026-01-01-000001` a `2026-11-03-000034`).
+El proyecto tiene 35 migraciones (de `2026-01-01-000001` a `2026-11-17-000035`). La última agrega las columnas del código de activación del acuse; en el servidor municipal sale con `php spark migrate`, sin el SQL de `supabase/`.
 
 ### 5.2 Historial de migraciones (punto delicado)
 
@@ -192,9 +198,23 @@ php spark db:seed BoletaChecklistSeeder
 **No ejecutar:** `DatabaseSeeder`, `UsuariosDemoSeeder`, `ConcesionesSeeder`, `ConvocatoriasSeeder`, `AgentesTransitoSeeder`, `DemoFuncionamientoSeeder` ni `JuezCalificadorDemoSeeder`.
 
 Comprobar:
+- Roles: `administrador`, `operador_ventanilla`, `ciudadano` y `juez_calificador`.
 - Tarifas: deben aparecer las de las fichas oficiales (por ejemplo, UR-TT-T-04 $156.94, UR-TT-T-05 $287.00).
 - Catálogo de infracciones: 201 faltas visibles en la app.
 - Parámetro de la UMA: confirmar el valor vigente con la Dirección antes de operar.
+
+### 5.4 Ensayo de instalación (17 nov 2026)
+
+Esta sección se ensayó completa en un PostgreSQL 17 local vacío, con un usuario sin privilegios de superusuario, igual que en la sección 2. El ensayo encontró y corrigió cuatro fallas que solo aparecían en una instalación limpia (en Supabase el esquema se creó con SQL, por eso no se veían):
+
+- La migración `000020` usaba el tipo `ENUM` de MySQL y detenía `php spark migrate`.
+- La migración `000029` intentaba cambiar el tipo de `users.password_hash`, que usa la vista `ciudadanos`.
+- La sincronización de boletas enviaba `TRUE/FALSE` a columnas `SMALLINT`; ninguna boleta de la app habría llegado al servidor.
+- No había forma de crear el primer administrador (ahora `php spark usuarios:crear-admin`, sección 10).
+
+Resultado: las 35 migraciones, los cinco seeders de catálogos y `php scripts/verificar_esquema_bd.php` pasan sin errores; la suite completa de pruebas corre también contra PostgreSQL; el panel abre sin errores y una boleta de la app se sincroniza y aparece en el panel.
+
+Al entrar por primera vez, el inicio del panel avisa de dos tareas de configuración que no se pueden sembrar: subir el formato oficial de cada trámite (**Catálogos → Formatos de trámite**) y asignar el fundamento a las 32 casillas de la boleta física que no lo tienen (**App Tránsito → Catálogo de Faltas**).
 
 ---
 
@@ -282,7 +302,13 @@ sudo apachectl configtest && sudo systemctl reload apache2
 
 ## 10. Usuarios reales y pruebas de aceptación
 
-1. Crear la cuenta de administrador real desde la consola o el panel, con contraseña segura.
+1. Crear la primera cuenta de administrador desde la consola (en una base nueva no hay ninguna otra forma de entrar al panel):
+
+   ```bash
+   php spark usuarios:crear-admin --usuario <usuario> --correo <correo> --nombre "<Nombre completo>"
+   ```
+
+   La contraseña se genera al azar y se muestra una sola vez en la terminal. Cambiarla al entrar, en **Admin → Usuarios**.
 2. Crear los usuarios de operación: juez calificador, operadores de ventanilla y agentes de tránsito (placa y contraseña).
 3. Probar con datos ficticios y después borrarlos:
 

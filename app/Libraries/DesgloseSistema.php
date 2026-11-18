@@ -596,7 +596,7 @@ final class DesgloseSistema
                 ->groupBy('falta_fundamento_legal')->orderBy('total', 'DESC')->limit(10)->get()->getResultArray());
 
             $fila = $this->db->table('boletas_infracciones')
-                ->select('COUNT(*) as total, SUM(CASE WHEN foto_placa_url IS NOT NULL AND foto_placa_url <> \'\' THEN 1 ELSE 0 END) as con_foto, SUM(CASE WHEN sin_placas = 1 THEN 1 ELSE 0 END) as sin_placas, SUM(CASE WHEN conductor_ausente = 1 THEN 1 ELSE 0 END) as ausente, AVG((COALESCE(falta_monto_min_uma, 0) + COALESCE(falta_monto_max_uma, 0)) / 2) as uma_prom')
+                ->select('COUNT(*) as total, SUM(CASE WHEN foto_placa_url IS NOT NULL AND foto_placa_url <> \'\' THEN 1 ELSE 0 END) as con_foto, SUM(CASE WHEN sin_placas = \'1\' THEN 1 ELSE 0 END) as sin_placas, SUM(CASE WHEN conductor_ausente = \'1\' THEN 1 ELSE 0 END) as ausente, AVG((COALESCE(falta_monto_min_uma, 0) + COALESCE(falta_monto_max_uma, 0)) / 2) as uma_prom')
                 ->get()->getRowArray();
             $res['con_foto']    = (int) ($fila['con_foto'] ?? 0);
             $res['sin_placas']  = (int) ($fila['sin_placas'] ?? 0);

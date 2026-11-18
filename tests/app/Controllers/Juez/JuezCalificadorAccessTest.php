@@ -7,6 +7,10 @@ use CodeIgniter\Test\FeatureTestTrait;
 use Config\Database;
 use Tests\Support\DatabaseTestCase;
 
+// El nombre del archivo lleva fecha, así que el autoloader no lo encuentra si
+// las migraciones no corrieron en este proceso (modo PostgreSQL preparado).
+require_once APPPATH . 'Database/Migrations/2026-10-23-000028_AddJuezCalificadorRole.php';
+
 class JuezCalificadorAccessTest extends DatabaseTestCase
 {
     use FeatureTestTrait;
@@ -93,6 +97,7 @@ class JuezCalificadorAccessTest extends DatabaseTestCase
 
     public function testRolesSeederCreaAdministradorAunqueElIdHistoricoEsteOcupado(): void
     {
+        $this->omitirEnPostgresPreparado('el id 1 lo ocupa el juez que crea la migración 000028');
         $this->db->table('user_roles')->where('role_id', $this->roleIds['administrador'])->delete();
         $this->db->table('roles')->where('id', $this->roleIds['administrador'])->delete();
 

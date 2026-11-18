@@ -25,6 +25,15 @@ class PermitirCiudadanoSinAcceso extends Migration
 {
     public function up()
     {
+        // En PostgreSQL basta quitar el NOT NULL. El Forge emite además un
+        // ALTER ... TYPE, que PostgreSQL rechaza porque la vista `ciudadanos`
+        // (migración 000019) usa la columna, y rompía la instalación limpia.
+        if ($this->db->DBDriver === 'Postgre') {
+            $this->db->query('ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL');
+
+            return;
+        }
+
         $esSqlite = $this->db->DBDriver === 'SQLite3';
 
         // SQLite no puede cambiar la nulabilidad con ALTER TABLE: el Forge de

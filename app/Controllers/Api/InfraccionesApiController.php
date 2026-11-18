@@ -295,12 +295,16 @@ class InfraccionesApiController extends Controller
                 'lugar'                 => $b['lugar'] ?? 'No especificado',
                 'latitud'               => isset($b['latitud']) && is_numeric($b['latitud']) ? (float)$b['latitud'] : null,
                 'longitud'              => isset($b['longitud']) && is_numeric($b['longitud']) ? (float)$b['longitud'] : null,
-                'conductor_ausente'     => $b['conductor_ausente'],
+                // '1'/'0' como texto: PostgreSQL lo acepta igual en la columna
+                // SMALLINT de las migraciones (servidor municipal) que en la
+                // BOOLEAN de Supabase. Un PHP bool se envía como TRUE/FALSE, que
+                // la columna SMALLINT rechaza y tumbaba toda la sincronización.
+                'conductor_ausente'     => $b['conductor_ausente'] ? '1' : '0',
                 'infractor_nombre'      => $b['infractor_nombre'] ?? null,
                 'infractor_domicilio'   => $b['infractor_domicilio'] ?? null,
                 'infractor_licencia'    => $b['infractor_licencia'] ?? null,
                 'vehiculo_placas'       => $b['vehiculo_placas'] ?? null,
-                'sin_placas'            => $b['sin_placas'],
+                'sin_placas'            => $b['sin_placas'] ? '1' : '0',
                 'vehiculo_marca'        => $b['vehiculo_marca'] ?? null,
                 'vehiculo_linea'        => $b['vehiculo_linea'] ?? null,
                 'vehiculo_color'        => $b['vehiculo_color'] ?? null,

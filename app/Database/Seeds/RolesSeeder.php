@@ -39,6 +39,11 @@ class RolesSeeder extends Seeder
             $this->db->table('roles')->insert($row);
         }
 
+        // Con ids escritos a mano, la secuencia de PostgreSQL no avanza: se
+        // alinea antes de insertar al juez, que sí la usa. Si no, en una tabla
+        // de roles vacía el juez chocaría con el id 1.
+        $this->alinearSecuencia();
+
         // COB-09 no reserva un id: la secuencia asigna el disponible y el nombre
         // único hace que ejecutar nuevamente el seeder sea seguro.
         $juezExiste = $this->db->table('roles')->where('nombre', 'juez_calificador')->countAllResults();
@@ -49,6 +54,11 @@ class RolesSeeder extends Seeder
             ]);
         }
 
+        $this->alinearSecuencia();
+    }
+
+    private function alinearSecuencia(): void
+    {
         if ($this->db->DBDriver === 'Postgre') {
             $this->db->query("SELECT setval(pg_get_serial_sequence('roles', 'id'), COALESCE((SELECT MAX(id) FROM roles), 1))");
         }

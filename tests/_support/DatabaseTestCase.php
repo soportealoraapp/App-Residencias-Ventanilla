@@ -33,9 +33,14 @@ class DatabaseTestCase extends CIUnitTestCase
     protected function setUp(): void
     {
         $esPostgresPreparado = getenv('TEST_POSTGRES_SCHEMA_PREPARED') === '1';
+        $seederDeLaPrueba    = '';
         if ($esPostgresPreparado) {
             $this->migrate = false;
             $this->refresh = false;
+            // El seeder de la prueba corre después del TRUNCATE; si no, el
+            // TRUNCATE borraría lo que acaba de sembrar.
+            $seederDeLaPrueba = $this->seed;
+            $this->seed       = '';
         }
 
         parent::setUp();
@@ -56,5 +61,23 @@ class DatabaseTestCase extends CIUnitTestCase
             $tablas
         );
         $this->db->query('TRUNCATE TABLE ' . implode(', ', $nombres) . ' RESTART IDENTITY CASCADE');
+
+        if ($seederDeLaPrueba !== '') {
+            $this->seed = $seederDeLaPrueba;
+            $this->seed($seederDeLaPrueba);
+        }
+    }
+
+    /**
+     * En el modo PostgreSQL preparado el TRUNCATE también borra lo que siembran
+     * las migraciones (tarifas base, rol de juez). Las pruebas que dependen de
+     * esos datos se omiten ahí; lo cubre el ensayo de instalación limpia
+     * (GUIA_MIGRACION.md, sección 5).
+     */
+    protected function omitirEnPostgresPreparado(string $motivo): void
+    {
+        if (getenv('TEST_POSTGRES_SCHEMA_PREPARED') === '1') {
+            $this->markTestSkipped('Depende de datos que siembran las migraciones: ' . $motivo);
+        }
     }
 }

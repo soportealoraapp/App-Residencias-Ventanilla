@@ -28,7 +28,7 @@ $mostrarSql = in_array('--formato=sql', $argv, true);
 //    correr aunque la app no arranque, que es justo el caso de deriva).
 // ------------------------------------------------------------------
 $env = [];
-foreach (file($raiz . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $linea) {
+foreach ((is_file($raiz . '/.env') ? file($raiz . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) : []) as $linea) {
     $linea = trim($linea);
     if ($linea === '' || str_starts_with($linea, '#') || !str_contains($linea, '=')) {
         continue;
@@ -37,22 +37,39 @@ foreach (file($raiz . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as
     $env[trim($k)] = trim(trim($v), "\"'");
 }
 
-$controlador = $env['database.default.DBDriver'] ?? '';
+// Acepta los mismos nombres que app/Config/Database.php: el formato de
+// GUIA_MIGRACION.md (DATABASE_DEFAULT_*) y el antiguo con puntos. Una variable
+// del entorno del proceso gana sobre el .env, como en CodeIgniter.
+$valor = static function (string $campo, string $porDefecto = '') use ($env): string {
+    foreach (['DATABASE_DEFAULT_' . strtoupper($campo), 'database.default.' . $campo] as $clave) {
+        $deEntorno = getenv($clave);
+        if ($deEntorno !== false && $deEntorno !== '') {
+            return $deEntorno;
+        }
+        if (($env[$clave] ?? '') !== '') {
+            return $env[$clave];
+        }
+    }
+
+    return $porDefecto;
+};
+
+$controlador = $valor('DBDriver');
 if ($controlador !== 'Postgre') {
-    fwrite(STDERR, "Este verificador espera database.default.DBDriver = Postgre; se encontró: '{$controlador}'.\n");
+    fwrite(STDERR, "Este verificador espera DATABASE_DEFAULT_DBDRIVER = Postgre; se encontró: '{$controlador}'.\n");
     exit(2);
 }
 
 $dsn = sprintf(
     'pgsql:host=%s;port=%s;dbname=%s;sslmode=%s',
-    $env['database.default.hostname'] ?? '',
-    $env['database.default.port'] ?? '5432',
-    $env['database.default.database'] ?? '',
-    $env['database.default.sslmode'] ?? 'require'
+    $valor('hostname'),
+    $valor('port', '5432'),
+    $valor('database'),
+    $valor('sslmode', 'require')
 );
 
 try {
-    $pdo = new PDO($dsn, $env['database.default.username'] ?? '', $env['database.default.password'] ?? '', [
+    $pdo = new PDO($dsn, $valor('username'), $valor('password'), [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     ]);
 } catch (Throwable $e) {
@@ -205,6 +222,11 @@ $totalMigraciones = (int) ($pdo->query('SELECT COUNT(*) FROM public.migrations')
 $faltanTablas = [];
 $faltanColumnas = [];
 foreach ($esperado as $tabla => $columnas) {
+    // ci_sessions solo la usan las sesiones de Vercel (Config/Session.php);
+    // en un servidor normal las sesiones van a writable/session.
+    if ($tabla === 'ci_sessions' && !isset($real[$tabla])) {
+        continue;
+    }
     if (!isset($real[$tabla])) {
         $faltanTablas[$tabla] = $columnas;
         continue;
@@ -220,7 +242,7 @@ $sobraTablas = array_values(array_diff(array_keys($real), array_keys($esperado),
 $faltanVistas = array_keys(array_diff_key($vistas, $vistasReales));
 
 echo "=== VERIFICADOR DE DERIVA DE ESQUEMA ===\n";
-echo 'Base de datos: ' . $env['database.default.database'] . '@' . $env['database.default.hostname'] . "\n";
+echo 'Base de datos: ' . $valor('database') . '@' . $valor('hostname') . "\n";
 echo 'Tablas definidas en el repo: ' . count($esperado) . " · existentes: " . count($real) . "\n";
 echo "Historial de migraciones (tabla migrations): {$totalMigraciones} registros\n\n";
 

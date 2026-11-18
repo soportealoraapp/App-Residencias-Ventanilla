@@ -169,6 +169,7 @@ class SolicitudPresencialTest extends DatabaseTestCase
 
     public function testCrearSolicitudUr03Presencial(): void
     {
+        $this->omitirEnPostgresPreparado('tarifas de las migraciones 000025 y 000033');
         $postData = [
             'tramite' => 'UR-TT-T-03',
             'ciudadano_id' => $this->ciudadanoId,
@@ -226,6 +227,7 @@ class SolicitudPresencialTest extends DatabaseTestCase
 
     public function testCrearSolicitudUr07ConMontoDinamico(): void
     {
+        $this->omitirEnPostgresPreparado('tarifas de las migraciones 000025 y 000033');
         $postData = [
             'tramite' => 'UR-TT-T-07',
             'ciudadano_id' => $this->ciudadanoId,
@@ -473,6 +475,7 @@ class SolicitudPresencialTest extends DatabaseTestCase
 
     public function testMigracionSiembraTarifasBaseDeLosTramites(): void
     {
+        $this->omitirEnPostgresPreparado('tarifas de las migraciones 000025 y 000033');
         // 2026-10-21-000025 siembra las tarifas base y 2026-10-27-000033 las deja
         // con los montos de las fichas oficiales.
         $sembradas = $this->db->table('tarifas')
