@@ -32,6 +32,31 @@ class SupabaseStorage
         $this->rutaLocal  = rtrim((string) ($_ENV['STORAGE_LOCAL_PATH'] ?? (WRITEPATH . 'uploads' . DIRECTORY_SEPARATOR . 'storage')), '/\\');
     }
 
+    /**
+     * Encabezados de autenticación para la API de Storage.
+     *
+     * - Llave secreta nueva (`sb_secret_…`): va sola en `apikey`; el gateway de
+     *   Supabase la cambia por un token de servicio. No es un JWT, así que no
+     *   se manda en `Authorization`.
+     * - Llaves heredadas (JWT `anon` + `service_role`): como siempre.
+     *
+     * Permite pasar a las llaves nuevas cambiando solo SUPABASE_SERVICE_ROLE_KEY
+     * y revocar después el secreto JWT heredado.
+     *
+     * @return list<string>
+     */
+    protected function encabezadosAuth(): array
+    {
+        if (str_starts_with($this->serviceKey, 'sb_secret_')) {
+            return ['apikey: ' . $this->serviceKey];
+        }
+
+        return [
+            'apikey: ' . $this->anonKey,
+            'Authorization: Bearer ' . $this->serviceKey,
+        ];
+    }
+
     /** true cuando los archivos se guardan en disco local en lugar de Supabase. */
     public function esLocal(): bool
     {
@@ -54,8 +79,7 @@ class SupabaseStorage
         $url = $this->baseUrl . '/object/' . $bucket . '/' . $path;
 
         $headers = [
-            'apikey: ' . $this->anonKey,
-            'Authorization: Bearer ' . $this->serviceKey,
+            ...$this->encabezadosAuth(),
             'Content-Type: ' . $mimeType,
         ];
 
@@ -93,8 +117,7 @@ class SupabaseStorage
         $url = $this->baseUrl . '/object/' . $bucket;
 
         $result = $this->request('DELETE', $url, json_encode(['prefixes' => $paths]), [
-            'apikey: ' . $this->anonKey,
-            'Authorization: Bearer ' . $this->serviceKey,
+            ...$this->encabezadosAuth(),
             'Content-Type: application/json',
         ]);
 
@@ -119,8 +142,7 @@ class SupabaseStorage
         $url = $this->baseUrl . '/object/sign/' . $bucket . '/' . $path;
 
         $result = $this->request('POST', $url, json_encode(['expiresIn' => $expiraSegundos]), [
-            'apikey: ' . $this->anonKey,
-            'Authorization: Bearer ' . $this->serviceKey,
+            ...$this->encabezadosAuth(),
             'Content-Type: application/json',
         ]);
 
@@ -159,8 +181,7 @@ class SupabaseStorage
         $url = $this->baseUrl . '/object/' . $bucket . '/' . $path;
 
         $result = $this->request('GET', $url, null, [
-            'apikey: ' . $this->anonKey,
-            'Authorization: Bearer ' . $this->serviceKey,
+            ...$this->encabezadosAuth(),
         ]);
 
         if ($result !== false && $result['status'] >= 200 && $result['status'] < 300) {
@@ -192,8 +213,7 @@ class SupabaseStorage
         ]);
 
         $result = $this->request('POST', $url, $body, [
-            'apikey: ' . $this->anonKey,
-            'Authorization: Bearer ' . $this->serviceKey,
+            ...$this->encabezadosAuth(),
             'Content-Type: application/json',
         ]);
 
@@ -214,8 +234,7 @@ class SupabaseStorage
         $url = $this->baseUrl . '/object/info/' . $bucket . '/' . $path;
 
         $result = $this->request('HEAD', $url, null, [
-            'apikey: ' . $this->anonKey,
-            'Authorization: Bearer ' . $this->serviceKey,
+            ...$this->encabezadosAuth(),
         ]);
 
         return $result !== false && $result['status'] >= 200 && $result['status'] < 300;
@@ -239,8 +258,7 @@ class SupabaseStorage
         }
 
         $result = $this->request('POST', $url, json_encode($body), [
-            'apikey: ' . $this->anonKey,
-            'Authorization: Bearer ' . $this->serviceKey,
+            ...$this->encabezadosAuth(),
             'Content-Type: application/json',
         ]);
 
@@ -252,8 +270,7 @@ class SupabaseStorage
         $url = $this->baseUrl . '/bucket';
 
         $result = $this->request('GET', $url, null, [
-            'apikey: ' . $this->anonKey,
-            'Authorization: Bearer ' . $this->serviceKey,
+            ...$this->encabezadosAuth(),
         ]);
 
         if ($result !== false && $result['status'] >= 200 && $result['status'] < 300) {
