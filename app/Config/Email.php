@@ -24,7 +24,7 @@ class Email extends BaseConfig
 
     public string $SMTPPass = '';
 
-    public int $SMTPPort = 565;
+    public int $SMTPPort = 465;
 
     public int $SMTPTimeout = 10;
 
@@ -64,5 +64,21 @@ class Email extends BaseConfig
         $this->SMTPUser  = $_ENV['EMAIL_SMTP_USER'] ?? $this->SMTPUser;
         $this->SMTPPass  = $_ENV['EMAIL_SMTP_PASS'] ?? $this->SMTPPass;
         $this->SMTPPort  = (int) ($_ENV['EMAIL_SMTP_PORT'] ?? $this->SMTPPort);
+
+        // smtp (por defecto), sendmail o mail, según lo que use el servidor.
+        $protocolo = strtolower(trim((string) ($_ENV['EMAIL_PROTOCOL'] ?? '')));
+        if (in_array($protocolo, ['smtp', 'sendmail', 'mail'], true)) {
+            $this->protocol = $protocolo;
+        }
+
+        // El cifrado tiene que corresponder al puerto: 465 usa SSL directo y
+        // 587 (o 25) negocia TLS con STARTTLS. Antes iba fijo en 'ssl', así que
+        // la configuración de la guía (puerto 587) no podía conectar.
+        // EMAIL_SMTP_CRYPTO acepta ssl, tls o none (sin cifrado, solo en red interna).
+        $cifrado = strtolower(trim((string) ($_ENV['EMAIL_SMTP_CRYPTO'] ?? '')));
+        if ($cifrado === '') {
+            $cifrado = $this->SMTPPort === 465 ? 'ssl' : 'tls';
+        }
+        $this->SMTPCrypto = $cifrado === 'none' ? '' : $cifrado;
     }
 }

@@ -371,7 +371,7 @@ class AuthController extends Controller
             $html .= '</div>';
             $html .= '<div style="background:#f8f9fa;padding:30px;border:1px solid #dee2e6;">';
             $html .= '<h2 style="color:#333;margin-top:0;">Restablecer tu contraseña</h2>';
-            $html .= '<p style="color:#555;">Hola <strong>' . esc($user->nombre ?? $user->email) . '</strong>,</p>';
+            $html .= '<p style="color:#555;">Hola <strong>' . esc(trim((string) ($user->nombre_completo ?? '')) !== '' ? $user->nombre_completo : $user->email) . '</strong>,</p>';
             $html .= '<p style="color:#555;">Recibimos una solicitud para restablecer la contraseña de tu cuenta en la Ventanilla Digital de Uriangato.</p>';
             $html .= '<p style="color:#555;">Haz clic en el siguiente botón para crear una nueva contraseña:</p>';
             $html .= '<div style="text-align:center;margin:30px 0;">';
@@ -388,7 +388,14 @@ class AuthController extends Controller
             $emailService->setTo($user->email);
             $emailService->setSubject('Restablecer tu contraseña - Ventanilla Digital Uriangato');
             $emailService->setMessage($html);
-            $emailService->send();
+
+            // Si el correo no sale, la persona ve el mismo aviso de siempre (no se
+            // delata si la cuenta existe), pero queda registro para que sistemas
+            // lo detecte: en la bitácora de auditoría y en writable/logs.
+            if (! $emailService->send(false)) {
+                log_message('error', 'Recuperación de contraseña: no se pudo enviar el correo. ' . strip_tags((string) $emailService->printDebugger(['headers'])));
+                $this->auditoriaModel->registrar('users', (int) $user->id, 'recuperacion_correo_fallido', null, ['ip' => $ip]);
+            }
         }
 
         return redirect()->back()->with('message', $mensaje);

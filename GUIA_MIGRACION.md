@@ -124,7 +124,7 @@ DATABASE_DEFAULT_DBDRIVER = Postgre
 DATABASE_DEFAULT_HOSTNAME = localhost        # PostgreSQL local
 DATABASE_DEFAULT_DATABASE = ventanilla_movilidad
 DATABASE_DEFAULT_USERNAME = ventanilla_movilidad
-DATABASE_DEFAULT_PASSWORD = <contraseña segura>
+DATABASE_DEFAULT_PASSWORD = '<contraseña segura>'
 DATABASE_DEFAULT_PORT = 5432
 DATABASE_DEFAULT_CHARSET = utf8
 DATABASE_DEFAULT_SCHEMA = public
@@ -135,17 +135,28 @@ SUPABASE_URL =
 SUPABASE_SERVICE_ROLE_KEY =
 STORAGE_LOCAL_PATH = /var/ventanilla/storage # fuera de la carpeta pública
 
-# Correo [POR DEFINIR con sistemas]
+# Correo [POR DEFINIR con sistemas] · lo usa la recuperación de contraseña
 EMAIL_FROM = no-reply@uriangato.gob.mx
-EMAIL_FROM_NAME = Ventanilla de Movilidad
+EMAIL_FROM_NAME = 'Ventanilla de Movilidad'
 EMAIL_SMTP_HOST =
 EMAIL_SMTP_USER =
-EMAIL_SMTP_PASS =
+EMAIL_SMTP_PASS = ''
 EMAIL_SMTP_PORT = 587
+EMAIL_SMTP_CRYPTO = tls                      # 587 → tls · 465 → ssl · none solo en red interna
 
 # Llave de cifrado nueva (no reutilizar la de pruebas)
 encryption.key =
 ```
+
+> **Comillas en el `.env`:** un valor con espacios (un nombre, una contraseña) va entre comillas simples, como `EMAIL_FROM_NAME`. Sin ellas, CodeIgniter no arranca y todo el sitio responde con error.
+
+**Probar el correo antes de abrir el sistema.** La recuperación de contraseña depende de él. Con el `.env` ya configurado:
+
+```bash
+php spark correo:probar persona@uriangato.gob.mx
+```
+
+Muestra el servidor, el puerto y el cifrado usados (nunca la contraseña) y, si falla, la respuesta del servidor de correo. Si un correo de recuperación no sale en operación, queda registrado como `recuperacion_correo_fallido` en **Auditoría** y con detalle en `writable/logs`.
 
 Generar la llave de cifrado:
 
